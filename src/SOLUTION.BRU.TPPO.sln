@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.8.34316.72
+# Visual Studio Version 18
+VisualStudioVersion = 18.7.11819.209 insiders
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ApiGateways", "ApiGateways", "{0F820B01-614E-4DD9-957C-D24D61D7E2E3}"
 EndProject
@@ -46,6 +46,10 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EventBus.Messages", "BuildingBlocks\EventBus.Messages\EventBus.Messages.csproj", "{26EF9DEC-FA79-4DD6-8059-554D8649BC41}"
 EndProject
 Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{AF673A8C-9964-4B7D-927A-E96D81A3B7E2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DesktopClients", "DesktopClients", "{6C7EF633-F9EF-4096-89CC-687C81D2AD56}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "by.pieckenst.bru.windowsclient.landscapestudio", "DesktopClients\by.pieckenst.bru.windowsclient.landscapestudio\by.pieckenst.bru.windowsclient.landscapestudio.csproj", "{FB4CA5DF-C132-4D55-887A-38AB597E39AD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -113,11 +117,16 @@ Global
 		{AF673A8C-9964-4B7D-927A-E96D81A3B7E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{AF673A8C-9964-4B7D-927A-E96D81A3B7E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{AF673A8C-9964-4B7D-927A-E96D81A3B7E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FB4CA5DF-C132-4D55-887A-38AB597E39AD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FB4CA5DF-C132-4D55-887A-38AB597E39AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FB4CA5DF-C132-4D55-887A-38AB597E39AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FB4CA5DF-C132-4D55-887A-38AB597E39AD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{CF37AE6A-F27E-4B36-A94B-7D9FDA3590C1} = {239602CF-32DC-4304-B26F-085C9DA9EBE1}
 		{12F8CC69-ADB2-4580-87BF-70610D3252F7} = {CF37AE6A-F27E-4B36-A94B-7D9FDA3590C1}
 		{009FE34D-5D37-48BF-82F2-86DF97A3346B} = {CF37AE6A-F27E-4B36-A94B-7D9FDA3590C1}
 		{EF084F80-3C27-4840-A048-DAA18816340D} = {CF37AE6A-F27E-4B36-A94B-7D9FDA3590C1}
@@ -135,6 +144,7 @@ Global
 		{84EEB0FD-EC89-4E20-8257-DD7EB0EDE41C} = {009FE34D-5D37-48BF-82F2-86DF97A3346B}
 		{241F8245-0FF7-4FE1-BA43-580F3B8CF596} = {12F8CC69-ADB2-4580-87BF-70610D3252F7}
 		{26EF9DEC-FA79-4DD6-8059-554D8649BC41} = {42781DF0-CCE4-442F-9311-365F1E967E22}
+		{FB4CA5DF-C132-4D55-887A-38AB597E39AD} = {6C7EF633-F9EF-4096-89CC-687C81D2AD56}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B8752804-FEC8-4A60-B7EA-09C18E44756F}
