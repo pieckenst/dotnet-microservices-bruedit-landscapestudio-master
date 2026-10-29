@@ -56,6 +56,13 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddMassTransit(conf =>
 {
     conf.AddConsumer<AuditEventConsumer>();
+    conf.AddConsumer<UserRegisteredAuditConsumer>();
+    conf.AddConsumer<ProfileUpdatedAuditConsumer>();
+    conf.AddConsumer<ProjectStageCompletedAuditConsumer>();
+    conf.AddConsumer<EmployeeAssignedAuditConsumer>();
+    conf.AddConsumer<PurchaseOrderCreatedAuditConsumer>();
+    conf.AddConsumer<EstimateApprovedAuditConsumer>();
+    conf.AddConsumer<MaterialReceivedAuditConsumer>();
     conf.UsingRabbitMq((ctx, cfg) =>
     {
         var host = builder.Configuration["EventBusSettings:HostAddress"];
@@ -63,7 +70,16 @@ builder.Services.AddMassTransit(conf =>
             throw new InvalidOperationException("EventBusSettings:HostAddress must be configured.");
         cfg.Host(host);
         cfg.ReceiveEndpoint(EventBusConstants.AuditEventQueue, endpoint =>
-            endpoint.ConfigureConsumer<AuditEventConsumer>(ctx));
+        {
+            endpoint.ConfigureConsumer<AuditEventConsumer>(ctx);
+            endpoint.ConfigureConsumer<UserRegisteredAuditConsumer>(ctx);
+            endpoint.ConfigureConsumer<ProfileUpdatedAuditConsumer>(ctx);
+            endpoint.ConfigureConsumer<ProjectStageCompletedAuditConsumer>(ctx);
+            endpoint.ConfigureConsumer<EmployeeAssignedAuditConsumer>(ctx);
+            endpoint.ConfigureConsumer<PurchaseOrderCreatedAuditConsumer>(ctx);
+            endpoint.ConfigureConsumer<EstimateApprovedAuditConsumer>(ctx);
+            endpoint.ConfigureConsumer<MaterialReceivedAuditConsumer>(ctx);
+        });
     });
 });
 builder.Services.Configure<MassTransitHostOptions>(options =>
