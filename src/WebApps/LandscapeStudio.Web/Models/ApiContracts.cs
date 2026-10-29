@@ -40,6 +40,15 @@ public sealed record AccountPreferenceDto(
     Guid UserId, string Theme, string Language, string TimeZone,
     bool EmailNotificationsEnabled, bool SmsNotificationsEnabled);
 
+
+public sealed record AccountAddressDto(
+    Guid Id, Guid UserId, string Label, string Line1, string? Line2, string City,
+    string? Region, string? PostalCode, string Country, bool IsDefault, DateTime CreatedDate);
+
+public sealed record AccountAddressRequest(
+    string Label, string Line1, string? Line2, string City, string? Region,
+    string? PostalCode, string Country, bool IsDefault);
+
 public sealed class OperationItem
 {
     public Dictionary<string, string> Values { get; init; } = new(StringComparer.OrdinalIgnoreCase);
