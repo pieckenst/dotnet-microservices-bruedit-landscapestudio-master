@@ -3,22 +3,36 @@ version: '3.4'
 services:
   transactiondb:
     image: mongo
-    
+
   accountdb:
     image: postgres
-    
+
   customerdb:
     image: postgres
+
+  catalogdb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: CatalogDb
+      POSTGRES_USER: landscape_app
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:-catalog_dev_only}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U landscape_app -d CatalogDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - catalog_postgres_data:/var/lib/postgresql/data
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
 
   pgadmin:
-    image: dpage/pgadmin4  
-    
+    image: dpage/pgadmin4
+
   mongo-express:
     image: mongo-express
-    
+
   portainer:
     image: portainer/portainer-ce
 
@@ -46,6 +60,20 @@ services:
       context: .
       dockerfile: Services/Customer/Customer.GRPC/Dockerfile
 
+  catalog.api:
+    image: ${DOCKER_REGISTRY-}catalogapi
+    build:
+      context: .
+      dockerfile: Services/Catalog/Catalog.API/Dockerfile
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Database__Provider: PostgreSQL
+      ConnectionStrings__CatalogConnectionString: Host=catalogdb;Port=5432;Database=CatalogDb;Username=landscape_app;Password=${CATALOG_DB_PASSWORD:-catalog_dev_only}
+      ConnectionStrings__SqliteConnectionString: Data Source=catalog.db
+    depends_on:
+      catalogdb:
+        condition: service_healthy
+
   ocelotapigateway:
     image: ${DOCKER_REGISTRY-}ocelotapigateway
     build:
@@ -70,3 +98,4 @@ volumes:
   postgres_data:
   pgadmin_data:
   elasticsearch-data:
+  catalog_postgres_data:
