@@ -1,80 +1,134 @@
-using Account.API.Extensions;
-using Account.API.GrpcServices;
-using Account.Application;
+using Account.API.EventBus;
 using Account.Infrastructure;
 using Account.Infrastructure.Persistence;
 using Common.Logging;
-using Customer.GRPC.Protos;
+using EventBus.Messages.Common;
 using HealthChecks.UI.Client;
 using MassTransit;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
-
+using Shared.Common.Common;
+using Shared.ServiceKit.Auditing;
+using System.Security.Claims;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog(SeriLogger.Configure);
 
-builder.Services.AddGrpcClient<CustomerProtoService.CustomerProtoServiceClient>(c => c.Address = new Uri(builder.Configuration["GrpcSettings:CustomerUrl"]!));
-builder.Services.AddScoped<CustomerGrpcService>();
-builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(builder.Configuration);
-
-builder.Services.AddAutoMapper(typeof(Program));
-
-builder.Services.AddMassTransit(conf =>
+var keyText = builder.Configuration["Jwt:SigningKey"];
+if (string.IsNullOrWhiteSpace(keyText))
 {
-    conf.UsingRabbitMq((ctx, cfg) =>
+    if (!builder.Environment.IsDevelopment())
+        throw new InvalidOperationException("Jwt:SigningKey must be configured outside Development.");
+    keyText = "local-development-signing-key-change-before-deployment-2026";
+}
+if (Encoding.UTF8.GetByteCount(keyText) < 32)
+    throw new InvalidOperationException("Jwt:SigningKey must be at least 32 UTF-8 bytes.");
+
+var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyText));
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        cfg.Host(builder.Configuration["EventBusSettings:HostAddress"]!);
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = signingKey,
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "LandscapeStudio.Identity",
+        ValidateAudience = true,
+        ValidAudience = builder.Configuration["Jwt:Audience"] ?? "LandscapeStudio.Clients",
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromSeconds(30),
+        NameClaimType = ClaimTypes.Name,
+        RoleClaimType = ClaimTypes.Role
+    };
+});
+builder.Services.AddAuthorization();
+builder.Services.AddInfrastructureServices(builder.Configuration);
+builder.Services.AddScoped<AuditEventActionFilter>();
+builder.Services.AddMassTransit(registration =>
+{
+    registration.AddConsumer<UserRegisteredConsumer>();
+    registration.UsingRabbitMq((context, bus) =>
+    {
+        var host = builder.Configuration["EventBusSettings:HostAddress"] ?? "amqp://guest:guest@localhost:5672";
+        bus.Host(host);
+        bus.ReceiveEndpoint(EventBusConstants.UserRegisteredQueue, endpoint =>
+            endpoint.ConfigureConsumer<UserRegisteredConsumer>(context));
     });
 });
-builder.Services.Configure<MassTransitHostOptions>(conf =>
+builder.Services.Configure<MassTransitHostOptions>(options =>
 {
-    conf.WaitUntilStarted = true;
-    conf.StartTimeout = TimeSpan.FromSeconds(30);
-    conf.StopTimeout = TimeSpan.FromMinutes(1);
+    options.WaitUntilStarted = true;
+    options.StartTimeout = TimeSpan.FromSeconds(30);
+    options.StopTimeout = TimeSpan.FromMinutes(1);
 });
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.AddService<AuditEventActionFilter>());
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(s =>
+builder.Services.AddSwaggerGen(options =>
 {
-    s.SwaggerDoc("v1", new OpenApiInfo { Title = "Account.API", Version = "v1" });
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Landscape Studio Account API",
+        Version = "v1",
+        Description = "User profile, contact information, addresses and preferences; credentials are owned by Identity."
+    });
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization", Type = SecuritySchemeType.Http, Scheme = "bearer",
+        BearerFormat = "JWT", In = ParameterLocation.Header
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
 });
+var rabbitHost = builder.Configuration["EventBusSettings:HostAddress"] ?? "amqp://guest:guest@localhost:5672";
 builder.Services.AddHealthChecks()
-    .AddRabbitMQ(builder.Configuration["EventBusSettings:HostAddress"]!, name: "accounttransaction-rabbitmqbus")
-    .AddDbContextCheck<AccountContext>();
-builder.Host.UseSerilog(SeriLogger.Configure);
+    .AddRabbitMQ(rabbitHost, name: "identity-events")
+    .AddDbContextCheck<AccountContext>("account-profile-database");
+
 var app = builder.Build();
-
-app.MigrateDatabase<AccountContext>((context, services) =>
+await using (var scope = app.Services.CreateAsyncScope())
 {
-    var logger = services.GetService<ILogger<AccountContextSeed>>();
-    AccountContextSeed
-        .SeedAsync(context, logger!)
-        .Wait();
-});
-
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-    app.UseSwagger();
-    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Account.API v1"));
+    var selection = scope.ServiceProvider.GetRequiredService<DatabaseProviderResolution>();
+    var context = scope.ServiceProvider.GetRequiredService<AccountContext>();
+    if (selection.Strategy.ProviderName.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
+        await context.Database.EnsureCreatedAsync();
+    else
+        await context.Database.MigrateAsync();
 }
 
-//app.UseHttpsRedirection();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Account API v1"));
+}
 app.UseRouting();
-
+app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
-
-app.MapHealthChecks("/hc", new HealthCheckOptions
+app.MapHealthChecks("/health", new HealthCheckOptions
 {
     Predicate = _ => true,
     ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
 });
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "Landscape Studio Account",
+    owns = new[] { "profiles", "contact information", "addresses", "preferences" },
+    credentialsOwnedBy = "Identity",
+    health = "/health"
+}));
+await app.RunAsync();
 
-app.Run();
+public partial class Program { }
