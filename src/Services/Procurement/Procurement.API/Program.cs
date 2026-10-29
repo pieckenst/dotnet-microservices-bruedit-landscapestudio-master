@@ -7,6 +7,7 @@ using Microsoft.OpenApi.Models;
 using Procurement.Infrastructure;
 using Procurement.Infrastructure.Persistence;
 using Serilog;
+using Shared.ServiceKit.Auditing;
 using System.Security.Claims;
 using System.Text;
 
@@ -24,7 +25,7 @@ if (Encoding.UTF8.GetByteCount(signingKeyText) < 32)
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyText));
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddProcurementInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
+builder.Services.AddMutationAuditEvents(builder.Configuration, "Procurement");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
