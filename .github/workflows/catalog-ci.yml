@@ -1,0 +1,54 @@
+name: Catalog service CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - "codex/**"
+    paths:
+      - "src/Services/Catalog/**"
+      - "src/BuildingBlocks/Shared.Common/**"
+      - "src/BuildingBlocks/Shared.ServiceKit/**"
+      - "src/BuildingBlocks/Common.Logging/**"
+      - "src/docker-compose.yml"
+      - "src/ApiGateways/OcelotApiGateway/ocelot.json"
+      - "src/Tests/Catalog.Tests/**"
+      - ".github/workflows/catalog-ci.yml"
+  pull_request:
+    paths:
+      - "src/Services/Catalog/**"
+      - "src/BuildingBlocks/Shared.Common/**"
+      - "src/BuildingBlocks/Shared.ServiceKit/**"
+      - "src/BuildingBlocks/Common.Logging/**"
+      - "src/docker-compose.yml"
+      - "src/ApiGateways/OcelotApiGateway/ocelot.json"
+      - "src/Tests/Catalog.Tests/**"
+      - ".github/workflows/catalog-ci.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore Catalog API
+        run: dotnet restore src/Services/Catalog/Catalog.API/Catalog.API.csproj
+
+      - name: Build Catalog API
+        run: dotnet build src/Services/Catalog/Catalog.API/Catalog.API.csproj --configuration Release --no-restore
+
+      - name: Restore Catalog tests
+        run: dotnet restore src/Tests/Catalog.Tests/Catalog.Tests.csproj
+
+      - name: Run Catalog tests
+        run: dotnet test src/Tests/Catalog.Tests/Catalog.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
+
+      - name: Validate Docker Compose configuration
+        run: docker compose -f src/docker-compose.yml config --quiet
