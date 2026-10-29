@@ -24,7 +24,7 @@ public sealed class AuthController(LandscapeApiClient api) : Controller
         try
         {
             var response = await api.PostAsync<LoginViewModel, AuthResponse>(
-                "/Auth/login", model, includeToken: false, cancellationToken);
+                "/Auth/login", new LoginRequest(model.UserName, model.Password), includeToken: false, cancellationToken: cancellationToken);
             HttpContext.Session.SetString("access_token", response.AccessToken);
             HttpContext.Session.SetString("token_expires_utc", response.ExpiresAtUtc.ToUniversalTime().ToString("O"));
             var userName = ReadUserProperty(response.User, "userName") ?? model.UserName;
