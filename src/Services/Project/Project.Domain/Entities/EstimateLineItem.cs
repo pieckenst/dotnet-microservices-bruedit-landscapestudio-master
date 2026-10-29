@@ -26,11 +26,13 @@ public sealed class EstimateLineItem : EntityBase
     {
         if (string.IsNullOrWhiteSpace(description)) throw new ArgumentException("Line description is required.", nameof(description));
         if (quantity <= 0 || quantity > 1_000_000_000m) throw new ArgumentOutOfRangeException(nameof(quantity));
-        if (string.IsNullOrWhiteSpace(unitSymbol)) throw new ArgumentException("A measurement unit is required.", nameof(unitSymbol));
-        if (unitPrice < 0 || (unitCost is not null && unitCost < 0)) throw new ArgumentOutOfRangeException(nameof(unitPrice));
+        if (string.IsNullOrWhiteSpace(unitSymbol) || unitSymbol.Trim().Length > 24) throw new ArgumentException("A measurement unit of at most 24 characters is required.", nameof(unitSymbol));
+        if (unitPrice < 0 || unitPrice > 1_000_000_000_000m || (unitCost is not null && (unitCost < 0 || unitCost > 1_000_000_000_000m))) throw new ArgumentOutOfRangeException(nameof(unitPrice));
         if (catalogItemId == Guid.Empty) throw new ArgumentException("Optional catalog item id must be non-empty.");
+        var roundedQuantity = decimal.Round(quantity, 3, MidpointRounding.AwayFromZero);
+        if (roundedQuantity <= 0) throw new ArgumentOutOfRangeException(nameof(quantity), "Quantity must be at least 0.001.");
         ItemType = itemType; Description = description.Trim();
-        Quantity = decimal.Round(quantity, 3, MidpointRounding.AwayFromZero); UnitSymbol = unitSymbol.Trim();
+        Quantity = roundedQuantity; UnitSymbol = unitSymbol.Trim();
         UnitPrice = decimal.Round(unitPrice, 2, MidpointRounding.AwayFromZero);
         UnitCost = unitCost is null ? null : decimal.Round(unitCost.Value, 2, MidpointRounding.AwayFromZero);
         CatalogItemId = catalogItemId;

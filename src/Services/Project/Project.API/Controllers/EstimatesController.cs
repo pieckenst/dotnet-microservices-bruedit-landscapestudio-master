@@ -79,7 +79,7 @@ public sealed class EstimatesController(IMediator mediator) : ControllerBase
         Transition(new SupersedeEstimateCommand(id), cancellationToken);
 
     private async Task<ActionResult<EstimateDto>> Transition<TCommand>(TCommand command, CancellationToken cancellationToken)
-        where TCommand : notnull
+        where TCommand : MediatR.IRequest<EstimateDto?>
     {
         var estimate = await mediator.Send(command, cancellationToken);
         return estimate is null ? NotFound() : Ok(estimate);

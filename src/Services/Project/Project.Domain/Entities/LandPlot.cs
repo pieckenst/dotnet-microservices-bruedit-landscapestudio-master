@@ -21,7 +21,9 @@ public sealed class LandPlot : EntityBase
         if (string.IsNullOrWhiteSpace(address)) throw new ArgumentException("Plot address is required.", nameof(address));
         if (areaSquareMetres <= 0 || areaSquareMetres > 100_000_000m) throw new ArgumentOutOfRangeException(nameof(areaSquareMetres));
         Name = name.Trim(); Address = address.Trim();
-        AreaSquareMetres = decimal.Round(areaSquareMetres, 2, MidpointRounding.AwayFromZero);
+        var roundedArea = decimal.Round(areaSquareMetres, 2, MidpointRounding.AwayFromZero);
+        if (roundedArea <= 0) throw new ArgumentOutOfRangeException(nameof(areaSquareMetres), "Area must be at least 0.01 square metres.");
+        AreaSquareMetres = roundedArea;
         SoilType = string.IsNullOrWhiteSpace(soilType) ? null : soilType.Trim();
         Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
     }

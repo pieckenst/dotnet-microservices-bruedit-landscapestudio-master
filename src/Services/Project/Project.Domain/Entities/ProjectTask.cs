@@ -32,7 +32,8 @@ public sealed class ProjectTask : EntityBase
     }
     public void ChangeStatus(ProjectTaskStatus status, DateOnly today)
     {
-        if (Status == ProjectTaskStatus.Completed && status != ProjectTaskStatus.Completed) throw new InvalidOperationException("A completed task cannot be reopened.");
+        if (Status is ProjectTaskStatus.Completed or ProjectTaskStatus.Cancelled && status != Status)
+            throw new InvalidOperationException("A completed or cancelled task is terminal.");
         Status = status; CompletedDate = status == ProjectTaskStatus.Completed ? today : null;
     }
 }

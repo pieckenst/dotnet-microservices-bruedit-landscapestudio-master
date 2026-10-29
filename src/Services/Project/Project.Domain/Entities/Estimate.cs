@@ -22,14 +22,15 @@ public sealed class Estimate : EntityBase
     public ICollection<EstimateLineItem> LineItems { get; private set; } = new List<EstimateLineItem>();
     public void Update(string version, string notes)
     {
-        if (Status is EstimateStatus.Approved or EstimateStatus.Superseded)
-            throw new InvalidOperationException("Approved or superseded estimates are immutable.");
+        if (Status != EstimateStatus.Draft)
+            throw new InvalidOperationException("Only a draft estimate can be edited.");
         Version = ValidateVersion(version); Notes = notes?.Trim() ?? string.Empty;
     }
     public void AddLineItem(EstimateLineItem item)
     {
         ArgumentNullException.ThrowIfNull(item);
         if (Status != EstimateStatus.Draft) throw new InvalidOperationException("Only a draft estimate can be edited.");
+        if (item.EstimateId != Id) throw new ArgumentException("Line item belongs to a different estimate.", nameof(item));
         if (LineItems.Any(existing => existing.Id == item.Id)) throw new InvalidOperationException("Estimate line item already exists.");
         LineItems.Add(item);
     }
@@ -64,6 +65,6 @@ public sealed class Estimate : EntityBase
     {
         if (string.IsNullOrWhiteSpace(version)) throw new ArgumentException("Estimate version is required.", nameof(version));
         if (version.Trim().Length > 40) throw new ArgumentOutOfRangeException(nameof(version));
-        return version.Trim();
+        return version.Trim().ToUpperInvariant();
     }
 }
