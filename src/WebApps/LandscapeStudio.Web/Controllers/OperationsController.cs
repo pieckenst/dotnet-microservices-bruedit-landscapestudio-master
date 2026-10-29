@@ -30,13 +30,25 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             var response = await api.GetAsync<JsonElement>(target.ApiPath, cancellationToken);
             var rows = ReadRows(response);
             var columns = rows.FirstOrDefault()?.Values.Keys.ToArray() ?? [];
-            return View(new OperationListViewModel(target.Title, resource, columns, rows));
+            return View(new OperationListViewModel
+            {
+                Title = target.Title,
+                Resource = resource,
+                Columns = columns,
+                Items = rows
+            });
         }
         catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException or JsonException)
         {
             logger.LogWarning(exception, "Could not load the {Resource} workflow.", resource);
-            return View(new OperationListViewModel(target.Title, resource, Array.Empty<string>(),
-                Array.Empty<OperationItem>(), exception.Message));
+            return View(new OperationListViewModel
+            {
+                Title = target.Title,
+                Resource = resource,
+                Columns = Array.Empty<string>(),
+                Items = Array.Empty<OperationItem>(),
+                Error = exception.Message
+            });
         }
     }
 
