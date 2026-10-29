@@ -22,7 +22,7 @@ namespace Shared.ServiceKit
         {
             try
             {
-                return await next(cancellationToken);
+                return await next();
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
