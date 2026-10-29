@@ -74,7 +74,7 @@
       "UpstreamPathTemplate": "/Accounts/{id}",
       "UpstreamHttpMethod": [ "GET" ]
     },
-    //Customer API
+    //Legacy Customer API retained until Project's client/reference model has been migrated.
     {
       "DownstreamPathTemplate": "/api/v1/Customers",
       "DownstreamScheme": "http",
@@ -98,6 +98,19 @@
       ],
       "UpstreamPathTemplate": "/Customers/{id}",
       "UpstreamHttpMethod": [ "GET" ]
+    },
+    //Catalog API: preserve the downstream /api/v1/{resource} contract.
+    {
+      "DownstreamPathTemplate": "/api/v1/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
     }
   ],
   "GlobalConfiguration": {
