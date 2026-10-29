@@ -48,4 +48,59 @@
         </form>
     </section>
 </div>
+<section class="surface-card form-section address-section">
+    <div class="form-section-heading"><span class="form-step">03</span><div><h2>Addresses</h2><p>Manage service, project and contact addresses for your Account profile.</p></div></div>
+    @if (Model.Addresses.Count > 0)
+    {
+        <div class="address-list">
+        @foreach (var address in Model.Addresses)
+        {
+            <article class="address-card">
+                <div class="address-card-heading"><span class="address-label-icon">⌂</span><div><strong>@address.Label</strong><small>@(address.IsDefault ? "Default address" : "Saved address")</small></div>
+                    @if (address.IsDefault) { <span class="status-pill">DEFAULT</span> }
+                </div>
+                <form asp-action="UpdateAddress" asp-route-id="@address.Id" method="post" class="form-stack address-edit-form">
+                    @Html.AntiForgeryToken()
+                    <div class="form-grid">
+                        <div class="field"><label for="Label-@address.Id">Label</label><input id="Label-@address.Id" name="Label" value="@address.Label" required maxlength="80" /></div>
+                        <div class="field"><label for="Line1-@address.Id">Address line 1</label><input id="Line1-@address.Id" name="Line1" value="@address.Line1" required maxlength="160" /></div>
+                        <div class="field"><label for="Line2-@address.Id">Address line 2</label><input id="Line2-@address.Id" name="Line2" value="@address.Line2" maxlength="160" /></div>
+                        <div class="field"><label for="City-@address.Id">City</label><input id="City-@address.Id" name="City" value="@address.City" required maxlength="100" /></div>
+                        <div class="field"><label for="Region-@address.Id">Region</label><input id="Region-@address.Id" name="Region" value="@address.Region" maxlength="100" /></div>
+                        <div class="field"><label for="PostalCode-@address.Id">Postal code</label><input id="PostalCode-@address.Id" name="PostalCode" value="@address.PostalCode" maxlength="24" /></div>
+                        <div class="field"><label for="Country-@address.Id">Country code</label><input id="Country-@address.Id" name="Country" value="@address.Country" required minlength="2" maxlength="2" /></div>
+                        <div class="field field-checkbox"><label class="toggle-line"><input type="checkbox" name="IsDefault" value="true" checked="@(address.IsDefault ? "checked" : null)" /><span><strong>Set as default</strong><small>Use this as the default Account address.</small></span></label><input type="hidden" name="IsDefault" value="false" /></div>
+                    </div>
+                    <div class="address-actions"><button class="button button-secondary" type="submit">Save address</button></div>
+                </form>
+                <form asp-action="DeleteAddress" asp-route-id="@address.Id" method="post" class="address-delete-form">
+                    @Html.AntiForgeryToken()
+                    <button class="button button-danger button-small" type="submit" onclick="return confirm('Delete this saved address?');">Delete address</button>
+                </form>
+            </article>
+        }
+        </div>
+    }
+    else
+    {
+        <div class="compact-empty"><span>⌂</span><strong>No saved addresses</strong><p>Add a contact or service address below. Addresses are stored against your Account profile.</p></div>
+    }
+</section>
+<section class="surface-card form-section address-section">
+    <div class="form-section-heading"><span class="form-step">04</span><div><h2>Add an address</h2><p>Country must be an ISO-style two-letter code, such as BY or NL.</p></div></div>
+    <form asp-action="CreateAddress" method="post" class="form-stack">
+        @Html.AntiForgeryToken()
+        <div class="form-grid">
+            <div class="field"><label for="NewLabel">Label <span class="required">*</span></label><input id="NewLabel" name="Label" placeholder="Home, office, project site" required maxlength="80" /></div>
+            <div class="field"><label for="NewLine1">Address line 1 <span class="required">*</span></label><input id="NewLine1" name="Line1" required maxlength="160" /></div>
+            <div class="field"><label for="NewLine2">Address line 2</label><input id="NewLine2" name="Line2" maxlength="160" /></div>
+            <div class="field"><label for="NewCity">City <span class="required">*</span></label><input id="NewCity" name="City" required maxlength="100" /></div>
+            <div class="field"><label for="NewRegion">Region</label><input id="NewRegion" name="Region" maxlength="100" /></div>
+            <div class="field"><label for="NewPostalCode">Postal code</label><input id="NewPostalCode" name="PostalCode" maxlength="24" /></div>
+            <div class="field"><label for="NewCountry">Country code <span class="required">*</span></label><input id="NewCountry" name="Country" value="BY" required minlength="2" maxlength="2" /></div>
+            <div class="field field-checkbox"><label class="toggle-line"><input type="checkbox" name="IsDefault" value="true" /><span><strong>Set as default</strong><small>Make this the default address.</small></span></label><input type="hidden" name="IsDefault" value="false" /></div>
+        </div>
+        <div class="form-actions form-actions-start"><button class="button button-primary" type="submit">Add address <span aria-hidden="true">→</span></button></div>
+    </form>
+</section>
 <div class="profile-footnote"><span class="lock-mark">◇</span><span><strong>Security separation</strong><small>This screen cannot change passwords, roles or sign-in status. Manage those through the Identity service.</small></span></div>
