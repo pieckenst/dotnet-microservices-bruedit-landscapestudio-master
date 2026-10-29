@@ -56,6 +56,17 @@ public sealed class IdentityContext(DbContextOptions<IdentityContext> options) :
         });
     }
 
+    private static void ConfigureEntity<TEntity>(ModelBuilder modelBuilder)
+        where TEntity : EntityBase
+    {
+        modelBuilder.Entity<TEntity>(entity =>
+        {
+            entity.HasKey(item => item.Id);
+            entity.Property(item => item.CreatedDate).IsRequired();
+            entity.Property(item => item.LastModifiedDate);
+        });
+    }
+
     private void StampAuditFields()
     {
         var now = DateTime.UtcNow;
