@@ -1,0 +1,62 @@
+@model DashboardViewModel
+@{
+    ViewData["Title"] = "Overview";
+    ViewData["Section"] = "Overview";
+}
+<div class="page-heading">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> STUDIO OVERVIEW</span><h1>Good work starts <span>with a clear view.</span></h1><p>Your live workspace overview, connected to project and audit services.</p></div>
+    <a class="button button-primary" asp-controller="Projects" asp-action="Create">＋ New project</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Warning))
+{
+    <div class="alert alert-warning" role="status"><strong>Some data is unavailable.</strong> @Model.Warning</div>
+}
+<section class="metric-grid" aria-label="Analytics summary">
+    <article class="metric-card metric-card-featured"><div class="metric-top"><span class="metric-label">AUDIT EVENTS</span><span class="metric-symbol">↗</span></div><div class="metric-value">@(Model.Analytics?.TotalEvents.ToString("N0") ?? "—")</div><div class="metric-note">Recorded in the selected period</div><div class="metric-bottom">Last 30 days <span>·</span> Live analytics</div></article>
+    <article class="metric-card"><div class="metric-top"><span class="metric-label">ACTIVE SERVICES</span><span class="metric-symbol metric-symbol-muted">◉</span></div><div class="metric-value">@(Model.Analytics?.ByService.Count.ToString("N0") ?? "—")</div><div class="metric-note">Services represented in the audit stream</div><div class="metric-bottom">Based on event source</div></article>
+    <article class="metric-card"><div class="metric-top"><span class="metric-label">RECENT PROJECTS</span><span class="metric-symbol metric-symbol-muted">▦</span></div><div class="metric-value">@Model.RecentProjects.Count.ToString("N0")</div><div class="metric-note">Records returned by the Project service</div><div class="metric-bottom">Latest project page</div></article>
+    <article class="metric-card"><div class="metric-top"><span class="metric-label">EVENT CATEGORIES</span><span class="metric-symbol metric-symbol-muted">≋</span></div><div class="metric-value">@(Model.Analytics?.ByAction.Count.ToString("N0") ?? "—")</div><div class="metric-note">Distinct actions recorded</div><div class="metric-bottom">All tracked mutations</div></article>
+</section>
+<section class="dashboard-grid">
+    <article class="surface-card project-card">
+        <div class="section-heading"><div><span class="mini-kicker">PROJECT WORKSPACE</span><h2>Recent projects</h2><p>Latest records from the Project API.</p></div><a class="text-link" asp-controller="Projects" asp-action="Index">View all <span>→</span></a></div>
+        @if (Model.RecentProjects.Count > 0)
+        {
+            <div class="table-wrap"><table><thead><tr><th>Project</th><th>Project no.</th><th>Status</th><th>Planned start</th></tr></thead><tbody>
+            @foreach (var project in Model.RecentProjects)
+            {
+                <tr><td><div class="entity-cell"><span class="entity-icon">▦</span><span><strong>@project.Name</strong><small>@project.Description</small></span></div></td><td class="mono">@project.ProjectNumber</td><td><span class="status-pill">@project.Status.ToString()</span></td><td>@(project.PlannedStartDate?.ToString("dd MMM yyyy") ?? "Not scheduled")</td></tr>
+            }
+            </tbody></table></div>
+        }
+        else
+        {
+            <div class="empty-state"><span class="empty-illustration">▦</span><h3>No projects to show yet</h3><p>When the Project service returns records, they will appear here. You can create the first project from the workspace.</p><a class="button button-secondary" asp-controller="Projects" asp-action="Create">Create a project</a></div>
+        }
+    </article>
+    <aside class="surface-card side-card">
+        <div class="section-heading"><div><span class="mini-kicker">EVENT STREAM</span><h2>Activity by service</h2></div><a class="icon-link" asp-controller="Audit" asp-action="Index" aria-label="View audit log">↗</a></div>
+        @if (Model.Analytics?.ByService.Count > 0)
+        {
+            <div class="activity-list">
+            @foreach (var item in Model.Analytics.ByService.OrderByDescending(x => x.Count).Take(6))
+            {
+                var max = Math.Max(1, Model.Analytics.ByService.Max(x => x.Count));
+                var pct = Math.Clamp((double)item.Count / max * 100, 4, 100);
+                <div class="activity-item"><div class="activity-label"><strong>@item.Name</strong><span>@item.Count.ToString("N0")</span></div><div class="activity-track"><span style="width:@pct.ToString("0", System.Globalization.CultureInfo.InvariantCulture)%"></span></div></div>
+            }
+            </div>
+        }
+        else
+        {
+            <div class="compact-empty"><span>◷</span><strong>Waiting for audit activity</strong><p>Successful changes are written to the audit stream as services publish events.</p></div>
+        }
+        <div class="side-card-foot"><span class="status-dot"></span><span>Summary window: @Model.Analytics?.FromUtc.ToString("dd MMM") — @Model.Analytics?.ToUtc.ToString("dd MMM yyyy")</span></div>
+    </aside>
+</section>
+<section class="quick-links">
+    <div class="quick-intro"><span class="mini-kicker">KEEP MOVING</span><h2>Jump into a workflow</h2><p>Open a service-backed area without leaving your studio.</p></div>
+    <a class="quick-link" asp-controller="Operations" asp-action="Index" asp-route-resource="plants"><span class="quick-link-icon">❋</span><span><strong>Plant catalog</strong><small>Plants and materials</small></span><span class="quick-arrow">↗</span></a>
+    <a class="quick-link" asp-controller="Operations" asp-action="Index" asp-route-resource="suppliers"><span class="quick-link-icon">⌘</span><span><strong>Suppliers</strong><small>Partners and orders</small></span><span class="quick-arrow">↗</span></a>
+    <a class="quick-link" asp-controller="Operations" asp-action="Index" asp-route-resource="stock-items"><span class="quick-link-icon">▤</span><span><strong>Inventory</strong><small>Stock and movements</small></span><span class="quick-arrow">↗</span></a>
+</section>
