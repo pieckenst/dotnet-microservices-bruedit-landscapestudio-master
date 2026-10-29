@@ -1,8 +1,8 @@
-using System.Drawing.Drawing2D;
+using Krypton.Toolkit;
 
 namespace by.pieckenst.bru.windowsclient.landscapestudio;
 
-public partial class Form1 : Form
+public partial class Form1 : KryptonForm
 {
     private static readonly Color Canvas = Color.FromArgb(246, 248, 246);
     private static readonly Color Sidebar = Color.FromArgb(24, 43, 36);
@@ -99,25 +99,31 @@ public partial class Form1 : Form
         return root;
     }
 
-    private Button CreateNavButton(string text)
+    private KryptonButton CreateNavButton(string text)
     {
-        var button = new Button
+        var button = new KryptonButton
         {
-            Text = "   " + text,
             Width = 210,
             Height = 42,
             Margin = new Padding(0, 2, 0, 2),
-            FlatStyle = FlatStyle.Flat,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Font = new Font("Segoe UI", 9.5f),
-            ForeColor = Color.FromArgb(218, 230, 222),
-            BackColor = Sidebar,
+            ButtonStyle = ButtonStyle.LowProfile,
             Cursor = Cursors.Hand,
-            UseVisualStyleBackColor = false,
-            Tag = text
+            Tag = text,
+            TabStop = false
         };
-        button.FlatAppearance.BorderSize = 0;
-        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(40, 65, 53);
+
+        button.Values.Text = "   " + text;
+        button.StateCommon.Back.Color1 = Sidebar;
+        button.StateCommon.Back.Color2 = Sidebar;
+        button.StateCommon.Border.DrawBorders = PaletteDrawBorders.None;
+        button.StateCommon.Content.ShortText.Color1 = Color.FromArgb(218, 230, 222);
+        button.StateCommon.Content.ShortText.Font = new Font("Segoe UI", 9.5f);
+        button.StateCommon.Content.ShortText.TextH = PaletteRelativeAlign.Near;
+        button.StateCommon.Content.ShortText.TextV = PaletteRelativeAlign.Center;
+        button.StateTracking.Back.Color1 = Color.FromArgb(40, 65, 53);
+        button.StateTracking.Back.Color2 = Color.FromArgb(40, 65, 53);
+        button.StatePressed.Back.Color1 = Color.FromArgb(52, 83, 66);
+        button.StatePressed.Back.Color2 = Color.FromArgb(52, 83, 66);
         button.Click += (_, _) => ShowPage(text);
         return button;
     }
@@ -195,18 +201,25 @@ public partial class Form1 : Form
             ForeColor = Muted,
             Font = new Font("Segoe UI", 10f)
         };
-        var action = new Button
+        var action = new KryptonButton
         {
-            Text = page == "Overview" ? "Connection settings" : "Configure service connection",
             Location = new Point(22, 130),
-            Size = new Size(220, 40),
-            FlatStyle = FlatStyle.Flat,
-            BackColor = Accent,
-            ForeColor = Color.White,
-            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold),
+            Size = new Size(240, 42),
+            ButtonStyle = ButtonStyle.Standalone,
             Cursor = Cursors.Hand
         };
-        action.FlatAppearance.BorderSize = 0;
+        action.Values.Text = page == "Overview" ? "Connection settings" : "Configure service connection";
+        action.StateCommon.Back.Color1 = Accent;
+        action.StateCommon.Back.Color2 = Accent;
+        action.StateCommon.Border.DrawBorders = PaletteDrawBorders.None;
+        action.StateCommon.Content.ShortText.Color1 = Color.White;
+        action.StateCommon.Content.ShortText.Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold);
+        action.StateCommon.Content.ShortText.TextH = PaletteRelativeAlign.Center;
+        action.StateCommon.Content.ShortText.TextV = PaletteRelativeAlign.Center;
+        action.StateTracking.Back.Color1 = Color.FromArgb(52, 104, 73);
+        action.StateTracking.Back.Color2 = Color.FromArgb(52, 104, 73);
+        action.StatePressed.Back.Color1 = Color.FromArgb(42, 88, 61);
+        action.StatePressed.Back.Color2 = Color.FromArgb(42, 88, 61);
         action.Click += (_, _) => MessageBox.Show(
             "The gateway URL and authentication flow will be configured when the shared API client is implemented.",
             "Connection settings", MessageBoxButtons.OK, MessageBoxIcon.Information);
