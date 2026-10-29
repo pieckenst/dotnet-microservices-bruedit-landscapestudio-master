@@ -1,0 +1,36 @@
+@model CreateProjectViewModel
+@{
+    ViewData["Title"] = "New project";
+    ViewData["Section"] = "Projects / New";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> CREATE A RECORD</span><h1>Start a <span>new project.</span></h1><p>Choose an existing client and land plot. The service validates the references before saving.</p></div>
+    <a class="button button-quiet" asp-action="Index">← Back to projects</a>
+</div>
+<form asp-action="Create" method="post" class="form-workspace">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">01</span><div><h2>Project details</h2><p>Use a unique project number that your studio can reference.</p></div></div>
+        <div class="form-grid">
+            <div class="field"><label asp-for="ProjectNumber">Project number <span class="required">*</span></label><input asp-for="ProjectNumber" placeholder="e.g. LS-2026-014" maxlength="40" /><span asp-validation-for="ProjectNumber" class="field-error"></span><small>Letters, numbers, dots, underscores, slashes and hyphens.</small></div>
+            <div class="field"><label asp-for="Name">Project name <span class="required">*</span></label><input asp-for="Name" placeholder="Courtyard refresh" maxlength="200" /><span asp-validation-for="Name" class="field-error"></span></div>
+            <div class="field field-full"><label asp-for="Description">Description</label><textarea asp-for="Description" rows="4" maxlength="4000" placeholder="Describe the planned landscaping work, constraints and intended outcome."></textarea><span asp-validation-for="Description" class="field-error"></span></div>
+        </div>
+    </section>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">02</span><div><h2>Client and site</h2><p>These references must already exist in the Project service.</p></div></div>
+        <div class="form-grid">
+            <div class="field"><label asp-for="ClientId">Client <span class="required">*</span></label><select asp-for="ClientId"><option value="">Select a client</option>@foreach (var client in Model.Clients) { <option value="@client.Id" selected="@(Model.ClientId == client.Id ? "selected" : null)">@client.DisplayName</option> }</select><span asp-validation-for="ClientId" class="field-error"></span>@if (Model.Clients.Count == 0) { <small>No active clients were returned. Create a client through the Project API before proceeding.</small> }</div>
+            <div class="field"><label asp-for="LandPlotId">Land plot <span class="required">*</span></label><select asp-for="LandPlotId"><option value="">Select a land plot</option>@foreach (var plot in Model.LandPlots) { <option value="@plot.Id" selected="@(Model.LandPlotId == plot.Id ? "selected" : null)">@plot.Name — @plot.Address</option> }</select><span asp-validation-for="LandPlotId" class="field-error"></span>@if (Model.LandPlots.Count == 0) { <small>No active land plots were returned. Add a land plot first.</small> }</div>
+        </div>
+    </section>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">03</span><div><h2>Schedule</h2><p>Dates can be left blank if the schedule is not finalized.</p></div></div>
+        <div class="form-grid">
+            <div class="field"><label asp-for="PlannedStartDate">Planned start</label><input asp-for="PlannedStartDate" type="date" /><span asp-validation-for="PlannedStartDate" class="field-error"></span></div>
+            <div class="field"><label asp-for="PlannedEndDate">Planned end</label><input asp-for="PlannedEndDate" type="date" /><span asp-validation-for="PlannedEndDate" class="field-error"></span></div>
+        </div>
+    </section>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index">Cancel</a><button class="button button-primary" type="submit">Create project <span aria-hidden="true">→</span></button></div>
+</form>
