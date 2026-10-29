@@ -1,0 +1,33 @@
+@model LoginViewModel
+@{
+    ViewData["Title"] = "Sign in";
+    ViewData["Section"] = "Sign in";
+}
+<section class="auth-wrap">
+    <div class="auth-intro">
+        <span class="eyebrow"><span class="eyebrow-line"></span> YOUR OPERATIONS, IN ONE PLACE</span>
+        <h1>Make room for<br /><span>better landscapes.</span></h1>
+        <p>Plan projects, coordinate teams, track materials and keep your studio's operations connected.</p>
+        <div class="auth-feature-list">
+            <div><span class="feature-icon">01</span><span><strong>Project workspace</strong><small>Projects, clients and estimates</small></span></div>
+            <div><span class="feature-icon">02</span><span><strong>Operational clarity</strong><small>Catalog, procurement and inventory</small></span></div>
+            <div><span class="feature-icon">03</span><span><strong>Accountable by design</strong><small>Auditable changes and exports</small></span></div>
+        </div>
+    </div>
+    <div class="auth-card">
+        <div class="auth-card-heading"><span class="mini-kicker">WELCOME BACK</span><h2>Sign in to your studio</h2><p>Use your Landscape Studio Identity account.</p></div>
+        <form asp-action="Login" asp-controller="Auth" method="post" class="form-stack">
+            @Html.AntiForgeryToken()
+            <input asp-for="ReturnUrl" type="hidden" />
+            <div asp-validation-summary="ModelOnly" class="validation-summary"></div>
+            <label asp-for="UserName">Username</label>
+            <input asp-for="UserName" autocomplete="username" placeholder="Enter your username" autofocus />
+            <span asp-validation-for="UserName" class="field-error"></span>
+            <label asp-for="Password">Password</label>
+            <input asp-for="Password" autocomplete="current-password" placeholder="Enter your password" />
+            <span asp-validation-for="Password" class="field-error"></span>
+            <button class="button button-primary button-wide" type="submit">Sign in <span aria-hidden="true">→</span></button>
+        </form>
+        <div class="auth-note"><span class="lock-mark">◇</span> Credentials are verified by the Identity service. This client never stores your password.</div>
+    </div>
+</section>
