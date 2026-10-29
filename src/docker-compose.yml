@@ -114,9 +114,9 @@ services:
       Jwt__Audience: LandscapeStudio.Clients
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
-      organizationdb:
-        condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      organizationdb:
         condition: service_healthy
     ports:
       - "8005:8080"
@@ -179,9 +179,9 @@ services:
       Jwt__Audience: LandscapeStudio.Clients
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
-      accountdb:
-        condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      accountdb:
         condition: service_healthy
     ports:
       - "8004:8080"
@@ -212,9 +212,9 @@ services:
       ConnectionStrings__CatalogConnectionString: Host=catalogdb;Port=5432;Database=CatalogDb;Username=landscape_app;Password=${CATALOG_DB_PASSWORD:-catalog_dev_only}
       ConnectionStrings__SqliteConnectionString: Data Source=/app/data/catalog.db
     depends_on:
-      catalogdb:
-        condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      catalogdb:
         condition: service_healthy
     volumes:
       - catalog_sqlite_data:/app/data
@@ -237,9 +237,9 @@ services:
       Identity__BootstrapAdmin__UserName: ${IDENTITY_ADMIN_USERNAME:-}
       Identity__BootstrapAdmin__Password: ${IDENTITY_ADMIN_PASSWORD:-}
     depends_on:
-      identitydb:
-        condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      identitydb:
         condition: service_healthy
     ports:
       - "8003:8080"
@@ -262,9 +262,9 @@ services:
       Jwt__Audience: LandscapeStudio.Clients
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
-      projectdb:
-        condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      projectdb:
         condition: service_healthy
     ports:
       - "8001:8080"
@@ -287,9 +287,9 @@ services:
       Jwt__Audience: LandscapeStudio.Clients
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
-      procurementdb:
-        condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      procurementdb:
         condition: service_healthy
     ports:
       - "8006:8080"
@@ -301,7 +301,6 @@ services:
     build:
       context: .
       dockerfile: ApiGateways/OcelotApiGateway/Dockerfile
-
     environment:
       ASPNETCORE_ENVIRONMENT: Development
     depends_on:
@@ -321,6 +320,7 @@ services:
         condition: service_started
     ports:
       - "8010:8080"
+
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2
 
