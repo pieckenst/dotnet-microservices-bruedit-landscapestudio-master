@@ -23,7 +23,7 @@ public sealed class GetProjectsQueryValidator : AbstractValidator<GetProjectsQue
     {
         RuleFor(x => x.Page).GreaterThanOrEqualTo(1);
         RuleFor(x => x.PageSize).InclusiveBetween(1, 200);
-        RuleFor(x => x.Status).IsInEnum().When(x => x.Status.HasValue);
+        RuleFor(x => x.Status).Must(status => !status.HasValue || Enum.IsDefined(status.Value));
     }
 }
 public sealed class CreateProjectCommandValidator : AbstractValidator<CreateProjectCommand>

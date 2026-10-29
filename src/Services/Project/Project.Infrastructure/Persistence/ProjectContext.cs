@@ -80,6 +80,8 @@ public sealed class ProjectContext(DbContextOptions<ProjectContext> options) : D
         modelBuilder.Entity<Estimate>(entity =>
         {
             entity.ToTable("estimates");
+            entity.Ignore(x => x.EstimatedTotal);
+            entity.Ignore(x => x.EstimatedCost);
             entity.Property(x => x.Version).HasMaxLength(40).IsRequired();
             entity.Property(x => x.Notes).HasMaxLength(4000).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);

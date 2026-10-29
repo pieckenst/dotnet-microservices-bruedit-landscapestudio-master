@@ -127,6 +127,49 @@
       "UpstreamPathTemplate": "/Users",
       "UpstreamHttpMethod": [ "GET", "POST" ]
     },
+    //Landscaping Project domain. Downstream APIs validate the Bearer JWT and permission claims.
+    {
+      "DownstreamPathTemplate": "/api/v1/projects/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Projects/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/projects",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Projects",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/clients/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Clients/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/clients",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Clients",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/land-plots/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/LandPlots/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/land-plots",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/LandPlots",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
     //Catalog resource/item routes must be separate so the optional id segment is preserved.
     {
       "DownstreamPathTemplate": "/api/v1/{resource}/{id}",
