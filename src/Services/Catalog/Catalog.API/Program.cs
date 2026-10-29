@@ -14,6 +14,7 @@ builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddCatalogApplication(builder.Configuration);
 builder.Services.AddCatalogInfrastructure(builder.Configuration);
 builder.Services.AddControllers();
+builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
