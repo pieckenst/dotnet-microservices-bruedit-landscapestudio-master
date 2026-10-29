@@ -1,6 +1,48 @@
 {
   "Routes": [
     {
+      "DownstreamPathTemplate": "/api/v1/analytics/summary",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Analytics/Summary",
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/audit-events/export",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/AuditEvents/export",
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/audit-events",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/AuditEvents",
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/accounts/me/addresses",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -499,20 +541,6 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/accounts/{userId}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "account.api",
-          "Port": "8080"
-        }
-      ],
-      "UpstreamPathTemplate": "/Accounts/{userId}",
-      "UpstreamHttpMethod": [
-        "GET"
       ]
     },
     {
