@@ -206,11 +206,15 @@ services:
       context: .
       dockerfile: Services/Catalog/Catalog.API/Dockerfile
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
       EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
       ConnectionStrings__CatalogConnectionString: Host=catalogdb;Port=5432;Database=CatalogDb;Username=landscape_app;Password=${CATALOG_DB_PASSWORD:-catalog_dev_only}
       ConnectionStrings__SqliteConnectionString: Data Source=/app/data/catalog.db
+      Jwt__Issuer: LandscapeStudio.Identity
+      Jwt__Audience: LandscapeStudio.Clients
+      Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
       rabbitmq:
         condition: service_healthy
