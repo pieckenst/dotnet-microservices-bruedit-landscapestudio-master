@@ -31,6 +31,7 @@ public partial class Form1 : KryptonForm
     private int _loadGeneration;
     private string _activePage = "Overview";
     private string _catalogResource = "Plants";
+    private Guid? _selectedEstimateProjectId;
 
     public Form1()
     {
@@ -233,6 +234,13 @@ public partial class Form1 : KryptonForm
                 create.Click += async (_, _) => await CreateProjectAsync();
                 actions.Controls.Add(create);
             }
+            if (_api is not null && page.Equals("Estimates", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New estimate");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreateEstimateAsync();
+                actions.Controls.Add(create);
+            }
         }
         header.Controls.Add(actions, 1, 0);
         return header;
@@ -338,22 +346,74 @@ public partial class Form1 : KryptonForm
     private async Task LoadTablePageAsync(string page, Panel body, int generation, CancellationToken cancellationToken)
     {
         var queryPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(14) };
-        var rowCount = page.Equals("Plant & material catalog", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
+        var isCatalog = page.Equals("Plant & material catalog", StringComparison.OrdinalIgnoreCase);
+        var isEstimates = page.Equals("Estimates", StringComparison.OrdinalIgnoreCase);
+        var rowCount = isCatalog || isEstimates ? 2 : 1;
         var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = rowCount, BackColor = Color.White };
         if (rowCount == 2)
         {
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            var filterBar = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
-            var plant = CreateSecondaryButton("Plants");
-            var material = CreateSecondaryButton("Materials");
-            var work = CreateSecondaryButton("Work types");
-            plant.Click += async (_, _) => { _catalogResource = "Plants"; await ShowPageAsync(_activePage); };
-            material.Click += async (_, _) => { _catalogResource = "Materials"; await ShowPageAsync(_activePage); };
-            work.Click += async (_, _) => { _catalogResource = "Work types"; await ShowPageAsync(_activePage); };
-            filterBar.Controls.Add(plant);
-            filterBar.Controls.Add(material);
-            filterBar.Controls.Add(work);
+            var filterBar = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoScroll = true };
+            if (isCatalog)
+            {
+                var plant = CreateSecondaryButton("Plants");
+                var material = CreateSecondaryButton("Materials");
+                var work = CreateSecondaryButton("Work types");
+                plant.Click += async (_, _) => { _catalogResource = "Plants"; await ShowPageAsync(_activePage); };
+                material.Click += async (_, _) => { _catalogResource = "Materials"; await ShowPageAsync(_activePage); };
+                work.Click += async (_, _) => { _catalogResource = "Work types"; await ShowPageAsync(_activePage); };
+                filterBar.Controls.Add(plant);
+                filterBar.Controls.Add(material);
+                filterBar.Controls.Add(work);
+            }
+            else if (isEstimates)
+            {
+                var projects = new ComboBox { Width = 360, DropDownStyle = ComboBoxStyle.DropDownList, Font = new Font("Segoe UI", 9.5f), IntegralHeight = false };
+                var load = CreateSecondaryButton("Load estimates");
+                try
+                {
+                    var projectResponse = await _api!.GetAsync("/Projects?page=1&pageSize=200", cancellationToken);
+                    var rows = CreateEstimateDialog.GetItems(projectResponse);
+                    if (rows.ValueKind == JsonValueKind.Array)
+                    {
+                        foreach (var row in rows.EnumerateArray())
+                        {
+                            if (CreateEstimateDialog.ReadBoolean(row, "isArchived")) continue;
+                            if (!Guid.TryParse(CreateEstimateDialog.ReadString(row, "id"), out var projectId) || projectId == Guid.Empty) continue;
+                            var number = CreateEstimateDialog.ReadString(row, "projectNumber") ?? string.Empty;
+                            var name = CreateEstimateDialog.ReadString(row, "name") ?? "(unnamed project)";
+                            projects.Items.Add(new EstimateProjectItem(projectId, string.IsNullOrWhiteSpace(number) ? name : $"{number} — {name}"));
+                        }
+                    }
+                    if (_selectedEstimateProjectId.HasValue)
+                    {
+                        for (var i = 0; i < projects.Items.Count; i++)
+                            if (projects.Items[i] is EstimateProjectItem item && item.Id == _selectedEstimateProjectId.Value)
+                            {
+                                projects.SelectedIndex = i;
+                                break;
+                            }
+                    }
+                    if (projects.SelectedIndex < 0 && projects.Items.Count > 0) projects.SelectedIndex = 0;
+                    load.Click += async (_, _) =>
+                    {
+                        if (projects.SelectedItem is EstimateProjectItem item)
+                        {
+                            _selectedEstimateProjectId = item.Id;
+                            await ShowPageAsync("Estimates");
+                        }
+                    };
+                    filterBar.Controls.Add(new Label { Text = "Project", AutoSize = true, Margin = new Padding(0, 9, 0, 0), ForeColor = Muted });
+                    filterBar.Controls.Add(projects);
+                    filterBar.Controls.Add(load);
+                }
+                catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+                {
+                    ShowErrorState(body, $"Projects could not be loaded: {exception.Message}", "Check the Project API and refresh the page.");
+                    return;
+                }
+            }
             layout.Controls.Add(filterBar, 0, 0);
         }
         else
@@ -370,7 +430,10 @@ public partial class Form1 : KryptonForm
         var route = ResolveRoute(page);
         if (route is null)
         {
-            ShowErrorState(body, "No gateway route is configured for this resource yet.", "Check the route definitions before enabling this workflow.");
+            if (isEstimates)
+                SetFeedback(queryPanel, "Choose a project above, then load its estimates.");
+            else
+                ShowErrorState(body, "No gateway route is configured for this resource yet.", "Check the route definitions before enabling this workflow.");
             return;
         }
         var data = await _api!.GetAsync(route, cancellationToken);
@@ -385,7 +448,9 @@ public partial class Form1 : KryptonForm
     private string? ResolveRoute(string page) => page switch
     {
         "Projects" => "/Projects?page=1&pageSize=100",
-        "Estimates" => "/Estimates?page=1&pageSize=100",
+        "Estimates" => _selectedEstimateProjectId is Guid estimateProjectId
+            ? $"/Estimates?projectId={estimateProjectId:D}&page=1&pageSize=100"
+            : null,
         "Customers" => "/Clients?page=1&pageSize=100",
         "Plant & material catalog" => _catalogResource switch
         {
@@ -406,6 +471,16 @@ public partial class Form1 : KryptonForm
         using var dialog = new CreateProjectDialog(_api);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Projects");
+    }
+
+    private async Task CreateEstimateAsync()
+    {
+        if (_api is null) return;
+        using var createDialog = new CreateEstimateDialog(_api);
+        if (createDialog.ShowDialog(this) != DialogResult.OK || createDialog.CreatedEstimateId == Guid.Empty) return;
+        using var details = new EstimateDetailsDialog(_api, createDialog.CreatedEstimateId);
+        details.ShowDialog(this);
+        await ShowPageAsync("Estimates");
     }
 
     private async Task OpenConnectionDialogAsync()
@@ -679,6 +754,11 @@ public partial class Form1 : KryptonForm
         button.StateCommon.Content.ShortText.Color1 = Ink;
         button.StateCommon.Content.ShortText.Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold);
         return button;
+    }
+
+    private sealed record EstimateProjectItem(Guid Id, string Label)
+    {
+        public override string ToString() => Label;
     }
 
     private static void ConfigurePrimaryButton(KryptonButton button, string label)
