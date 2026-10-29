@@ -99,6 +99,34 @@
       "UpstreamPathTemplate": "/Customers/{id}",
       "UpstreamHttpMethod": [ "GET" ]
     },
+    // Identity authentication and protected user management.
+    {
+      "DownstreamPathTemplate": "/api/v1/auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "identity.api", "Port": "8080" }
+      ],
+      "UpstreamPathTemplate": "/Auth/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "identity.api", "Port": "8080" }
+      ],
+      "UpstreamPathTemplate": "/Users/{id}",
+      "UpstreamHttpMethod": [ "GET" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        { "Host": "identity.api", "Port": "8080" }
+      ],
+      "UpstreamPathTemplate": "/Users",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
     //Catalog resource/item routes must be separate so the optional id segment is preserved.
     {
       "DownstreamPathTemplate": "/api/v1/{resource}/{id}",
