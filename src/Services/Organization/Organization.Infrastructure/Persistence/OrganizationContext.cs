@@ -41,7 +41,7 @@ public sealed class OrganizationContext(DbContextOptions<OrganizationContext> op
             entity.Property(x => x.Phone).HasMaxLength(40);
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
             entity.HasIndex(x => x.EmployeeNumber).IsUnique();
-            entity.HasIndex(x => x.IdentityUserId).IsUnique();
+            entity.HasIndex(x => x.IdentityUserId);
             entity.HasOne(x => x.Position).WithMany().HasForeignKey(x => x.PositionId).OnDelete(DeleteBehavior.Restrict);
         });
         modelBuilder.Entity<Brigade>(entity =>
