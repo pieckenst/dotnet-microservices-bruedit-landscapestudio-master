@@ -9,6 +9,7 @@ using Project.Application;
 using Project.Infrastructure;
 using Project.Infrastructure.Persistence;
 using Serilog;
+using Shared.ServiceKit.Auditing;
 using System.Security.Claims;
 using System.Text;
 
@@ -31,7 +32,7 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyText)
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddProjectApplication(builder.Configuration);
 builder.Services.AddProjectInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
+builder.Services.AddMutationAuditEvents(builder.Configuration, "Project");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
