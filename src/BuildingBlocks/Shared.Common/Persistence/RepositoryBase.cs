@@ -5,8 +5,8 @@ using System.Linq.Expressions;
 namespace Shared.Common.Persistence
 {
     /// <summary>
-    /// Generic repository implementation using DbContext generically (fixed from original
-    /// which hardcoded AccountContext/CustomerContext). Uses AsNoTracking on reads for performance.
+    /// Generic repository implementation using DbContext generically.
+    /// Read operations are no-tracking by default to avoid unnecessary EF change-tracker overhead.
     /// </summary>
     /// <typeparam name="T">Entity type that inherits from EntityBase.</typeparam>
     public class RepositoryBase<T> : IRepositoryBase<T> where T : EntityBase
@@ -20,12 +20,13 @@ namespace Shared.Common.Persistence
 
         public async Task<IReadOnlyList<T>> GetAllAsync()
         {
-            return await _dbContext.Set<T>().ToListAsync();
+            return await _dbContext.Set<T>().AsNoTracking().ToListAsync();
         }
 
         public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbContext.Set<T>().Where(predicate).FirstOrDefaultAsync();
+            ArgumentNullException.ThrowIfNull(predicate);
+            return await _dbContext.Set<T>().AsNoTracking().Where(predicate).FirstOrDefaultAsync();
         }
 
         public async Task<IReadOnlyList<T>> GetAsync(
@@ -38,12 +39,11 @@ namespace Shared.Common.Persistence
             if (disableTracking) query = query.AsNoTracking();
 
             if (!string.IsNullOrWhiteSpace(includeString)) query = query.Include(includeString);
-
             if (predicate != null) query = query.Where(predicate);
 
-            if (orderBy != null)
-                return await orderBy(query).ToListAsync();
-            return await query.ToListAsync();
+            return orderBy is not null
+                ? await orderBy(query).ToListAsync()
+                : await query.ToListAsync();
         }
 
         public async Task<IReadOnlyList<T>> GetAsync(
@@ -55,22 +55,24 @@ namespace Shared.Common.Persistence
             IQueryable<T> query = _dbContext.Set<T>();
             if (disableTracking) query = query.AsNoTracking();
 
-            if (includes != null) query = includes.Aggregate(query, (current, include) => current.Include(include));
+            if (includes is not null)
+                query = includes.Aggregate(query, (current, include) => current.Include(include));
 
-            if (predicate != null) query = query.Where(predicate);
+            if (predicate is not null) query = query.Where(predicate);
 
-            if (orderBy != null)
-                return await orderBy(query).ToListAsync();
-            return await query.ToListAsync();
+            return orderBy is not null
+                ? await orderBy(query).ToListAsync()
+                : await query.ToListAsync();
         }
 
         public virtual async Task<T?> GetByIdAsync(Guid id)
         {
-            return await _dbContext.Set<T>().FindAsync(id);
+            return await _dbContext.Set<T>().AsNoTracking().FirstOrDefaultAsync(entity => entity.Id == id);
         }
 
         public async Task<T> AddAsync(T entity)
         {
+            ArgumentNullException.ThrowIfNull(entity);
             await _dbContext.Set<T>().AddAsync(entity);
             await _dbContext.SaveChangesAsync();
             return entity;
@@ -78,12 +80,14 @@ namespace Shared.Common.Persistence
 
         public async Task UpdateAsync(T entity)
         {
+            ArgumentNullException.ThrowIfNull(entity);
             _dbContext.Entry(entity).State = EntityState.Modified;
             await _dbContext.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(T entity)
         {
+            ArgumentNullException.ThrowIfNull(entity);
             _dbContext.Set<T>().Remove(entity);
             await _dbContext.SaveChangesAsync();
         }
