@@ -104,7 +104,7 @@ public sealed class CreateEstimateCommandHandler(
         cancellationToken.ThrowIfCancellationRequested();
         if (await projects.GetByIdAsync(request.ProjectId) is null)
             throw new NotFoundException(nameof(LandscapeProject), request.ProjectId);
-        var version = request.Version.Trim();
+        var version = request.Version.Trim().ToUpperInvariant();
         if (await estimateIndex.GetAsync(estimate => estimate.ProjectId == request.ProjectId && estimate.Version == version) is not null)
             throw new InvalidOperationException("An estimate with that version already exists for the project.");
         var estimate = new Estimate(Guid.NewGuid(), request.ProjectId, version, request.Notes);
