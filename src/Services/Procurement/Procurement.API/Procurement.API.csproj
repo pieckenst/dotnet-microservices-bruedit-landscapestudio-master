@@ -18,5 +18,6 @@
     <ProjectReference Include="..\Procurement.Domain\Procurement.Domain.csproj" />
     <ProjectReference Include="..\Procurement.Infrastructure\Procurement.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Common.Logging\Common.Logging.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Shared.ServiceKit\Shared.ServiceKit.csproj" />
   </ItemGroup>
 </Project>
