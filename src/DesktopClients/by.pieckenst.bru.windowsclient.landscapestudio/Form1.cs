@@ -289,7 +289,7 @@ public partial class Form1 : KryptonForm
         lower.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64));
         lower.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
         lower.Controls.Add(BuildSurfaceWithGrid("Recent projects", CreateGrid()), 0, 0);
-        lower.Controls.Add(BuildActivitySurface(), 1, 0);
+        lower.Controls.Add(BuildActivitySurface(CreateGrid()), 1, 0);
         content.Controls.Add(lower, 0, 1);
         body.Controls.Clear();
         body.Controls.Add(content);
@@ -524,10 +524,16 @@ public partial class Form1 : KryptonForm
         return surface;
     }
 
-    private static Control BuildActivitySurface()
+    private static Control BuildActivitySurface(DataGridView grid)
     {
         var surface = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(15), Margin = Padding.Empty };
         surface.Paint += (_, e) => { using var p = new Pen(Color.FromArgb(229, 235, 230)); e.Graphics.DrawRectangle(p, 0, 0, surface.Width - 1, surface.Height - 1); };
+        var container = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Color.White };
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        container.Controls.Add(new Label { Text = "Activity by service", AutoSize = true, ForeColor = Ink, Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold) }, 0, 0);
+        container.Controls.Add(grid, 0, 1);
+        surface.Controls.Add(container);
         return surface;
     }
 
