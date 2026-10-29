@@ -1,0 +1,51 @@
+@model ProfilePageViewModel
+@{
+    ViewData["Title"] = "Profile";
+    ViewData["Section"] = "Profile";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> YOUR ACCOUNT</span><h1>Profile &amp; <span>preferences.</span></h1><p>Contact data and workspace preferences belong to Account. Credentials, roles and sign-in remain in Identity.</p></div>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-error" role="alert"><strong>Account service unavailable.</strong> @Model.Error</div>
+}
+@if (Model.Errors.Count > 0)
+{
+    <div class="alert alert-error" role="alert">@foreach (var error in Model.Errors) { <div>@error</div> }</div>
+}
+<div asp-validation-summary="All" class="validation-summary"></div>
+<div class="profile-grid">
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">01</span><div><h2>Contact information</h2><p>Saved to your Account profile, separate from login credentials.</p></div></div>
+        <form asp-action="UpdateProfile" method="post" class="form-stack">
+            @Html.AntiForgeryToken()
+            <div class="field"><label for="DisplayName">Display name <span class="required">*</span></label><input id="DisplayName" name="DisplayName" value="@Model.Profile?.DisplayName" maxlength="120" required /></div>
+            <div class="form-grid">
+                <div class="field"><label for="FirstName">First name</label><input id="FirstName" name="FirstName" value="@Model.Profile?.FirstName" maxlength="80" /></div>
+                <div class="field"><label for="LastName">Last name</label><input id="LastName" name="LastName" value="@Model.Profile?.LastName" maxlength="80" /></div>
+            </div>
+            <div class="field"><label for="Email">Email</label><input id="Email" name="Email" type="email" value="@Model.Profile?.Email" maxlength="254" /></div>
+            <div class="form-grid">
+                <div class="field"><label for="PhoneNumber">Phone number</label><input id="PhoneNumber" name="PhoneNumber" type="tel" value="@Model.Profile?.PhoneNumber" maxlength="40" /></div>
+                <div class="field"><label for="CompanyName">Company</label><input id="CompanyName" name="CompanyName" value="@Model.Profile?.CompanyName" maxlength="160" /></div>
+            </div>
+            <div class="form-actions form-actions-start"><button class="button button-primary" type="submit">Save profile <span aria-hidden="true">→</span></button></div>
+        </form>
+    </section>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">02</span><div><h2>Workspace preferences</h2><p>Your defaults affect your experience, not your Identity credentials.</p></div></div>
+        <form asp-action="UpdatePreferences" method="post" class="form-stack">
+            @Html.AntiForgeryToken()
+            <div class="field"><label for="Theme">Appearance</label><select id="Theme" name="Theme"><option value="system" selected="@(Model.Preferences?.Theme == "system" ? "selected" : null)">System default</option><option value="light" selected="@(Model.Preferences?.Theme == "light" ? "selected" : null)">Light</option><option value="dark" selected="@(Model.Preferences?.Theme == "dark" ? "selected" : null)">Dark</option></select></div>
+            <div class="field"><label for="Language">Language</label><select id="Language" name="Language"><option value="en" selected="@(Model.Preferences?.Language == "en" ? "selected" : null)">English</option><option value="ru" selected="@(Model.Preferences?.Language == "ru" ? "selected" : null)">Русский</option><option value="be" selected="@(Model.Preferences?.Language == "be" ? "selected" : null)">Беларуская</option></select></div>
+            <div class="field"><label for="TimeZone">Time zone identifier</label><input id="TimeZone" name="TimeZone" value="@(Model.Preferences?.TimeZone ?? "UTC")" maxlength="80" required /><small>Example: UTC, Europe/Minsk, Europe/Amsterdam.</small></div>
+            <label class="toggle-line"><input type="checkbox" name="EmailNotificationsEnabled" value="true" checked="@(Model.Preferences?.EmailNotificationsEnabled == true ? "checked" : null)" /><span><strong>Email notifications</strong><small>Receive operational updates by email.</small></span></label>
+            <input type="hidden" name="EmailNotificationsEnabled" value="false" />
+            <label class="toggle-line"><input type="checkbox" name="SmsNotificationsEnabled" value="true" checked="@(Model.Preferences?.SmsNotificationsEnabled == true ? "checked" : null)" /><span><strong>SMS notifications</strong><small>Receive selected updates by SMS where configured.</small></span></label>
+            <input type="hidden" name="SmsNotificationsEnabled" value="false" />
+            <div class="form-actions form-actions-start"><button class="button button-primary" type="submit">Save preferences <span aria-hidden="true">→</span></button></div>
+        </form>
+    </section>
+</div>
+<div class="profile-footnote"><span class="lock-mark">◇</span><span><strong>Security separation</strong><small>This screen cannot change passwords, roles or sign-in status. Manage those through the Identity service.</small></span></div>
