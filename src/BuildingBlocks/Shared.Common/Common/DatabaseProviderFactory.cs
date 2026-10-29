@@ -67,7 +67,7 @@ namespace Shared.Common.Common
             return (_strategies["Sqlite"], sqliteFallbackConnectionString);
         }
 
-        public DbContextOptionsBuilder<TContext> ConfigureContext<TContext>(
+        public DbContextOptionsBuilder ConfigureContext<TContext>(
             DbContextOptionsBuilder<TContext> builder,
             string preferredProvider,
             string primaryConnectionString,
