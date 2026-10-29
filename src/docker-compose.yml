@@ -69,10 +69,12 @@ services:
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
       ConnectionStrings__CatalogConnectionString: Host=catalogdb;Port=5432;Database=CatalogDb;Username=landscape_app;Password=${CATALOG_DB_PASSWORD:-catalog_dev_only}
-      ConnectionStrings__SqliteConnectionString: Data Source=catalog.db
+      ConnectionStrings__SqliteConnectionString: Data Source=/app/data/catalog.db
     depends_on:
       catalogdb:
         condition: service_healthy
+    volumes:
+      - catalog_sqlite_data:/app/data
 
   ocelotapigateway:
     image: ${DOCKER_REGISTRY-}ocelotapigateway
@@ -99,3 +101,4 @@ volumes:
   pgadmin_data:
   elasticsearch-data:
   catalog_postgres_data:
+  catalog_sqlite_data:
