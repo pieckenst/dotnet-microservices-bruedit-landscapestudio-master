@@ -34,7 +34,7 @@ namespace Shared.ServiceKit
             if (failures.Length > 0)
                 throw new ValidationException(failures);
 
-            return await next(cancellationToken);
+            return await next();
         }
     }
 }
