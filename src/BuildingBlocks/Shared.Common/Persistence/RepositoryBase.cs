@@ -65,9 +65,39 @@ namespace Shared.Common.Persistence
                 : await query.ToListAsync();
         }
 
+        public async Task<PagedResult<T>> GetPagedAsync(
+            int page,
+            int pageSize,
+            Expression<Func<T, bool>>? predicate = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null)
+        {
+            if (page < 1)
+                throw new ArgumentOutOfRangeException(nameof(page), "Page must be at least 1.");
+            if (pageSize is < 1 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be between 1 and 200.");
+
+            IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+            if (predicate is not null)
+                query = query.Where(predicate);
+
+            var totalCount = await query.CountAsync();
+            var orderedQuery = orderBy is not null
+                ? orderBy(query)
+                : query.OrderBy(entity => entity.Id);
+
+            var items = await orderedQuery
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return new PagedResult<T>(items, page, pageSize, totalCount);
+        }
+
         public virtual async Task<T?> GetByIdAsync(Guid id)
         {
-            return await _dbContext.Set<T>().AsNoTracking().FirstOrDefaultAsync(entity => entity.Id == id);
+            return await _dbContext.Set<T>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(entity => entity.Id == id);
         }
 
         public async Task<T> AddAsync(T entity)
