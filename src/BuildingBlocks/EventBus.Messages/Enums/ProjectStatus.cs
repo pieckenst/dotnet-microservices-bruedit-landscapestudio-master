@@ -30,6 +30,12 @@ namespace EventBus.Messages.Enums
         Cancelled = 7,
 
         /// <summary>On hold pending materials, weather, or client decision.</summary>
-        OnHold = 8
+        OnHold = 8,
+
+        /// <summary>Project created in the studio, but not yet scheduled.</summary>
+        Draft = 9,
+
+        /// <summary>Project accepted into the delivery plan.</summary>
+        Planned = 10
     }
 }
