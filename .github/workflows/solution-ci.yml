@@ -1,0 +1,33 @@
+name: Solution integration CI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - ".github/workflows/**"
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "src/**"
+      - ".github/workflows/**"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore solution
+        run: dotnet restore src/SOLUTION.BRU.TPPO.sln -p:EnableWindowsTargeting=true
+      - name: Build solution
+        run: dotnet build src/SOLUTION.BRU.TPPO.sln --configuration Release --no-restore -p:EnableWindowsTargeting=true
+      - name: Run solution tests
+        run: dotnet test src/SOLUTION.BRU.TPPO.sln --configuration Release --no-build --no-restore -p:EnableWindowsTargeting=true --logger "console;verbosity=normal"
+      - name: Validate Docker Compose
+        run: docker compose -f src/docker-compose.yml config --quiet
