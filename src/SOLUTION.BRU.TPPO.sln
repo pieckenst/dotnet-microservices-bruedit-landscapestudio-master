@@ -51,6 +51,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DesktopClients", "DesktopCl
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "by.pieckenst.bru.windowsclient.landscapestudio", "DesktopClients\by.pieckenst.bru.windowsclient.landscapestudio\by.pieckenst.bru.windowsclient.landscapestudio.csproj", "{FB4CA5DF-C132-4D55-887A-38AB597E39AD}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Catalog", "Catalog", "{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345001}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Catalog.API", "Services\Catalog\Catalog.API\Catalog.API.csproj", "{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345002}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Catalog.Application", "Services\Catalog\Catalog.Application\Catalog.Application.csproj", "{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345003}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Catalog.Domain", "Services\Catalog\Catalog.Domain\Catalog.Domain.csproj", "{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345004}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Catalog.Infrastructure", "Services\Catalog\Catalog.Infrastructure\Catalog.Infrastructure.csproj", "{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345005}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345006}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Catalog.Tests", "Tests\Catalog.Tests\Catalog.Tests.csproj", "{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345007}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -121,6 +135,26 @@ Global
 		{FB4CA5DF-C132-4D55-887A-38AB597E39AD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FB4CA5DF-C132-4D55-887A-38AB597E39AD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FB4CA5DF-C132-4D55-887A-38AB597E39AD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345002}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345002}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345002}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345003}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345004}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345004}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345004}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345004}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345005}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345005}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345005}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345005}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345007}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345007}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345007}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345007}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -146,6 +180,12 @@ Global
 		{26EF9DEC-FA79-4DD6-8059-554D8649BC41} = {42781DF0-CCE4-442F-9311-365F1E967E22}
 		{FB4CA5DF-C132-4D55-887A-38AB597E39AD} = {6C7EF633-F9EF-4096-89CC-687C81D2AD56}
 	EndGlobalSection
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345001} = {CF37AE6A-F27E-4B36-A94B-7D9FDA3590C1}
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345002} = {C4DA1FD5-E6E7-44CE-A81B-1A1E8A345001}
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345003} = {C4DA1FD5-E6E7-44CE-A81B-1A1E8A345001}
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345004} = {C4DA1FD5-E6E7-44CE-A81B-1A1E8A345001}
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345005} = {C4DA1FD5-E6E7-44CE-A81B-1A1E8A345001}
+		{C4DA1FD5-E6E7-44CE-A81B-1A1E8A345007} = {C4DA1FD5-E6E7-44CE-A81B-1A1E8A345006}
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {B8752804-FEC8-4A60-B7EA-09C18E44756F}
 	EndGlobalSection
