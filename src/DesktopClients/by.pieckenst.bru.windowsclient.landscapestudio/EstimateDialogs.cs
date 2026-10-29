@@ -332,7 +332,9 @@ internal sealed class EstimateDetailsDialog : KryptonForm
             var total = ReadDecimal(estimate, "estimatedTotal");
             var project = CreateEstimateDialog.ReadString(estimate, "projectId") ?? string.Empty;
             _summary.Text = $"Version {version}   ·   Status: {_state}   ·   Total: {total:N2}   ·   Project {project}";
-            var lineItems = CreateEstimateDialog.GetItems(estimate);
+            var lineItems = CreateEstimateDialog.TryGetProperty(estimate, "lineItems", out var returnedLines)
+                ? returnedLines
+                : default;
             _grid.DataSource = ToDataTable(lineItems);
             _status.ForeColor = Color.FromArgb(75, 115, 83);
             _status.Text = $"Loaded {(_grid.Rows.Count):N0} line-item row(s).";
