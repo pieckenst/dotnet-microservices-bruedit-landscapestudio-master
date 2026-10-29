@@ -99,9 +99,9 @@
       "UpstreamPathTemplate": "/Customers/{id}",
       "UpstreamHttpMethod": [ "GET" ]
     },
-    //Catalog API: preserve the downstream /api/v1/{resource} contract.
+    //Catalog resource/item routes must be separate so the optional id segment is preserved.
     {
-      "DownstreamPathTemplate": "/api/v1/{everything}",
+      "DownstreamPathTemplate": "/api/v1/{resource}/{id}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
@@ -109,8 +109,20 @@
           "Port": "8080"
         }
       ],
-      "UpstreamPathTemplate": "/Catalog/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "DELETE", "PATCH" ]
+      "UpstreamPathTemplate": "/Catalog/{resource}/{id}",
+      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/{resource}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/{resource}",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
     }
   ],
   "GlobalConfiguration": {
