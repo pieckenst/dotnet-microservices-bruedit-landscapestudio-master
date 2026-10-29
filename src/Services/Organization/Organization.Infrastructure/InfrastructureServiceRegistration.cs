@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Organization.Infrastructure.Persistence;
+using Organization.Infrastructure.Repositories;
+using Organization.Application.Contracts;
 using Shared.Common.Common;
 
 namespace Organization.Infrastructure;
@@ -29,6 +31,7 @@ public static class InfrastructureServiceRegistration
         });
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<OrganizationContext>());
         services.AddScoped(typeof(Shared.Common.Persistence.IRepositoryBase<>), typeof(Shared.Common.Persistence.RepositoryBase<>));
+        services.AddScoped<IBrigadeRepository, BrigadeRepository>();
         return services;
     }
 }
