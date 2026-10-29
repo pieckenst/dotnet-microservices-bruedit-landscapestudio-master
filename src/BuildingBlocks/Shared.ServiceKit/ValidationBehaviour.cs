@@ -20,7 +20,7 @@ namespace Shared.ServiceKit
             CancellationToken cancellationToken)
         {
             if (_validators.Count == 0)
-                return await next(cancellationToken);
+                return await next();
 
             var context = new ValidationContext<TRequest>(request);
             var results = await Task.WhenAll(
