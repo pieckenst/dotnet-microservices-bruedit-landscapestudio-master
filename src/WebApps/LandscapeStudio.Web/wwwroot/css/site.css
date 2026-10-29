@@ -286,3 +286,24 @@ input:focus, select:focus, textarea:focus { border-color: #89b194; box-shadow: 0
     .resource-tabs { gap: 5px; }
     .resource-tabs a { padding: 7px 9px; font-size: 9px; }
 }
+
+.address-section { margin-top: 18px; }
+.address-list { display: grid; gap: 14px; }
+.address-card { padding: 16px; border: 1px solid #e5ece3; border-radius: 12px; background: #fcfdfb; }
+.address-card-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.address-label-icon { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #dae7da; border-radius: 10px; background: #edf5ed; color: #5f8968; font-size: 16px; }
+.address-card-heading > div { display: flex; flex-direction: column; }
+.address-card-heading strong { color: #415746; font-size: 11px; }
+.address-card-heading small { margin-top: 3px; color: #929e94; font-size: 9px; }
+.address-card-heading .status-pill { margin-left: auto; }
+.address-edit-form .form-grid { gap: 12px; }
+.address-actions { display: flex; justify-content: flex-end; margin-top: 2px; }
+.address-delete-form { display: flex; justify-content: flex-end; margin-top: 8px; }
+.button-danger { border-color: #f0d8d4; background: #fff7f5; color: #a44e43; }
+.button-danger:hover { border-color: #e8c4bf; background: #ffefec; }
+.field-checkbox { justify-content: flex-end; }
+.field-checkbox .toggle-line { min-height: 41px; align-items: center; margin-top: 22px; }
+@media (max-width: 720px) {
+    .address-card { padding: 12px; }
+    .address-card-heading .status-pill { font-size: 7px; }
+}
