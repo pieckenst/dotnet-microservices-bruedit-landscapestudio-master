@@ -9,6 +9,48 @@ public sealed record AuthResponse(string AccessToken, string TokenType, DateTime
 public sealed record IdentityUserSummary(Guid Id, string UserName, string Role, bool IsActive);
 
 
+
+public sealed record CreateClientRequest(string DisplayName, string? Email, string? Phone, string? BillingAddress);
+public sealed record CreateLandPlotRequest(string Name, string Address, decimal AreaSquareMetres, string? SoilType, string? Notes);
+
+public sealed class ClientsIndexViewModel
+{
+    public IReadOnlyList<ClientDto> Items { get; set; } = Array.Empty<ClientDto>();
+    public string? Error { get; set; }
+}
+
+public sealed class CreateClientViewModel
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(160, MinimumLength = 1)]
+    public string DisplayName { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.EmailAddress, System.ComponentModel.DataAnnotations.StringLength(254)]
+    public string? Email { get; set; }
+    [System.ComponentModel.DataAnnotations.Phone, System.ComponentModel.DataAnnotations.StringLength(40)]
+    public string? Phone { get; set; }
+    [System.ComponentModel.DataAnnotations.StringLength(400)]
+    public string? BillingAddress { get; set; }
+}
+
+public sealed class LandPlotsIndexViewModel
+{
+    public IReadOnlyList<LandPlotDto> Items { get; set; } = Array.Empty<LandPlotDto>();
+    public string? Error { get; set; }
+}
+
+public sealed class CreateLandPlotViewModel
+{
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(160, MinimumLength = 1)]
+    public string Name { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(300, MinimumLength = 1)]
+    public string Address { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Range(typeof(decimal), "0.01", "1000000000")]
+    public decimal AreaSquareMetres { get; set; }
+    [System.ComponentModel.DataAnnotations.StringLength(100)]
+    public string? SoilType { get; set; }
+    [System.ComponentModel.DataAnnotations.StringLength(2000)]
+    public string? Notes { get; set; }
+}
+
 public sealed record EstimateLineItemDto(
     Guid Id, JsonElement ItemType, string Description, decimal Quantity, string UnitSymbol,
     decimal UnitPrice, decimal? UnitCost, Guid? CatalogItemId, decimal LineTotal, decimal? LineCost);
