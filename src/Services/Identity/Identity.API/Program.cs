@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
+using Shared.ServiceKit.Auditing;
 using System.Security.Claims;
 using System.Text;
 
@@ -32,7 +33,7 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyText)
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddIdentityApplication(builder.Configuration);
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
+builder.Services.AddMutationAuditEvents(builder.Configuration, "Identity");
 builder.Services.AddAuthorization();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
