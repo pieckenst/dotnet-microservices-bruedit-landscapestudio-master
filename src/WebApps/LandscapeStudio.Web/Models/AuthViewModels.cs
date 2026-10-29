@@ -19,3 +19,5 @@ public sealed record ErrorViewModel(string RequestId)
 {
     public bool ShowRequestId => !string.IsNullOrWhiteSpace(RequestId);
 }
+
+public sealed record LoginRequest(string UserName, string Password);
