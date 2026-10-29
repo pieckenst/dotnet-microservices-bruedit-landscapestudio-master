@@ -1,6 +1,7 @@
 using EventBus.Messages.Events;
 using MassTransit;
 using Microsoft.AspNetCore.Mvc.Filters;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -22,8 +23,9 @@ public sealed class AuditEventActionFilter(
         var executed = await next();
         var http = context.HttpContext;
         var method = http.Request.Method;
+        var actionStatus = (executed.Result as IStatusCodeActionResult)?.StatusCode ?? http.Response.StatusCode;
         if (method is "GET" or "HEAD" or "OPTIONS" || executed.Exception is not null ||
-            executed.ExceptionHandled || http.Response.StatusCode is < 200 or >= 300)
+            executed.ExceptionHandled || actionStatus is < 200 or >= 300)
             return;
 
         var routeValues = context.ActionDescriptor.RouteValues;
@@ -52,7 +54,7 @@ public sealed class AuditEventActionFilter(
                 Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
                 {
                     ["httpMethod"] = method,
-                    ["statusCode"] = http.Response.StatusCode.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    ["statusCode"] = actionStatus.ToString(System.Globalization.CultureInfo.InvariantCulture)
                 }
             }, http.RequestAborted);
         }
