@@ -1,15 +1,18 @@
 using Catalog.Application.DTOs;
 using Catalog.Application.Features.MeasurementUnits;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Catalog.API.Controllers;
 
 [ApiController]
 [Route("api/v1/measurement-units")]
+[Authorize]
 public sealed class MeasurementUnitsController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Policy = "catalog.read")]
     [ProducesResponseType(typeof(PagedResponse<MeasurementUnitDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResponse<MeasurementUnitDto>>> Get(
         [FromQuery] int page = 1,
@@ -18,6 +21,7 @@ public sealed class MeasurementUnitsController(IMediator mediator) : ControllerB
         => Ok(await mediator.Send(new GetMeasurementUnitsQuery(page, pageSize), cancellationToken));
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "catalog.read")]
     [ProducesResponseType(typeof(MeasurementUnitDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<MeasurementUnitDto>> GetById(Guid id, CancellationToken cancellationToken)
@@ -27,6 +31,7 @@ public sealed class MeasurementUnitsController(IMediator mediator) : ControllerB
     }
 
     [HttpPost]
+    [Authorize(Policy = "catalog.write")]
     [ProducesResponseType(typeof(MeasurementUnitDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<MeasurementUnitDto>> Create(
@@ -38,6 +43,7 @@ public sealed class MeasurementUnitsController(IMediator mediator) : ControllerB
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "catalog.write")]
     [ProducesResponseType(typeof(MeasurementUnitDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -51,6 +57,7 @@ public sealed class MeasurementUnitsController(IMediator mediator) : ControllerB
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "catalog.write")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
