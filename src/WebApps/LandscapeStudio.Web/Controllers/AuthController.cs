@@ -23,7 +23,7 @@ public sealed class AuthController(LandscapeApiClient api) : Controller
         if (!ModelState.IsValid) return View(model);
         try
         {
-            var response = await api.PostAsync<LoginViewModel, AuthResponse>(
+            var response = await api.PostAsync<LoginRequest, AuthResponse>(
                 "/Auth/login", new LoginRequest(model.UserName, model.Password), includeToken: false, cancellationToken: cancellationToken);
             HttpContext.Session.SetString("access_token", response.AccessToken);
             HttpContext.Session.SetString("token_expires_utc", response.ExpiresAtUtc.ToUniversalTime().ToString("O"));
