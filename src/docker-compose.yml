@@ -63,6 +63,42 @@ services:
     volumes:
       - project_postgres_data:/var/lib/postgresql/data
 
+  organizationdb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: OrganizationDb
+      POSTGRES_USER: landscape_app
+      POSTGRES_PASSWORD: ${ORGANIZATION_DB_PASSWORD:-organization_dev_only}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U landscape_app -d OrganizationDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - organization_postgres_data:/var/lib/postgresql/data
+
+  organization.api:
+    image: ${DOCKER_REGISTRY-}organizationapi
+    build:
+      context: .
+      dockerfile: Services/Organization/Organization.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Database__Provider: PostgreSQL
+      ConnectionStrings__OrganizationConnectionString: Host=organizationdb;Port=5432;Database=OrganizationDb;Username=landscape_app;Password=${ORGANIZATION_DB_PASSWORD:-organization_dev_only}
+      ConnectionStrings__SqliteConnectionString: Data Source=/app/data/organization.db
+      Jwt__Issuer: LandscapeStudio.Identity
+      Jwt__Audience: LandscapeStudio.Clients
+      Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
+    depends_on:
+      organizationdb:
+        condition: service_healthy
+    ports:
+      - "8005:8080"
+    volumes:
+      - organization_sqlite_data:/app/data
+
   rabbitmq:
     image: rabbitmq:3-management-alpine
 
@@ -209,3 +245,5 @@ volumes:
   project_sqlite_data:
   account_postgres_data:
   account_sqlite_data:
+  organization_postgres_data:
+  organization_sqlite_data:

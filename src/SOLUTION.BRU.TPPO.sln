@@ -89,6 +89,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Project.Infrastructure", "S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Project.Tests", "Tests\Project.Tests\Project.Tests.csproj", "{BB45B3BD-83E2-4F41-981D-E0E57A7A0001}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Organization", "Organization", "{A260AF15-8C11-4919-ABE5-400000000001}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Organization.API", "Services\Organization\Organization.API\Organization.API.csproj", "{A260AF15-8C11-4919-ABE5-400000000002}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Organization.Application", "Services\Organization\Organization.Application\Organization.Application.csproj", "{A260AF15-8C11-4919-ABE5-400000000003}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Organization.Domain", "Services\Organization\Organization.Domain\Organization.Domain.csproj", "{A260AF15-8C11-4919-ABE5-400000000004}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Organization.Infrastructure", "Services\Organization\Organization.Infrastructure\Organization.Infrastructure.csproj", "{A260AF15-8C11-4919-ABE5-400000000005}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Organization.Tests", "Tests\Organization.Tests\Organization.Tests.csproj", "{A260AF15-8C11-4919-ABE5-400000000006}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

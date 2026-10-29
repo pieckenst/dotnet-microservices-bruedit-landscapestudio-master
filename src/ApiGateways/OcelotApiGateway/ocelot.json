@@ -290,6 +290,66 @@
       ]
     },
     {
+      "DownstreamPathTemplate": "/api/v1/employees",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Employees",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/positions",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Positions",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/brigades",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Brigades",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-assignments",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/WorkAssignments",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/auth/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -453,6 +513,78 @@
       "UpstreamPathTemplate": "/Accounts/{userId}",
       "UpstreamHttpMethod": [
         "GET"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/employees/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Employees/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/positions/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Positions/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/brigades/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Brigades/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-assignments/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/WorkAssignments/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
       ]
     },
     {
