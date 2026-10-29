@@ -1,0 +1,78 @@
+@using Microsoft.AspNetCore.Http
+@{
+    var isAuthenticated = !string.IsNullOrWhiteSpace(Context.Session.GetString("access_token"));
+    var userName = Context.Session.GetString("user_name") ?? "Workspace user";
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Home";
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
+    var isLogin = string.Equals(currentController, "Auth", StringComparison.OrdinalIgnoreCase);
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · Landscape Studio</title>
+    <meta name="theme-color" content="#183a2c" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="@(isLogin ? "auth-shell" : "")">
+    @if (isAuthenticated)
+    {
+        <aside class="sidebar">
+            <a class="brand" asp-controller="Home" asp-action="Index" aria-label="Landscape Studio dashboard">
+                <span class="brand-mark" aria-hidden="true">L</span>
+                <span class="brand-copy"><strong>Landscape</strong><small>STUDIO MANAGEMENT</small></span>
+            </a>
+            <div class="nav-label">WORKSPACE</div>
+            <nav class="main-nav" aria-label="Main navigation">
+                <a class="@(currentController == "Home" ? "active" : "")" asp-controller="Home" asp-action="Index"><span class="nav-icon">⌂</span>Overview</a>
+                <a class="@(currentController == "Projects" ? "active" : "")" asp-controller="Projects" asp-action="Index"><span class="nav-icon">▦</span>Projects</a>
+                <a class="@(currentController == "Operations" && (Context.Request.Query["resource"] == "plants" || Context.Request.Query["resource"] == "materials" || Context.Request.Query["resource"] == "work-types") ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="plants"><span class="nav-icon">❋</span>Plant &amp; material catalog</a>
+            </nav>
+            <div class="nav-label">OPERATIONS</div>
+            <nav class="main-nav" aria-label="Operational workflows">
+                <a class="@(Context.Request.Query["resource"] == "suppliers" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="suppliers"><span class="nav-icon">⌘</span>Suppliers</a>
+                <a class="@(Context.Request.Query["resource"] == "stock-items" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="stock-items"><span class="nav-icon">▤</span>Inventory</a>
+                <a class="@(Context.Request.Query["resource"] == "purchase-orders" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="purchase-orders"><span class="nav-icon">▣</span>Purchase orders</a>
+                <a class="@(Context.Request.Query["resource"] == "deliveries" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="deliveries"><span class="nav-icon">↘</span>Deliveries</a>
+                <a class="@(currentController == "Audit" ? "active" : "")" asp-controller="Audit" asp-action="Index"><span class="nav-icon">◷</span>Audit log</a>
+            </nav>
+            <div class="sidebar-bottom">
+                <div class="service-mark"><span class="service-dot"></span><span><strong>Connected workspace</strong><small>Through API gateway</small></span></div>
+                <a class="profile-link @(currentController == "Profile" ? "active" : "")" asp-controller="Profile" asp-action="Index"><span class="avatar">@userName[..1].ToUpperInvariant()</span><span class="profile-copy"><strong>@userName</strong><small>Profile &amp; preferences</small></span><span class="profile-arrow">›</span></a>
+            </div>
+        </aside>
+    }
+    <div class="app-main @(isAuthenticated ? "" : "app-main-auth")">
+        <header class="topbar">
+            <div class="breadcrumb"><span>LANDSCAPE STUDIO</span><span class="crumb-divider">/</span><strong>@(isLogin ? "Sign in" : ViewData["Section"] ?? currentController)</strong></div>
+            <div class="topbar-right">
+                @if (isAuthenticated)
+                {
+                    <span class="gateway-status"><span class="status-dot"></span>API workspace</span>
+                    <form asp-controller="Auth" asp-action="Logout" method="post" class="logout-form">
+                        <button class="button button-quiet button-small" type="submit">Sign out <span aria-hidden="true">↗</span></button>
+                    </form>
+                }
+                else
+                {
+                    <span class="quiet-label">LANDSCAPE STUDIO MANAGEMENT</span>
+                }
+            </div>
+        </header>
+        <main class="page-content">
+            @if (TempData["Success"] is string success)
+            {
+                <div class="alert alert-success" role="status">@success</div>
+            }
+            @if (TempData["Error"] is string flashError)
+            {
+                <div class="alert alert-error" role="alert">@flashError</div>
+            }
+            @RenderBody()
+        </main>
+        <footer class="page-footer"><span>LANDSCAPE STUDIO</span><span>Project operations · Inventory · Analytics</span></footer>
+    </div>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
