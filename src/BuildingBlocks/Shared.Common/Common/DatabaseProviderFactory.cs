@@ -26,7 +26,7 @@ namespace Shared.Common.Common
                 throw new InvalidOperationException("A SQLite database provider strategy must be registered.");
         }
 
-        public (IDatabaseProviderStrategy Strategy, string ConnectionString) Resolve(
+        public DatabaseProviderResolution Resolve(
             string preferredProvider,
             string primaryConnectionString,
             string sqliteFallbackConnectionString)
@@ -37,14 +37,14 @@ namespace Shared.Common.Common
             if (string.Equals(preferredProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogInformation("Using SQLite provider as configured.");
-                return (_strategies["Sqlite"], sqliteFallbackConnectionString);
+                return new DatabaseProviderResolution(_strategies["Sqlite"], sqliteFallbackConnectionString);
             }
 
             if (!_strategies.TryGetValue(preferredProvider ?? string.Empty, out var preferred))
             {
                 _logger.LogWarning("Database provider {Provider} is not registered; falling back to SQLite.",
                     string.IsNullOrWhiteSpace(preferredProvider) ? "(not configured)" : preferredProvider);
-                return (_strategies["Sqlite"], sqliteFallbackConnectionString);
+                return new DatabaseProviderResolution(_strategies["Sqlite"], sqliteFallbackConnectionString);
             }
 
             if (!string.IsNullOrWhiteSpace(primaryConnectionString))
@@ -54,7 +54,7 @@ namespace Shared.Common.Common
                     if (preferred.CanConnect(primaryConnectionString))
                     {
                         _logger.LogInformation("Database provider {Provider} is reachable.", preferred.ProviderName);
-                        return (preferred, primaryConnectionString);
+                        return new DatabaseProviderResolution(preferred, primaryConnectionString);
                     }
                 }
                 catch (Exception exception)
