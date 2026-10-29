@@ -12,7 +12,7 @@ namespace EventBus.Messages.Events
         public Guid PurchaseOrderId { get; set; }
         public Guid MaterialId { get; set; }
         public string MaterialName { get; set; } = string.Empty;
-        public Guid MeasurementUnitId { get; set; }
+        public string UnitSymbol { get; set; } = string.Empty;
         public string UnitName { get; set; } = string.Empty;
         public decimal QuantityReceived { get; set; }
         public decimal UnitCost { get; set; }
