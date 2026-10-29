@@ -1,3 +1,5 @@
+using EventBus.Messages.Events;
+using MassTransit;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +13,7 @@ namespace Procurement.API.Controllers;
 [ApiController]
 [Route("api/v1/purchase-orders")]
 [Authorize]
-public sealed class PurchaseOrdersController(ProcurementContext context) : ControllerBase
+public sealed class PurchaseOrdersController(ProcurementContext context, IPublishEndpoint publishEndpoint, ILogger<PurchaseOrdersController> logger) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "procurement.read")]
@@ -43,9 +45,9 @@ public sealed class PurchaseOrdersController(ProcurementContext context) : Contr
     public async Task<ActionResult<PurchaseOrderDto>> Create(
         [FromBody] CreatePurchaseOrderRequest request, CancellationToken cancellationToken)
     {
-        var supplierExists = await context.Suppliers.AnyAsync(
+        var supplier = await context.Suppliers.AsNoTracking().SingleOrDefaultAsync(
             supplier => supplier.Id == request.SupplierId && supplier.IsActive, cancellationToken);
-        if (!supplierExists) return BadRequest(new ProblemDetails
+        if (supplier is null) return BadRequest(new ProblemDetails
         {
             Title = "Invalid supplier",
             Detail = "The purchase order must reference an existing active supplier.",
@@ -62,6 +64,27 @@ public sealed class PurchaseOrdersController(ProcurementContext context) : Contr
         }
         await context.PurchaseOrders.AddAsync(order, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await publishEndpoint.Publish(new PurchaseOrderCreatedEvent
+            {
+                PurchaseOrderId = order.Id,
+                SupplierId = order.SupplierId,
+                // The analytics stream intentionally receives identifiers, not supplier contact names.
+                SupplierName = string.Empty,
+                OrderNumber = order.OrderNumber,
+                TotalAmount = order.OrderTotal,
+                Currency = supplier.CurrencyCode,
+                OrderDate = ToUtcDateTime(order.OrderDate),
+                ExpectedDeliveryDate = order.ExpectedDeliveryDate is null ? null : ToUtcDateTime(order.ExpectedDeliveryDate.Value)
+            }, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Purchase order {OrderId} was saved but its analytics event could not be published.", order.Id);
+        }
+
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, ToDto(order));
     }
 
@@ -115,15 +138,41 @@ public sealed class PurchaseOrdersController(ProcurementContext context) : Contr
                 });
         }
 
-        order.ReceiveLine(lineId, request.Quantity, request.ReceivedDate);
+        var receivedLine = order.ReceiveLine(lineId, request.Quantity, request.ReceivedDate);
+        Guid? movementId = null;
         if (stockItem is not null)
         {
             stockItem.ApplyMovement(request.Quantity);
-            await context.StockMovements.AddAsync(new StockMovement(Guid.NewGuid(), stockItem.Id,
+            movementId = Guid.NewGuid();
+            await context.StockMovements.AddAsync(new StockMovement(movementId.Value, stockItem.Id,
                 StockMovementType.Receipt, request.Quantity, order.OrderNumber, order.ProjectId,
-                $"Receipt for purchase-order line {line.Id}"), cancellationToken);
+                $"Receipt for purchase-order line {receivedLine.Id}"), cancellationToken);
         }
         await context.SaveChangesAsync(cancellationToken);
+
+        if (movementId.HasValue && receivedLine.ItemType == ProcurementItemType.Material && receivedLine.CatalogItemId.HasValue)
+        {
+            try
+            {
+                await publishEndpoint.Publish(new MaterialReceivedEvent
+                {
+                    MaterialReceiptId = movementId.Value,
+                    PurchaseOrderId = order.Id,
+                    MaterialId = receivedLine.CatalogItemId.Value,
+                    MaterialName = string.Empty,
+                    UnitSymbol = receivedLine.UnitSymbol,
+                    QuantityReceived = request.Quantity,
+                    UnitCost = receivedLine.UnitPrice,
+                    TotalCost = decimal.Round(request.Quantity * receivedLine.UnitPrice, 2, MidpointRounding.AwayFromZero),
+                    ReceivedDate = ToUtcDateTime(request.ReceivedDate),
+                    ReceivedBy = string.Empty
+                }, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Inventory receipt {MovementId} was saved but its analytics event could not be published.", movementId.Value);
+            }
+        }
         return Ok(ToDto(order));
     }
 
@@ -141,6 +190,9 @@ public sealed class PurchaseOrdersController(ProcurementContext context) : Contr
     private Task<PurchaseOrder?> LoadTracked(Guid id, CancellationToken cancellationToken) =>
         context.PurchaseOrders.Include(order => order.Lines)
             .SingleOrDefaultAsync(order => order.Id == id, cancellationToken);
+
+    private static DateTime ToUtcDateTime(DateOnly date) =>
+        DateTime.SpecifyKind(date.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc);
 
     private static PurchaseOrderDto ToDto(PurchaseOrder order) => new(
         order.Id, order.OrderNumber, order.SupplierId, order.ProjectId, order.OrderDate,
