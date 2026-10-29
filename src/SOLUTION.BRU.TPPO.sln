@@ -107,6 +107,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Procurement.Tests", "Tests\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Analytics.Tests", "Tests\Analytics.Tests\Analytics.Tests.csproj", "{DDEE884A-C3F3-4F08-85F0-A43C0B2BC121}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LandscapeStudio.Web", "WebApps\LandscapeStudio.Web\LandscapeStudio.Web.csproj", "{A737B01C-09A7-4C0A-9612-1A43E0BDB1CD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -119,6 +121,10 @@ Global
 		SolutionGuid = {B8752804-FEC8-4A60-B7EA-09C18E44756F}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A737B01C-09A7-4C0A-9612-1A43E0BDB1CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A737B01C-09A7-4C0A-9612-1A43E0BDB1CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A737B01C-09A7-4C0A-9612-1A43E0BDB1CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A737B01C-09A7-4C0A-9612-1A43E0BDB1CD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DDEE884A-C3F3-4F08-85F0-A43C0B2BC121}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DDEE884A-C3F3-4F08-85F0-A43C0B2BC121}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DDEE884A-C3F3-4F08-85F0-A43C0B2BC121}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -273,6 +279,7 @@ Global
 		{F1E2D3C4-B5A6-4798-9234-56789ABCDEF0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
+		{A737B01C-09A7-4C0A-9612-1A43E0BDB1CD} = {239602CF-32DC-4304-B26F-085C9DA9EBE1}
 		{DDEE884A-C3F3-4F08-85F0-A43C0B2BC121} = {C4DA1FD5-E6E7-44CE-A81B-1A1E8A345006}
 		{009FE34D-5D37-48BF-82F2-86DF97A3346B} = {CF37AE6A-F27E-4B36-A94B-7D9FDA3590C1}
 		{12F8CC69-ADB2-4580-87BF-70610D3252F7} = {CF37AE6A-F27E-4B36-A94B-7D9FDA3590C1}
