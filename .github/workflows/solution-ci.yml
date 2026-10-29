@@ -29,5 +29,7 @@ jobs:
         run: dotnet build src/SOLUTION.BRU.TPPO.sln --configuration Release --no-restore -p:EnableWindowsTargeting=true
       - name: Run solution tests
         run: dotnet test src/SOLUTION.BRU.TPPO.sln --configuration Release --no-build --no-restore -p:EnableWindowsTargeting=true --logger "console;verbosity=normal"
-      - name: Validate Docker Compose
+      - name: Validate base Docker Compose
         run: docker compose -f src/docker-compose.yml config --quiet
+      - name: Validate local Docker Compose overrides
+        run: docker compose -f src/docker-compose.yml -f src/docker-compose.override.yml config --quiet
