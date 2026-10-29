@@ -8,6 +8,72 @@ public sealed record AuthResponse(string AccessToken, string TokenType, DateTime
 
 public sealed record IdentityUserSummary(Guid Id, string UserName, string Role, bool IsActive);
 
+
+public sealed record EstimateLineItemDto(
+    Guid Id, JsonElement ItemType, string Description, decimal Quantity, string UnitSymbol,
+    decimal UnitPrice, decimal? UnitCost, Guid? CatalogItemId, decimal LineTotal, decimal? LineCost);
+
+public sealed record EstimateDto(
+    Guid Id, Guid ProjectId, string Version, string Notes, JsonElement Status, DateTime? SubmittedAtUtc,
+    DateTime? ApprovedAtUtc, decimal EstimatedTotal, decimal? EstimatedCost,
+    IReadOnlyList<EstimateLineItemDto> LineItems, DateTime CreatedDate, DateTime? LastModifiedDate);
+
+public sealed record CreateEstimateRequest(Guid ProjectId, string Version, string Notes);
+
+public sealed record AddEstimateLineItemRequest(
+    int ItemType, string Description, decimal Quantity, string UnitSymbol,
+    decimal UnitPrice, decimal? UnitCost, Guid? CatalogItemId);
+
+public sealed class EstimatesIndexViewModel
+{
+    public Guid? ProjectId { get; set; }
+    public IReadOnlyList<LandscapeProjectDto> Projects { get; set; } = Array.Empty<LandscapeProjectDto>();
+    public IReadOnlyList<EstimateDto> Estimates { get; set; } = Array.Empty<EstimateDto>();
+    public int Page { get; set; } = 1;
+    public int TotalPages { get; set; }
+    public int TotalCount { get; set; }
+    public string? Error { get; set; }
+}
+
+public sealed class CreateEstimateViewModel
+{
+    public Guid ProjectId { get; set; }
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(40, MinimumLength = 1)]
+    public string Version { get; set; } = "V1";
+    [System.ComponentModel.DataAnnotations.StringLength(4000)]
+    public string Notes { get; set; } = string.Empty;
+    public IReadOnlyList<LandscapeProjectDto> Projects { get; set; } = Array.Empty<LandscapeProjectDto>();
+}
+
+public sealed class EstimateDetailsViewModel
+{
+    public EstimateDto? Estimate { get; set; }
+    public LandscapeProjectDto? Project { get; set; }
+    public AddEstimateLineItemViewModel NewLineItem { get; set; } = new();
+    public string? Error { get; set; }
+}
+
+public sealed class AddEstimateLineItemViewModel
+{
+    public Guid EstimateId { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(0, 4)]
+    public int ItemType { get; set; } = 1;
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(500, MinimumLength = 1)]
+    public string Description { get; set; } = string.Empty;
+    [System.ComponentModel.DataAnnotations.Range(typeof(decimal), "0.001", "1000000000")]
+    public decimal Quantity { get; set; } = 1;
+    [System.ComponentModel.DataAnnotations.Required, System.ComponentModel.DataAnnotations.StringLength(24, MinimumLength = 1)]
+    public string UnitSymbol { get; set; } = "pcs";
+    [System.ComponentModel.DataAnnotations.Range(typeof(decimal), "0", "1000000000000")]
+    public decimal UnitPrice { get; set; }
+    [System.ComponentModel.DataAnnotations.Range(typeof(decimal), "0", "1000000000000")]
+    public decimal? UnitCost { get; set; }
+    public Guid? CatalogItemId { get; set; }
+
+    public AddEstimateLineItemRequest ToRequest() =>
+        new(ItemType, Description, Quantity, UnitSymbol, UnitPrice, UnitCost, CatalogItemId);
+}
+
 public sealed record AnalyticsCountViewModel(string Name, long Count);
 
 public sealed record AnalyticsSummaryViewModel(
