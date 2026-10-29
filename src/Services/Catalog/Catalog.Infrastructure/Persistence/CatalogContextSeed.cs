@@ -6,7 +6,7 @@ namespace Catalog.Infrastructure.Persistence;
 
 public static class CatalogContextSeed
 {
-    private static readonly MeasurementUnit[] Units =
+    private static MeasurementUnit[] CreateDefaultUnits() =>
     [
         new(Guid.Parse("b30e1c79-8e5d-40bb-8f8a-d07d2c2e0001"), "Piece", "шт."),
         new(Guid.Parse("b30e1c79-8e5d-40bb-8f8a-d07d2c2e0002"), "Square metre", "м²"),
@@ -25,9 +25,10 @@ public static class CatalogContextSeed
 
         if (!await context.MeasurementUnits.AnyAsync(cancellationToken))
         {
-            await context.MeasurementUnits.AddRangeAsync(Units, cancellationToken);
+            var units = CreateDefaultUnits();
+            await context.MeasurementUnits.AddRangeAsync(units, cancellationToken);
             await context.SaveChangesAsync(cancellationToken);
-            logger.LogInformation("Seeded {Count} catalog measurement units.", Units.Length);
+            logger.LogInformation("Seeded {Count} catalog measurement units.", units.Length);
         }
     }
 }
