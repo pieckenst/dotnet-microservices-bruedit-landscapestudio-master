@@ -10,8 +10,7 @@ namespace Shared.Common.Common
     {
         public string ProviderName => "PostgreSQL";
 
-        public DbContextOptionsBuilder<T> Configure<T>(DbContextOptionsBuilder<T> builder, string connectionString)
-            where T : DbContext
+        public DbContextOptionsBuilder Configure(DbContextOptionsBuilder builder, string connectionString)
         {
             AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
             return builder.UseNpgsql(connectionString);
