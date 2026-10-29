@@ -60,7 +60,7 @@ public sealed class ProjectStagesController(
             try
             {
                 // Project tasks already provide a real source for completion counts.
-                var tasks = await taskRepository.GetAsync(task => task.StageId == stage.Id);
+                var tasks = await taskRepository.GetAsync(predicate: task => task.StageId == stage.Id, orderBy: null, includeString: null, disableTracking: true);
                 var completedCount = tasks.LongCount(task => task.Status == ProjectTaskStatus.Completed);
                 var project = await projectRepository.GetByIdAsync(stage.ProjectId);
                 await publishEndpoint.Publish(new ProjectStageCompletedEvent
