@@ -1,0 +1,86 @@
+@model EstimateDetailsViewModel
+@{
+    ViewData["Title"] = "Estimate";
+    ViewData["Section"] = "Estimates / Details";
+    var estimate = Model.Estimate;
+    var status = estimate is null ? "Unknown" : EnumLabel(estimate.Status, new[] { "Draft", "Submitted", "Approved", "Rejected", "Superseded" });
+    var canEdit = status == "Draft";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> ESTIMATE DETAIL</span><h1>@(estimate?.Version ?? "Estimate") <span>review.</span></h1><p>@(Model.Project is null ? "Project details could not be resolved." : Model.Project.ProjectNumber + " — " + Model.Project.Name)</p></div>
+    <a class="button button-quiet" asp-action="Index" asp-route-projectId="@estimate?.ProjectId">← Back to estimates</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-error" role="alert"><strong>Estimate operation failed.</strong> @Model.Error</div>
+}
+@if (estimate is not null)
+{
+    <section class="metric-grid estimate-metric-grid">
+        <article class="metric-card"><div class="metric-top"><span class="metric-label">ESTIMATE STATUS</span><span class="metric-symbol metric-symbol-muted">◷</span></div><div class="estimate-status-value">@status</div><div class="metric-note">Lifecycle status returned by Project API</div><div class="metric-bottom">Version @estimate.Version</div></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-label">ESTIMATED TOTAL</span><span class="metric-symbol metric-symbol-muted">≋</span></div><div class="metric-value">@estimate.EstimatedTotal.ToString("N2")</div><div class="metric-note">Sum of line-item sell prices</div><div class="metric-bottom">@estimate.LineItems.Count.ToString("N0") line items</div></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-label">ESTIMATED COST</span><span class="metric-symbol metric-symbol-muted">◈</span></div><div class="metric-value">@(estimate.EstimatedCost?.ToString("N2") ?? "—")</div><div class="metric-note">Cost values where supplied</div><div class="metric-bottom">No assumed currency</div></article>
+        <article class="metric-card"><div class="metric-top"><span class="metric-label">CREATED</span><span class="metric-symbol metric-symbol-muted">▦</span></div><div class="estimate-date-value">@estimate.CreatedDate.ToString("dd MMM yyyy")</div><div class="metric-note">Last modified</div><div class="metric-bottom">@(estimate.LastModifiedDate?.ToString("dd MMM yyyy") ?? "Not modified")</div></article>
+    </section>
+    <section class="surface-card">
+        <div class="section-heading section-heading-table"><div><span class="mini-kicker">ESTIMATE CONTENT</span><h2>Line items</h2><p>Sell prices determine the total; optional cost values are used for cost reporting.</p></div></div>
+        @if (estimate.LineItems.Count > 0)
+        {
+            <div class="table-wrap"><table><thead><tr><th>Type</th><th>Description</th><th>Quantity</th><th>Unit</th><th>Unit price</th><th>Line total</th><th>Cost</th></tr></thead><tbody>
+            @foreach (var line in estimate.LineItems)
+            {
+                <tr><td><span class="status-pill">@EnumLabel(line.ItemType, new[] { "Work", "Material", "Plant", "Equipment", "Other" })</span></td><td>@line.Description</td><td>@line.Quantity.ToString("N3")</td><td>@line.UnitSymbol</td><td class="mono">@line.UnitPrice.ToString("N2")</td><td class="mono">@line.LineTotal.ToString("N2")</td><td class="mono">@(line.LineCost?.ToString("N2") ?? "—")</td></tr>
+            }
+            </tbody></table></div>
+        }
+        else
+        {
+            <div class="empty-state"><span class="empty-illustration">≋</span><h3>No line items yet</h3><p>Add the work and material lines that make up this estimate before submitting it.</p></div>
+        }
+    </section>
+    @if (canEdit)
+    {
+        <section class="surface-card form-section estimate-add-line">
+            <div class="form-section-heading"><span class="form-step">＋</span><div><h2>Add a line item</h2><p>Keep quantity, unit and prices explicit for repeatable estimates.</p></div></div>
+            <form asp-action="AddLineItem" asp-route-id="@estimate.Id" method="post" class="form-stack">
+                @Html.AntiForgeryToken()
+                <input type="hidden" name="EstimateId" value="@estimate.Id" />
+                <div class="form-grid">
+                    <div class="field"><label for="ItemType">Line type</label><select id="ItemType" name="ItemType"><option value="0">Work</option><option value="1" selected>Material</option><option value="2">Plant</option><option value="3">Equipment</option><option value="4">Other</option></select></div>
+                    <div class="field"><label for="Description">Description <span class="required">*</span></label><input id="Description" name="Description" required maxlength="500" /></div>
+                    <div class="field"><label for="Quantity">Quantity <span class="required">*</span></label><input id="Quantity" name="Quantity" type="number" step="0.001" min="0.001" max="1000000000" value="1" required /></div>
+                    <div class="field"><label for="UnitSymbol">Unit <span class="required">*</span></label><input id="UnitSymbol" name="UnitSymbol" value="pcs" maxlength="24" required /></div>
+                    <div class="field"><label for="UnitPrice">Unit sell price <span class="required">*</span></label><input id="UnitPrice" name="UnitPrice" type="number" step="0.01" min="0" value="0" required /></div>
+                    <div class="field"><label for="UnitCost">Unit cost (optional)</label><input id="UnitCost" name="UnitCost" type="number" step="0.01" min="0" placeholder="Leave blank if unknown" /></div>
+                </div>
+                <div class="form-actions form-actions-start"><button class="button button-primary" type="submit">Add line item <span aria-hidden="true">→</span></button></div>
+            </form>
+        </section>
+        <section class="surface-card form-section estimate-transition-section">
+            <div class="form-section-heading"><span class="form-step">↗</span><div><h2>Next step</h2><p>Submit this draft when its content is ready for review.</p></div></div>
+            <div class="transition-actions">
+                <form asp-action="Submit" asp-route-id="@estimate.Id" method="post">@Html.AntiForgeryToken()<button class="button button-primary" type="submit" @(estimate.LineItems.Count == 0 ? "disabled" : "")>Submit for approval <span aria-hidden="true">→</span></button></form>
+                <span class="transition-note">After submission, the API controls which lifecycle transitions are allowed.</span>
+            </div>
+        </section>
+    }
+    else if (status == "Submitted")
+    {
+        <section class="surface-card form-section estimate-transition-section">
+            <div class="form-section-heading"><span class="form-step">✓</span><div><h2>Review decision</h2><p>Record the approval decision through the Project API.</p></div></div>
+            <div class="transition-actions">
+                <form asp-action="Approve" asp-route-id="@estimate.Id" method="post">@Html.AntiForgeryToken()<button class="button button-primary" type="submit">Approve estimate</button></form>
+                <form asp-action="Reject" asp-route-id="@estimate.Id" method="post">@Html.AntiForgeryToken()<button class="button button-danger" type="submit">Reject estimate</button></form>
+            </div>
+        </section>
+    }
+}
+@functions {
+    private static string EnumLabel(System.Text.Json.JsonElement value, string[] names)
+    {
+        if (value.ValueKind == System.Text.Json.JsonValueKind.String) return value.GetString() ?? "Unknown";
+        if (value.ValueKind == System.Text.Json.JsonValueKind.Number && value.TryGetInt32(out var number) && number >= 0 && number < names.Length)
+            return names[number];
+        return "Unknown";
+    }
+}
