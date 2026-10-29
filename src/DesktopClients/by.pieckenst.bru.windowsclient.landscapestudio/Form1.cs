@@ -1,3 +1,5 @@
+using System.Data;
+using System.Text.Json;
 using Krypton.Toolkit;
 
 namespace by.pieckenst.bru.windowsclient.landscapestudio;
@@ -10,17 +12,37 @@ public partial class Form1 : KryptonForm
     private static readonly Color Ink = Color.FromArgb(33, 47, 40);
     private static readonly Color Muted = Color.FromArgb(112, 127, 118);
     private readonly Panel _content = new() { Dock = DockStyle.Fill, BackColor = Canvas, Padding = new Padding(28, 22, 28, 24) };
-    private readonly Label _pageTitle = new() { AutoSize = true, Font = new Font("Segoe UI Semibold", 22f, FontStyle.Bold), ForeColor = Ink };
-    private readonly Label _pageSubtitle = new() { AutoSize = true, Font = new Font("Segoe UI", 10f), ForeColor = Muted };
-    private readonly Label _connectionState = new() { AutoSize = true, Text = "API NOT CONNECTED", ForeColor = Color.FromArgb(160, 105, 28), BackColor = Color.FromArgb(255, 244, 220), Padding = new Padding(10, 6, 10, 6), Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold) };
-    private readonly FlowLayoutPanel _navigation = new() { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(12, 18, 12, 12), BackColor = Sidebar };
+    private readonly Label _connectionState = new()
+    {
+        AutoSize = true, Text = "API NOT CONNECTED", ForeColor = Color.FromArgb(160, 105, 28),
+        BackColor = Color.FromArgb(255, 244, 220), Padding = new Padding(10, 6, 10, 6),
+        Font = new Font("Segoe UI Semibold", 8.5f, FontStyle.Bold)
+    };
+    private readonly FlowLayoutPanel _navigation = new()
+    {
+        Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false,
+        AutoScroll = true, Padding = new Padding(12, 18, 12, 12), BackColor = Sidebar
+    };
+    private readonly Dictionary<string, KryptonButton> _navButtons = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Label> _metricValues = new(StringComparer.OrdinalIgnoreCase);
+    private readonly KryptonButton _connectButton = new() { Width = 136, Height = 38, ButtonStyle = ButtonStyle.Standalone };
+    private DesktopApiClient? _api;
+    private CancellationTokenSource? _loadCancellation;
+    private int _loadGeneration;
     private string _activePage = "Overview";
+    private string _catalogResource = "Plants";
 
     public Form1()
     {
         InitializeComponent();
         BuildApplicationShell();
-        ShowPage("Overview");
+        Shown += async (_, _) => await ShowPageAsync("Overview");
+        FormClosed += (_, _) =>
+        {
+            _loadCancellation?.Cancel();
+            _loadCancellation?.Dispose();
+            _api?.Dispose();
+        };
     }
 
     private void BuildApplicationShell()
@@ -38,9 +60,7 @@ public partial class Form1 : KryptonForm
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 246));
         shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         Controls.Add(shell);
-
-        var sidebar = BuildSidebar();
-        shell.Controls.Add(sidebar, 0, 0);
+        shell.Controls.Add(BuildSidebar(), 0, 0);
 
         var main = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Canvas, Margin = Padding.Empty };
         main.RowStyles.Add(new RowStyle(SizeType.Absolute, 76));
@@ -48,13 +68,22 @@ public partial class Form1 : KryptonForm
         shell.Controls.Add(main, 1, 0);
 
         var topbar = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(28, 0, 28, 0) };
-        var topbarLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = Color.White };
+        var topbarLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 1, BackColor = Color.White };
         topbarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         topbarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        var breadcrumb = new Label { Text = "WORKSPACE   /   LANDSCAPE STUDIO", AutoSize = true, ForeColor = Muted, Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), Anchor = AnchorStyles.Left };
-        topbarLayout.Controls.Add(breadcrumb, 0, 0);
+        topbarLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
+        var breadcrumb = new Label
+        {
+            Text = "WORKSPACE   /   LANDSCAPE STUDIO", AutoSize = true, ForeColor = Muted,
+            Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), Anchor = AnchorStyles.Left
+        };
         _connectionState.Anchor = AnchorStyles.Right;
+        topbarLayout.Controls.Add(breadcrumb, 0, 0);
         topbarLayout.Controls.Add(_connectionState, 1, 0);
+        ConfigurePrimaryButton(_connectButton, "Connect to API");
+        _connectButton.Anchor = AnchorStyles.Right;
+        _connectButton.Click += async (_, _) => await OpenConnectionDialogAsync();
+        topbarLayout.Controls.Add(_connectButton, 2, 0);
         topbar.Controls.Add(topbarLayout);
         main.Controls.Add(topbar, 0, 0);
         main.Controls.Add(_content, 0, 1);
@@ -68,10 +97,8 @@ public partial class Form1 : KryptonForm
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
 
         var brand = new Panel { Dock = DockStyle.Fill, Padding = new Padding(22, 20, 12, 10), BackColor = Sidebar };
-        var brandTitle = new Label { Text = "LANDSCAPE", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 16f, FontStyle.Bold), Location = new Point(22, 19) };
-        var brandSub = new Label { Text = "STUDIO  /  MANAGEMENT", AutoSize = true, ForeColor = Color.FromArgb(160, 187, 171), Font = new Font("Segoe UI", 8f), Location = new Point(23, 52) };
-        brand.Controls.Add(brandTitle);
-        brand.Controls.Add(brandSub);
+        brand.Controls.Add(new Label { Text = "LANDSCAPE", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 16f, FontStyle.Bold), Location = new Point(22, 19) });
+        brand.Controls.Add(new Label { Text = "STUDIO  /  MANAGEMENT", AutoSize = true, ForeColor = Color.FromArgb(160, 187, 171), Font = new Font("Segoe UI", 8f), Location = new Point(23, 52) });
         root.Controls.Add(brand, 0, 0);
 
         var groups = new[]
@@ -82,11 +109,15 @@ public partial class Form1 : KryptonForm
         };
         foreach (var group in groups)
         {
-            var heading = new Label { Text = group.Item1, AutoSize = true, ForeColor = Color.FromArgb(133, 160, 144), Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), Margin = new Padding(10, 13, 0, 7) };
-            _navigation.Controls.Add(heading);
+            _navigation.Controls.Add(new Label
+            {
+                Text = group.Item1, AutoSize = true, ForeColor = Color.FromArgb(133, 160, 144),
+                Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), Margin = new Padding(10, 13, 0, 7)
+            });
             foreach (var item in group.Item2)
             {
                 var button = CreateNavButton(item);
+                _navButtons[item] = button;
                 _navigation.Controls.Add(button);
             }
         }
@@ -94,7 +125,7 @@ public partial class Form1 : KryptonForm
 
         var footer = new Panel { Dock = DockStyle.Fill, BackColor = Sidebar, Padding = new Padding(18, 12, 18, 12) };
         footer.Controls.Add(new Label { Text = "TPPO PROJECT", AutoSize = true, ForeColor = Color.White, Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold), Location = new Point(18, 12) });
-        footer.Controls.Add(new Label { Text = "Desktop client · .NET", AutoSize = true, ForeColor = Color.FromArgb(160, 187, 171), Font = new Font("Segoe UI", 8.5f), Location = new Point(18, 34) });
+        footer.Controls.Add(new Label { Text = "Desktop client · .NET 10", AutoSize = true, ForeColor = Color.FromArgb(160, 187, 171), Font = new Font("Segoe UI", 8.5f), Location = new Point(18, 34) });
         root.Controls.Add(footer, 0, 2);
         return root;
     }
@@ -103,15 +134,9 @@ public partial class Form1 : KryptonForm
     {
         var button = new KryptonButton
         {
-            Width = 210,
-            Height = 42,
-            Margin = new Padding(0, 2, 0, 2),
-            ButtonStyle = ButtonStyle.LowProfile,
-            Cursor = Cursors.Hand,
-            Tag = text,
-            TabStop = false
+            Width = 210, Height = 42, Margin = new Padding(0, 2, 0, 2),
+            ButtonStyle = ButtonStyle.LowProfile, Cursor = Cursors.Hand, Tag = text, TabStop = false
         };
-
         button.Values.Text = "   " + text;
         button.StateCommon.Back.Color1 = Sidebar;
         button.StateCommon.Back.Color2 = Sidebar;
@@ -124,108 +149,545 @@ public partial class Form1 : KryptonForm
         button.StateTracking.Back.Color2 = Color.FromArgb(40, 65, 53);
         button.StatePressed.Back.Color1 = Color.FromArgb(52, 83, 66);
         button.StatePressed.Back.Color2 = Color.FromArgb(52, 83, 66);
-        button.Click += (_, _) => ShowPage(text);
+        button.Click += async (_, _) => await ShowPageAsync(text);
         return button;
     }
 
-    private void ShowPage(string page)
+    private async Task ShowPageAsync(string page)
     {
         _activePage = page;
-        _pageTitle.Text = page;
-        _pageSubtitle.Text = page == "Overview"
-            ? "Your studio at a glance. Live figures will appear when the API is configured."
-            : $"Manage {page.ToLowerInvariant()} through the Landscape Studio service layer.";
+        _loadCancellation?.Cancel();
+        _loadCancellation?.Dispose();
+        _loadCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(35));
+        var cancellationToken = _loadCancellation.Token;
+        var generation = ++_loadGeneration;
+
+        foreach (var pair in _navButtons)
+        {
+            var selected = pair.Key.Equals(page, StringComparison.OrdinalIgnoreCase);
+            pair.Value.StateCommon.Back.Color1 = selected ? Color.FromArgb(218, 232, 220) : Sidebar;
+            pair.Value.StateCommon.Back.Color2 = selected ? Color.FromArgb(218, 232, 220) : Sidebar;
+            pair.Value.StateCommon.Content.ShortText.Color1 = selected ? Ink : Color.FromArgb(218, 230, 222);
+            pair.Value.StateTracking.Back.Color1 = selected ? Color.FromArgb(218, 232, 220) : Color.FromArgb(40, 65, 53);
+            pair.Value.StateTracking.Back.Color2 = selected ? Color.FromArgb(218, 232, 220) : Color.FromArgb(40, 65, 53);
+        }
+
         _content.SuspendLayout();
         _content.Controls.Clear();
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Canvas, Margin = Padding.Empty };
+        layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
+        layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-        var pageLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3, BackColor = Canvas, Margin = Padding.Empty };
-        pageLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
-        pageLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, page == "Overview" ? 154 : 0));
-        pageLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-
-        var heading = new Panel { Dock = DockStyle.Fill, BackColor = Canvas };
-        _pageTitle.Location = new Point(0, 0);
-        _pageSubtitle.Location = new Point(2, 42);
-        heading.Controls.Add(_pageTitle);
-        heading.Controls.Add(_pageSubtitle);
-        pageLayout.Controls.Add(heading, 0, 0);
-
-        if (page == "Overview")
-            pageLayout.Controls.Add(BuildMetricCards(), 0, 1);
-
-        pageLayout.Controls.Add(BuildMainPanel(page), 0, 2);
-        _content.Controls.Add(pageLayout);
+        var header = BuildPageHeader(page);
+        layout.Controls.Add(header, 0, 0);
+        var body = new Panel { Dock = DockStyle.Fill, BackColor = Canvas, Padding = Padding.Empty };
+        layout.Controls.Add(body, 0, 1);
+        _content.Controls.Add(layout);
         _content.ResumeLayout();
+
+        if (page.Equals("Settings", StringComparison.OrdinalIgnoreCase))
+        {
+            ShowSettings(body);
+            return;
+        }
+        if (_api is null || !_api.IsAuthenticated)
+        {
+            ShowDisconnectedState(body);
+            return;
+        }
+
+        ShowLoadingState(body);
+        await LoadPageAsync(page, body, generation, cancellationToken);
+    }
+
+    private Control BuildPageHeader(string page)
+    {
+        var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = Canvas, Margin = Padding.Empty };
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        var text = new Panel { Dock = DockStyle.Fill, BackColor = Canvas };
+        var title = new Label { Text = page, AutoSize = true, ForeColor = Ink, Font = new Font("Segoe UI Semibold", 22f, FontStyle.Bold), Location = new Point(0, 0) };
+        var subtitle = new Label
+        {
+            Text = PageSubtitle(page), AutoSize = true, ForeColor = Muted,
+            Font = new Font("Segoe UI", 9.5f), Location = new Point(2, 43)
+        };
+        text.Controls.Add(title);
+        text.Controls.Add(subtitle);
+        header.Controls.Add(text, 0, 0);
+
+        var actions = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false,
+            AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(0, 15, 0, 0)
+        };
+        if (!page.Equals("Settings", StringComparison.OrdinalIgnoreCase))
+        {
+            var refresh = CreateSecondaryButton("Refresh");
+            refresh.Click += async (_, _) => await ShowPageAsync(_activePage);
+            actions.Controls.Add(refresh);
+            if (_api is not null && page.Equals("Projects", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New project");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreateProjectAsync();
+                actions.Controls.Add(create);
+            }
+        }
+        header.Controls.Add(actions, 1, 0);
+        return header;
+    }
+
+    private static string PageSubtitle(string page) => page switch
+    {
+        "Overview" => "Live activity and operational signals from your service workspace.",
+        "Projects" => "Plan and manage landscaping projects using live Project API records.",
+        "Estimates" => "Review estimates returned by the configured project service.",
+        "Customers" => "Maintain client records owned by the Project service.",
+        "Plant & material catalog" => "Browse the plant, material and work-type catalogs.",
+        "Procurement" => "Purchase orders and supplier deliveries from Procurement.",
+        "Inventory" => "Stock levels and inventory records from Procurement.",
+        "Suppliers" => "Supplier records and contact channels from Procurement.",
+        "Organization" => "Organization and workforce records from the connected service.",
+        "Settings" => "Configure the gateway connection and authenticate with Identity.",
+        _ => "Live service-backed data from Landscape Studio."
+    };
+
+    private async Task LoadPageAsync(string page, Panel body, int generation, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (page.Equals("Overview", StringComparison.OrdinalIgnoreCase))
+                await LoadOverviewAsync(body, generation, cancellationToken);
+            else
+                await LoadTablePageAsync(page, body, generation, cancellationToken);
+        }
+        catch (OperationCanceledException) { }
+        catch (DesktopApiException exception)
+        {
+            if (generation != _loadGeneration || body.IsDisposed) return;
+            if (exception.IsUnauthorized) SetDisconnected("SESSION REJECTED");
+            ShowErrorState(body, exception.Message, exception.IsUnauthorized ? "Reconnect and sign in with an authorized account." : "Refresh the page after checking the service and your permissions.");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException or InvalidOperationException)
+        {
+            if (generation != _loadGeneration || body.IsDisposed) return;
+            ShowErrorState(body, exception is TaskCanceledException ? "The API request timed out." : exception.Message,
+                "Check the API gateway and the service health page, then refresh.");
+        }
+    }
+
+    private async Task LoadOverviewAsync(Panel body, int generation, CancellationToken cancellationToken)
+    {
+        var metrics = BuildMetricCards();
+        var content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Canvas, Margin = Padding.Empty };
+        content.RowStyles.Add(new RowStyle(SizeType.Absolute, 145));
+        content.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        content.Controls.Add(metrics, 0, 0);
+
+        var lower = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, BackColor = Canvas, Margin = Padding.Empty };
+        lower.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 64));
+        lower.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 36));
+        lower.Controls.Add(BuildSurfaceWithGrid("Recent projects", CreateGrid()), 0, 0);
+        lower.Controls.Add(BuildActivitySurface(), 1, 0);
+        content.Controls.Add(lower, 0, 1);
+        body.Controls.Clear();
+        body.Controls.Add(content);
+
+        var projects = await _api!.GetAsync("/Projects?page=1&pageSize=8", cancellationToken);
+        if (generation != _loadGeneration || body.IsDisposed) return;
+        var projectItems = GetItems(projects);
+        var projectGrid = FindFirstGrid(lower.Controls[0]);
+        if (projectGrid is not null) projectGrid.DataSource = ToDataTable(projectItems);
+        _metricValues["PROJECTS"].Text = ReadCount(projects)?.ToString("N0") ?? projectItems.GetArrayLength().ToString("N0");
+
+        try
+        {
+            var analytics = await _api.GetAsync("/Analytics/Summary", cancellationToken);
+            if (generation != _loadGeneration || body.IsDisposed) return;
+            _metricValues["AUDIT EVENTS"].Text = ReadLong(analytics, "totalEvents")?.ToString("N0") ?? "0";
+            var services = GetProperty(analytics, "byService");
+            var activityGrid = FindFirstGrid(lower.Controls[1]);
+            if (activityGrid is not null) activityGrid.DataSource = ToDataTable(services);
+            _metricValues["EVENT SOURCES"].Text = services.ValueKind == JsonValueKind.Array
+                ? services.GetArrayLength().ToString("N0")
+                : "0";
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            _metricValues["AUDIT EVENTS"].Text = "—";
+            _metricValues["EVENT SOURCES"].Text = "—";
+            SetFeedback(lower.Controls[1], "Analytics is currently unavailable.");
+        }
+
+        try
+        {
+            var orders = await _api.GetAsync("/PurchaseOrders?page=1&pageSize=1", cancellationToken);
+            if (generation == _loadGeneration)
+                _metricValues["PURCHASE ORDERS"].Text = ReadCount(orders)?.ToString("N0") ?? "0";
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            if (generation == _loadGeneration) _metricValues["PURCHASE ORDERS"].Text = "—";
+        }
+
+        if (generation == _loadGeneration && _api is not null)
+            _connectionState.Text = "CONNECTED";
+    }
+
+    private async Task LoadTablePageAsync(string page, Panel body, int generation, CancellationToken cancellationToken)
+    {
+        var queryPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(14) };
+        var rowCount = page.Equals("Plant & material catalog", StringComparison.OrdinalIgnoreCase) ? 2 : 1;
+        var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = rowCount, BackColor = Color.White };
+        if (rowCount == 2)
+        {
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            var filterBar = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+            var plant = CreateSecondaryButton("Plants");
+            var material = CreateSecondaryButton("Materials");
+            var work = CreateSecondaryButton("Work types");
+            plant.Click += async (_, _) => { _catalogResource = "Plants"; await ShowPageAsync(_activePage); };
+            material.Click += async (_, _) => { _catalogResource = "Materials"; await ShowPageAsync(_activePage); };
+            work.Click += async (_, _) => { _catalogResource = "Work types"; await ShowPageAsync(_activePage); };
+            filterBar.Controls.Add(plant);
+            filterBar.Controls.Add(material);
+            filterBar.Controls.Add(work);
+            layout.Controls.Add(filterBar, 0, 0);
+        }
+        else
+        {
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        }
+
+        var grid = CreateGrid();
+        if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
+        queryPanel.Controls.Add(layout);
+        body.Controls.Clear();
+        body.Controls.Add(queryPanel);
+
+        var route = ResolveRoute(page);
+        if (route is null)
+        {
+            ShowErrorState(body, "No gateway route is configured for this resource yet.", "Check the route definitions before enabling this workflow.");
+            return;
+        }
+        var data = await _api!.GetAsync(route, cancellationToken);
+        if (generation != _loadGeneration || body.IsDisposed) return;
+        var items = GetItems(data);
+        grid.DataSource = ToDataTable(items);
+        if (items.ValueKind == JsonValueKind.Array && items.GetArrayLength() == 0)
+            SetFeedback(queryPanel, "The API returned no records for this request.");
+        _connectionState.Text = "CONNECTED";
+    }
+
+    private string? ResolveRoute(string page) => page switch
+    {
+        "Projects" => "/Projects?page=1&pageSize=100",
+        "Estimates" => "/Estimates?page=1&pageSize=100",
+        "Customers" => "/Clients?page=1&pageSize=100",
+        "Plant & material catalog" => _catalogResource switch
+        {
+            "Materials" => "/Catalog/Materials?page=1&pageSize=100",
+            "Work types" => "/Catalog/WorkTypes?page=1&pageSize=100",
+            _ => "/Catalog/Plants?page=1&pageSize=100"
+        },
+        "Procurement" => "/PurchaseOrders?page=1&pageSize=100",
+        "Inventory" => "/StockItems?page=1&pageSize=100",
+        "Suppliers" => "/Suppliers?page=1&pageSize=100",
+        "Organization" => "/Employees?page=1&pageSize=100",
+        _ => null
+    };
+
+    private async Task CreateProjectAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreateProjectDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Projects");
+    }
+
+    private async Task OpenConnectionDialogAsync()
+    {
+        using var dialog = new ConnectionDialog();
+        if (dialog.ShowDialog(this) != DialogResult.OK || dialog.ConnectedClient is null) return;
+        _api?.Dispose();
+        _api = dialog.ConnectedClient;
+        SetConnected();
+        await ShowPageAsync(_activePage == "Settings" ? "Overview" : _activePage);
+    }
+
+    private void ShowSettings(Panel body)
+    {
+        var surface = new Panel { Dock = DockStyle.Top, Height = 250, BackColor = Color.White, Padding = new Padding(24) };
+        surface.Paint += (_, e) => { using var p = new Pen(Color.FromArgb(229, 235, 230)); e.Graphics.DrawRectangle(p, 0, 0, surface.Width - 1, surface.Height - 1); };
+        surface.Controls.Add(new Label { Text = "API gateway and authentication", AutoSize = true, Font = new Font("Segoe UI Semibold", 14f, FontStyle.Bold), ForeColor = Ink, Location = new Point(24, 22) });
+        surface.Controls.Add(new Label
+        {
+            Text = "Gateway URL: " + ClientSettingsStore.LoadGatewayUri().AbsoluteUri + Environment.NewLine +
+                "Access tokens are held in memory only; only the gateway URL is written to local settings." +
+                Environment.NewLine + Environment.NewLine +
+                (_api?.IsAuthenticated == true ? $"Signed in as {_api.UserName} ({_api.Role})." : "No authenticated API session is active."),
+            AutoSize = false, Size = new Size(760, 76), Location = new Point(26, 62), ForeColor = Muted, Font = new Font("Segoe UI", 10f)
+        });
+        var action = CreatePrimaryButton(_api?.IsAuthenticated == true ? "Change connection" : "Connect and sign in");
+        action.Location = new Point(24, 164);
+        action.Click += async (_, _) => await OpenConnectionDialogAsync();
+        surface.Controls.Add(action);
+        body.Controls.Clear();
+        body.Controls.Add(surface);
+    }
+
+    private void ShowDisconnectedState(Panel body)
+    {
+        var surface = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(28) };
+        surface.Paint += (_, e) => { using var p = new Pen(Color.FromArgb(229, 235, 230)); e.Graphics.DrawRectangle(p, 0, 0, surface.Width - 1, surface.Height - 1); };
+        var icon = new Label { Text = "↗", AutoSize = true, ForeColor = Accent, Font = new Font("Segoe UI", 29f), Location = new Point(28, 23) };
+        var title = new Label { Text = "Connect your Landscape Studio workspace", AutoSize = true, ForeColor = Ink, Font = new Font("Segoe UI Semibold", 15f, FontStyle.Bold), Location = new Point(31, 78) };
+        var description = new Label
+        {
+            Text = "Sign in through the Identity service to load real projects, catalog records, procurement data and analytics. The desktop client does not store your password or persist access tokens.",
+            AutoSize = false, Size = new Size(650, 52), ForeColor = Muted, Font = new Font("Segoe UI", 10f), Location = new Point(33, 114)
+        };
+        var button = CreatePrimaryButton("Connect to API");
+        button.Location = new Point(31, 185);
+        button.Click += async (_, _) => await OpenConnectionDialogAsync();
+        surface.Controls.Add(icon);
+        surface.Controls.Add(title);
+        surface.Controls.Add(description);
+        surface.Controls.Add(button);
+        body.Controls.Clear();
+        body.Controls.Add(surface);
+    }
+
+    private void ShowLoadingState(Panel body)
+    {
+        var loading = new Label { Text = "Loading live data…", Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleCenter, ForeColor = Muted, Font = new Font("Segoe UI", 11f) };
+        body.Controls.Clear();
+        body.Controls.Add(loading);
+    }
+
+    private void ShowErrorState(Panel body, string message, string hint)
+    {
+        var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(26) };
+        panel.Controls.Add(new Label { Text = "The service request could not be completed.", AutoSize = true, ForeColor = Color.FromArgb(143, 65, 52), Font = new Font("Segoe UI Semibold", 13f, FontStyle.Bold), Location = new Point(24, 24) });
+        panel.Controls.Add(new Label { Text = message, AutoSize = false, Size = new Size(820, 52), ForeColor = Muted, Font = new Font("Segoe UI", 10f), Location = new Point(26, 64) });
+        panel.Controls.Add(new Label { Text = hint, AutoSize = true, ForeColor = Muted, Font = new Font("Segoe UI", 9f), Location = new Point(26, 122) });
+        var refresh = CreateSecondaryButton("Try again");
+        refresh.Location = new Point(24, 158);
+        refresh.Click += async (_, _) => await ShowPageAsync(_activePage);
+        panel.Controls.Add(refresh);
+        body.Controls.Clear();
+        body.Controls.Add(panel);
     }
 
     private Control BuildMetricCards()
     {
-        var cards = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 1, BackColor = Canvas, Padding = new Padding(0, 8, 0, 12) };
-        for (var i = 0; i < 4; i++)
+        var cards = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 4, RowCount = 1, BackColor = Canvas, Padding = new Padding(0, 3, 0, 12) };
+        var entries = new[]
+        {
+            ("PROJECTS", "PROJECT RECORDS"),
+            ("AUDIT EVENTS", "AUDIT EVENTS"),
+            ("PURCHASE ORDERS", "PURCHASE ORDERS"),
+            ("EVENT SOURCES", "EVENT SOURCES")
+        };
+        for (var i = 0; i < entries.Length; i++)
         {
             cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25));
             var card = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Margin = new Padding(0, 0, 12, 0), Padding = new Padding(18) };
-            card.Paint += (_, e) =>
-            {
-                using var pen = new Pen(Color.FromArgb(229, 235, 230));
-                e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1);
-            };
-            var title = new Label { Text = new[] { "ACTIVE PROJECTS", "OPEN ESTIMATES", "PENDING ORDERS", "LOW STOCK ITEMS" }[i], AutoSize = true, ForeColor = Muted, Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), Location = new Point(18, 18) };
+            card.Paint += (_, e) => { using var pen = new Pen(Color.FromArgb(229, 235, 230)); e.Graphics.DrawRectangle(pen, 0, 0, card.Width - 1, card.Height - 1); };
+            card.Controls.Add(new Label { Text = entries[i].Item2, AutoSize = true, ForeColor = Muted, Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), Location = new Point(18, 18) });
             var value = new Label { Text = "—", AutoSize = true, ForeColor = Ink, Font = new Font("Segoe UI Semibold", 27f, FontStyle.Bold), Location = new Point(16, 42) };
-            var note = new Label { Text = "Waiting for API connection", AutoSize = true, ForeColor = Muted, Font = new Font("Segoe UI", 8f), Location = new Point(18, 91) };
-            card.Controls.Add(title);
+            _metricValues[entries[i].Item1] = value;
             card.Controls.Add(value);
-            card.Controls.Add(note);
+            card.Controls.Add(new Label { Text = "Live API data", AutoSize = true, ForeColor = Muted, Font = new Font("Segoe UI", 8f), Location = new Point(18, 91) });
             cards.Controls.Add(card, i, 0);
         }
         return cards;
     }
 
-    private Control BuildMainPanel(string page)
+    private static Control BuildSurfaceWithGrid(string titleText, DataGridView grid)
     {
-        var panel = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(22) };
-        panel.Paint += (_, e) =>
+        var surface = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(15), Margin = new Padding(0, 0, 10, 0) };
+        surface.Paint += (_, e) => { using var p = new Pen(Color.FromArgb(229, 235, 230)); e.Graphics.DrawRectangle(p, 0, 0, surface.Width - 1, surface.Height - 1); };
+        surface.Controls.Add(grid);
+        var title = new Label { Text = titleText, AutoSize = true, ForeColor = Ink, Font = new Font("Segoe UI Semibold", 12f, FontStyle.Bold), Location = new Point(16, 15) };
+        var container = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, BackColor = Color.White };
+        container.RowStyles.Add(new RowStyle(SizeType.Absolute, 38));
+        container.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+        container.Controls.Add(title, 0, 0);
+        grid.Dock = DockStyle.Fill;
+        container.Controls.Add(grid, 0, 1);
+        surface.Controls.Clear();
+        surface.Controls.Add(container);
+        return surface;
+    }
+
+    private static Control BuildActivitySurface()
+    {
+        var surface = new Panel { Dock = DockStyle.Fill, BackColor = Color.White, Padding = new Padding(15), Margin = Padding.Empty };
+        surface.Paint += (_, e) => { using var p = new Pen(Color.FromArgb(229, 235, 230)); e.Graphics.DrawRectangle(p, 0, 0, surface.Width - 1, surface.Height - 1); };
+        return surface;
+    }
+
+    private static DataGridView CreateGrid()
+    {
+        return new DataGridView
         {
-            using var pen = new Pen(Color.FromArgb(229, 235, 230));
-            e.Graphics.DrawRectangle(pen, 0, 0, panel.Width - 1, panel.Height - 1);
+            Dock = DockStyle.Fill, BackgroundColor = Color.White, BorderStyle = BorderStyle.None,
+            GridColor = Color.FromArgb(232, 238, 231), EnableHeadersVisualStyles = false,
+            ColumnHeadersDefaultCellStyle = new DataGridViewCellStyle
+            {
+                BackColor = Color.FromArgb(248, 250, 247), ForeColor = Color.FromArgb(112, 127, 118),
+                Font = new Font("Segoe UI Semibold", 8f, FontStyle.Bold), SelectionBackColor = Color.FromArgb(248, 250, 247),
+                SelectionForeColor = Color.FromArgb(112, 127, 118), Padding = new Padding(5)
+            },
+            DefaultCellStyle = new DataGridViewCellStyle
+            {
+                BackColor = Color.White, ForeColor = Color.FromArgb(55, 73, 61), SelectionBackColor = Color.FromArgb(230, 240, 229),
+                SelectionForeColor = Color.FromArgb(33, 47, 40), Font = new Font("Segoe UI", 9f), Padding = new Padding(4)
+            },
+            RowHeadersVisible = false, AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.DisplayedCells,
+            AutoSizeRowsMode = DataGridViewAutoSizeRowsMode.AllCells, ReadOnly = true, AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false, MultiSelect = false, SelectionMode = DataGridViewSelectionMode.FullRowSelect
         };
-        var title = new Label { Text = page == "Overview" ? "Workspace status" : $"{page} workspace", AutoSize = true, ForeColor = Ink, Font = new Font("Segoe UI Semibold", 13f, FontStyle.Bold), Location = new Point(22, 20) };
-        var body = new Label
+    }
+
+    private static DataGridView? FindFirstGrid(Control control)
+    {
+        if (control is DataGridView grid) return grid;
+        foreach (Control child in control.Controls)
         {
-            Text = page == "Overview"
-                ? "The interface shell is ready. Connect the gateway and configure authentication to load live projects, estimates, suppliers and inventory."
-                : "This area is reserved for the service-backed workflow. It will use the shared API client and typed response models; no sample records are presented as real business data.",
-            AutoSize = false,
-            Location = new Point(24, 61),
-            Size = new Size(760, 54),
-            ForeColor = Muted,
-            Font = new Font("Segoe UI", 10f)
-        };
-        var action = new KryptonButton
+            var found = FindFirstGrid(child);
+            if (found is not null) return found;
+        }
+        return null;
+    }
+
+    private static DataTable ToDataTable(JsonElement items)
+    {
+        var table = new DataTable();
+        if (items.ValueKind != JsonValueKind.Array) return table;
+        var rows = items.EnumerateArray().Where(x => x.ValueKind == JsonValueKind.Object).ToArray();
+        var columns = rows.SelectMany(row => row.EnumerateObject())
+            .Where(property => property.Value.ValueKind is not (JsonValueKind.Object or JsonValueKind.Array or JsonValueKind.Null or JsonValueKind.Undefined))
+            .Select(property => property.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        foreach (var column in columns) table.Columns.Add(column, typeof(string));
+        foreach (var row in rows)
         {
-            Location = new Point(22, 130),
-            Size = new Size(240, 42),
-            ButtonStyle = ButtonStyle.Standalone,
-            Cursor = Cursors.Hand
-        };
-        action.Values.Text = page == "Overview" ? "Connection settings" : "Configure service connection";
-        action.StateCommon.Back.Color1 = Accent;
-        action.StateCommon.Back.Color2 = Accent;
-        action.StateCommon.Border.DrawBorders = PaletteDrawBorders.None;
-        action.StateCommon.Content.ShortText.Color1 = Color.White;
-        action.StateCommon.Content.ShortText.Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold);
-        action.StateCommon.Content.ShortText.TextH = PaletteRelativeAlign.Center;
-        action.StateCommon.Content.ShortText.TextV = PaletteRelativeAlign.Center;
-        action.StateTracking.Back.Color1 = Color.FromArgb(52, 104, 73);
-        action.StateTracking.Back.Color2 = Color.FromArgb(52, 104, 73);
-        action.StatePressed.Back.Color1 = Color.FromArgb(42, 88, 61);
-        action.StatePressed.Back.Color2 = Color.FromArgb(42, 88, 61);
-        action.Click += (_, _) => MessageBox.Show(
-            "The gateway URL and authentication flow will be configured when the shared API client is implemented.",
-            "Connection settings", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        panel.Controls.Add(title);
-        panel.Controls.Add(body);
-        panel.Controls.Add(action);
-        return panel;
+            var data = table.NewRow();
+            foreach (var property in row.EnumerateObject())
+            {
+                if (!table.Columns.Contains(property.Name)) continue;
+                data[property.Name] = property.Value.ValueKind == JsonValueKind.String
+                    ? property.Value.GetString() ?? string.Empty
+                    : property.Value.ToString();
+            }
+            table.Rows.Add(data);
+        }
+        return table;
+    }
+
+    private static JsonElement GetItems(JsonElement response)
+    {
+        if (response.ValueKind == JsonValueKind.Object)
+        {
+            if (TryGetProperty(response, "items", out var items)) return items;
+            if (TryGetProperty(response, "data", out var data) && data.ValueKind == JsonValueKind.Array) return data;
+        }
+        return response;
+    }
+
+    private static JsonElement GetProperty(JsonElement source, string key) =>
+        TryGetProperty(source, key, out var value) ? value : default;
+
+    private static bool TryGetProperty(JsonElement source, string name, out JsonElement value)
+    {
+        if (source.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var property in source.EnumerateObject())
+            {
+                if (property.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                {
+                    value = property.Value;
+                    return true;
+                }
+            }
+        }
+        value = default;
+        return false;
+    }
+
+    private static long? ReadLong(JsonElement source, string key)
+    {
+        var value = GetProperty(source, key);
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var number)) return number;
+        return null;
+    }
+
+    private static long? ReadCount(JsonElement source) => ReadLong(source, "totalCount") ?? ReadLong(source, "TotalCount");
+
+    private static void SetFeedback(Control control, string message)
+    {
+        control.Controls.Add(new Label
+        {
+            Name = "api-feedback", Text = message, AutoSize = true, ForeColor = Muted,
+            Font = new Font("Segoe UI", 9f), Location = new Point(22, Math.Max(50, control.Height - 45))
+        });
+    }
+
+    private void SetConnected()
+    {
+        _connectionState.Text = "CONNECTED";
+        _connectionState.ForeColor = Color.FromArgb(48, 105, 64);
+        _connectionState.BackColor = Color.FromArgb(229, 244, 228);
+        _connectButton.Values.Text = "Change connection";
+    }
+
+    private void SetDisconnected(string status)
+    {
+        _connectionState.Text = status;
+        _connectionState.ForeColor = Color.FromArgb(160, 105, 28);
+        _connectionState.BackColor = Color.FromArgb(255, 244, 220);
+        _connectButton.Values.Text = "Connect to API";
+    }
+
+    private static KryptonButton CreatePrimaryButton(string label)
+    {
+        var button = new KryptonButton { Height = 40, ButtonStyle = ButtonStyle.Standalone, Cursor = Cursors.Hand };
+        button.Values.Text = label;
+        ConfigurePrimaryButton(button, label);
+        return button;
+    }
+
+    private static KryptonButton CreateSecondaryButton(string label)
+    {
+        var button = new KryptonButton { Height = 36, ButtonStyle = ButtonStyle.Standalone, Cursor = Cursors.Hand };
+        button.Values.Text = label;
+        button.StateCommon.Back.Color1 = Color.White;
+        button.StateCommon.Back.Color2 = Color.White;
+        button.StateCommon.Border.Color1 = Color.FromArgb(217, 227, 216);
+        button.StateCommon.Content.ShortText.Color1 = Ink;
+        button.StateCommon.Content.ShortText.Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold);
+        return button;
+    }
+
+    private static void ConfigurePrimaryButton(KryptonButton button, string label)
+    {
+        button.Values.Text = label;
+        button.StateCommon.Back.Color1 = Accent;
+        button.StateCommon.Back.Color2 = Accent;
+        button.StateCommon.Border.DrawBorders = PaletteDrawBorders.None;
+        button.StateCommon.Content.ShortText.Color1 = Color.White;
+        button.StateCommon.Content.ShortText.Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold);
+        button.StateCommon.Content.ShortText.TextH = PaletteRelativeAlign.Center;
+        button.StateCommon.Content.ShortText.TextV = PaletteRelativeAlign.Center;
+        button.StateTracking.Back.Color1 = Color.FromArgb(52, 104, 73);
+        button.StateTracking.Back.Color2 = Color.FromArgb(52, 104, 73);
+        button.StatePressed.Back.Color1 = Color.FromArgb(42, 88, 61);
+        button.StatePressed.Back.Color2 = Color.FromArgb(42, 88, 61);
     }
 }
