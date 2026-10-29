@@ -1,8 +1,15 @@
 version: '3.4'
 
 services:
-  transactiondb:
-    image: mongo
+  analyticsdb:
+    image: mongo:7
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "quit(db.adminCommand('ping').ok ? 0 : 2)"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - mongo_data:/data/db
 
   accountdb:
     image: postgres:16-alpine
@@ -97,6 +104,7 @@ services:
       context: .
       dockerfile: Services/Organization/Organization.API/Dockerfile
     environment:
+      EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
@@ -108,6 +116,8 @@ services:
     depends_on:
       organizationdb:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "8005:8080"
     volumes:
@@ -115,6 +125,11 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
 
   pgadmin:
     image: dpage/pgadmin4
@@ -125,11 +140,28 @@ services:
   portainer:
     image: portainer/portainer-ce
 
-  transaction.api:
-    image: ${DOCKER_REGISTRY-}transactionapi
+  analytics.api:
+    image: ${DOCKER_REGISTRY-}analyticsapi
     build:
       context: .
       dockerfile: Services/Transaction/Transaction.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      DatabaseSettings__ConnectionString: mongodb://analyticsdb:27017
+      DatabaseSettings__DatabaseName: LandscapeAnalytics
+      DatabaseSettings__CollectionName: AuditEvents
+      EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
+      Jwt__Issuer: LandscapeStudio.Identity
+      Jwt__Audience: LandscapeStudio.Clients
+      Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
+    depends_on:
+      analyticsdb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "8000:8080"
 
   account.api:
     image: ${DOCKER_REGISTRY-}accountapi
@@ -137,6 +169,7 @@ services:
       context: .
       dockerfile: Services/Account/Account.API/Dockerfile
     environment:
+      EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
@@ -147,6 +180,8 @@ services:
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
       accountdb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - "8004:8080"
@@ -171,12 +206,15 @@ services:
       context: .
       dockerfile: Services/Catalog/Catalog.API/Dockerfile
     environment:
+      EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
       ConnectionStrings__CatalogConnectionString: Host=catalogdb;Port=5432;Database=CatalogDb;Username=landscape_app;Password=${CATALOG_DB_PASSWORD:-catalog_dev_only}
       ConnectionStrings__SqliteConnectionString: Data Source=/app/data/catalog.db
     depends_on:
       catalogdb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     volumes:
       - catalog_sqlite_data:/app/data
@@ -187,6 +225,7 @@ services:
       context: .
       dockerfile: Services/Identity/Identity.API/Dockerfile
     environment:
+      EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
@@ -200,6 +239,8 @@ services:
     depends_on:
       identitydb:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "8003:8080"
     volumes:
@@ -211,6 +252,7 @@ services:
       context: .
       dockerfile: Services/Project/Project.API/Dockerfile
     environment:
+      EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
@@ -221,6 +263,8 @@ services:
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
       projectdb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - "8001:8080"
@@ -233,6 +277,7 @@ services:
       context: .
       dockerfile: Services/Procurement/Procurement.API/Dockerfile
     environment:
+      EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
@@ -243,6 +288,8 @@ services:
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
       procurementdb:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     ports:
       - "8006:8080"
@@ -255,6 +302,25 @@ services:
       context: .
       dockerfile: ApiGateways/OcelotApiGateway/Dockerfile
 
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+    depends_on:
+      account.api:
+        condition: service_started
+      catalog.api:
+        condition: service_started
+      identity.api:
+        condition: service_started
+      project.api:
+        condition: service_started
+      organization.api:
+        condition: service_started
+      procurement.api:
+        condition: service_started
+      analytics.api:
+        condition: service_started
+    ports:
+      - "8010:8080"
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2
 
