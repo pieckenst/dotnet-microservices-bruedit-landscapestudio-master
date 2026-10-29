@@ -9,6 +9,7 @@ using Organization.Application;
 using Organization.Infrastructure;
 using Organization.Infrastructure.Persistence;
 using Serilog;
+using Shared.ServiceKit.Auditing;
 using System.Security.Claims;
 using System.Text;
 
@@ -28,7 +29,7 @@ var audience = builder.Configuration["Jwt:Audience"] ?? "LandscapeStudio.Clients
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddOrganizationApplication(builder.Configuration);
 builder.Services.AddOrganizationInfrastructure(builder.Configuration);
-builder.Services.AddControllers();
+builder.Services.AddMutationAuditEvents(builder.Configuration, "Organization");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
