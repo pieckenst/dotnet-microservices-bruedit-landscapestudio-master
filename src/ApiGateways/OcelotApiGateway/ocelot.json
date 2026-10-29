@@ -6,7 +6,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "analytics.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Analytics/Summary",
@@ -20,7 +20,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "analytics.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/AuditEvents/export",
@@ -34,7 +34,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "analytics.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/AuditEvents",
@@ -48,7 +48,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Accounts/me/addresses",
@@ -63,7 +63,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Accounts/me/preferences",
@@ -78,7 +78,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Accounts/me/addresses/{addressId}",
@@ -93,7 +93,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Accounts/me",
@@ -108,7 +108,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/Plants",
@@ -123,7 +123,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/Materials",
@@ -138,7 +138,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/WorkTypes",
@@ -153,7 +153,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/MeasurementUnits",
@@ -168,7 +168,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/Plants/{id}",
@@ -184,7 +184,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/Materials/{id}",
@@ -200,7 +200,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/WorkTypes/{id}",
@@ -216,7 +216,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/MeasurementUnits/{id}",
@@ -232,7 +232,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "identity.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Users",
@@ -247,7 +247,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Projects",
@@ -262,7 +262,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Clients",
@@ -277,7 +277,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/LandPlots",
@@ -292,7 +292,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/ProjectStages",
@@ -307,7 +307,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/ProjectTasks",
@@ -322,7 +322,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Estimates",
@@ -337,7 +337,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Employees",
@@ -352,7 +352,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Positions",
@@ -367,7 +367,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Brigades",
@@ -382,7 +382,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/WorkAssignments",
@@ -397,7 +397,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "identity.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Auth/{everything}",
@@ -412,7 +412,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "identity.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Users/{id}",
@@ -426,7 +426,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Projects/{everything}",
@@ -444,7 +444,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Clients/{everything}",
@@ -462,7 +462,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/LandPlots/{everything}",
@@ -480,7 +480,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/ProjectStages/{everything}",
@@ -498,7 +498,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/ProjectTasks/{everything}",
@@ -516,7 +516,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "project.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Estimates/{everything}",
@@ -534,7 +534,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/{resource}",
@@ -549,7 +549,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Employees/{everything}",
@@ -567,7 +567,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Positions/{everything}",
@@ -585,7 +585,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Brigades/{everything}",
@@ -603,7 +603,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "organization.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/WorkAssignments/{everything}",
@@ -621,7 +621,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "catalog.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Catalog/{resource}/{id}",
@@ -637,7 +637,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Suppliers",
@@ -652,7 +652,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Suppliers/{id}",
@@ -667,7 +667,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Suppliers/{id}/active",
@@ -681,7 +681,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/StockItems",
@@ -696,7 +696,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/StockItems/{id}",
@@ -710,7 +710,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/StockItems/{id}/movements",
@@ -725,7 +725,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/PurchaseOrders",
@@ -740,7 +740,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/PurchaseOrders/{id}",
@@ -754,7 +754,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/submit",
@@ -768,7 +768,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/approve",
@@ -782,7 +782,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/receive-lines/{lineId}",
@@ -796,7 +796,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/cancel",
@@ -810,7 +810,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Deliveries",
@@ -825,7 +825,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Deliveries/{id}",
@@ -839,7 +839,7 @@
       "DownstreamHostAndPorts": [
         {
           "Host": "procurement.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
       "UpstreamPathTemplate": "/Deliveries/{id}/status",
