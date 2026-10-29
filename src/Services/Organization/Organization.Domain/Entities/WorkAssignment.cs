@@ -39,7 +39,7 @@ public sealed class WorkAssignment : EntityBase
     public void ChangeStatus(AssignmentStatus status)
     {
         if (!Enum.IsDefined(status)) throw new ArgumentOutOfRangeException(nameof(status));
-        if (Status is AssignmentStatus.Completed or AssignmentStatus.Cancelled && status != Status)
+        if ((Status is AssignmentStatus.Completed or AssignmentStatus.Cancelled) && status != Status)
             throw new InvalidOperationException("A completed or cancelled assignment is terminal.");
         Status = status;
     }
