@@ -13,7 +13,7 @@ namespace Identity.Infrastructure;
 
 public static class InfrastructureServiceRegistration
 {
-    public static IServiceCollection AddIdentityInfrastructure(IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddIdentityInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<IDatabaseProviderStrategy, PostgresProviderStrategy>();
         services.AddSingleton<IDatabaseProviderStrategy, SqlServerProviderStrategy>();
