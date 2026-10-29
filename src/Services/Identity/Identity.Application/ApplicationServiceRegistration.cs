@@ -12,6 +12,6 @@ public sealed class IdentityApplicationRegistration : ServiceRegistrationBase
 
 public static class ApplicationServiceRegistration
 {
-    public static IServiceCollection AddIdentityApplication(IServiceCollection services, IConfiguration configuration) =>
+    public static IServiceCollection AddIdentityApplication(this IServiceCollection services, IConfiguration configuration) =>
         new IdentityApplicationRegistration().AddApplicationServices(services, configuration);
 }
