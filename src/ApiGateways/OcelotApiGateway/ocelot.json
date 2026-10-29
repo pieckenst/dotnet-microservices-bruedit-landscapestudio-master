@@ -775,6 +775,49 @@
       "UpstreamHttpMethod": [
         "POST"
       ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/deliveries",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Deliveries",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/deliveries/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Deliveries/{id}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/deliveries/{id}/status",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Deliveries/{id}/status",
+      "UpstreamHttpMethod": [
+        "PATCH"
+      ]
     }
   ],
   "GlobalConfiguration": {
