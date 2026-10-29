@@ -12,5 +12,6 @@
     <ProjectReference Include="..\Organization.Application\Organization.Application.csproj" />
     <ProjectReference Include="..\Organization.Infrastructure\Organization.Infrastructure.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Common.Logging\Common.Logging.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\Shared.ServiceKit\Shared.ServiceKit.csproj" />
   </ItemGroup>
 </Project>
