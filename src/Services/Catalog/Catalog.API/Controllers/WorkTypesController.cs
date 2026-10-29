@@ -1,15 +1,18 @@
 using Catalog.Application.DTOs;
 using Catalog.Application.Features.WorkTypes;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Catalog.API.Controllers;
 
 [ApiController]
 [Route("api/v1/work-types")]
+[Authorize]
 public sealed class WorkTypesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Policy = "catalog.read")]
     [ProducesResponseType(typeof(PagedResponse<WorkTypeDto>), StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedResponse<WorkTypeDto>>> Get(
         [FromQuery] int page = 1,
@@ -18,6 +21,7 @@ public sealed class WorkTypesController(IMediator mediator) : ControllerBase
         => Ok(await mediator.Send(new GetWorkTypesQuery(page, pageSize), cancellationToken));
 
     [HttpGet("{id:guid}")]
+    [Authorize(Policy = "catalog.read")]
     [ProducesResponseType(typeof(WorkTypeDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<WorkTypeDto>> GetById(Guid id, CancellationToken cancellationToken)
@@ -27,6 +31,7 @@ public sealed class WorkTypesController(IMediator mediator) : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "catalog.write")]
     [ProducesResponseType(typeof(WorkTypeDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<WorkTypeDto>> Create(
@@ -38,6 +43,7 @@ public sealed class WorkTypesController(IMediator mediator) : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Policy = "catalog.write")]
     [ProducesResponseType(typeof(WorkTypeDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -51,6 +57,7 @@ public sealed class WorkTypesController(IMediator mediator) : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "catalog.write")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
