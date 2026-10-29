@@ -23,6 +23,9 @@ ARG BUILD_CONFIGURATION=Release
 RUN dotnet publish "Catalog.API.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
+USER root
+RUN mkdir -p /app/data && chown app:app /app/data
+USER app
 WORKDIR /app
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "Catalog.API.dll"]
