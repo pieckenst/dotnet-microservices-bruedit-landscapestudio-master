@@ -1,15 +1,26 @@
+using EventBus.Messages.Events;
+using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Project.Application.Contracts;
 using Project.Application.DTOs;
 using Project.Application.Features.Estimates;
+using Project.Domain.Entities;
+using Project.Domain.Enums;
+using Shared.Common.Persistence;
 
 namespace Project.API.Controllers;
 
 [ApiController]
 [Route("api/v1/estimates")]
 [Authorize]
-public sealed class EstimatesController(IMediator mediator) : ControllerBase
+public sealed class EstimatesController(
+    IMediator mediator,
+    IEstimateRepository estimates,
+    IRepositoryBase<LandscapeProject> projects,
+    IPublishEndpoint publishEndpoint,
+    ILogger<EstimatesController> logger) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "projects.read")]
@@ -65,8 +76,45 @@ public sealed class EstimatesController(IMediator mediator) : ControllerBase
 
     [HttpPost("{id:guid}/approve")]
     [Authorize(Policy = "projects.write")]
-    public Task<ActionResult<EstimateDto>> Approve(Guid id, CancellationToken cancellationToken) =>
-        Transition(new ApproveEstimateCommand(id), cancellationToken);
+    public async Task<ActionResult<EstimateDto>> Approve(Guid id, CancellationToken cancellationToken)
+    {
+        var estimate = await mediator.Send(new ApproveEstimateCommand(id), cancellationToken);
+        if (estimate is null) return NotFound();
+
+        try
+        {
+            var aggregate = await estimates.GetByIdWithItemsAsync(id, tracking: false, cancellationToken);
+            var project = await projects.GetByIdAsync(estimate.ProjectId);
+            if (aggregate is not null && project is not null)
+            {
+                var costedItems = aggregate.LineItems.Where(item => item.LineCost.HasValue).ToArray();
+                var workCost = costedItems.Where(item => item.ItemType == EstimateLineItemType.Work).Sum(item => item.LineCost!.Value);
+                var materialsCost = costedItems.Where(item => item.ItemType != EstimateLineItemType.Work).Sum(item => item.LineCost!.Value);
+                await publishEndpoint.Publish(new EstimateApprovedEvent
+                {
+                    EstimateId = estimate.Id,
+                    ProjectId = estimate.ProjectId,
+                    ProjectName = string.Empty,
+                    ClientId = project.ClientId,
+                    ClientName = string.Empty,
+                    EstimatedTotal = estimate.EstimatedTotal,
+                    MaterialsCost = materialsCost,
+                    WorksCost = workCost,
+                    // The estimate model does not persist currency. Do not assume the currency.
+                    Currency = string.Empty,
+                    ApprovedDate = estimate.ApprovedAtUtc ?? DateTime.UtcNow,
+                    LineItemCount = estimate.LineItems.Count
+                }, cancellationToken);
+            }
+        }
+        catch (Exception exception)
+        {
+            // The estimate is committed before the integration event; log rather than returning a false failure.
+            logger.LogError(exception, "Estimate {EstimateId} was approved but its analytics event could not be published.", id);
+        }
+
+        return Ok(estimate);
+    }
 
     [HttpPost("{id:guid}/reject")]
     [Authorize(Policy = "projects.write")]
