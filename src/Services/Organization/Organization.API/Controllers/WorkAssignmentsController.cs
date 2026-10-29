@@ -1,3 +1,5 @@
+using EventBus.Messages.Events;
+using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,7 +12,10 @@ namespace Organization.API.Controllers;
 [ApiController]
 [Route("api/v1/work-assignments")]
 [Authorize]
-public sealed class WorkAssignmentsController(IMediator mediator) : ControllerBase
+public sealed class WorkAssignmentsController(
+    IMediator mediator,
+    IPublishEndpoint publishEndpoint,
+    ILogger<WorkAssignmentsController> logger) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "organization.read")]
@@ -24,6 +29,28 @@ public sealed class WorkAssignmentsController(IMediator mediator) : ControllerBa
     public async Task<ActionResult<WorkAssignmentDto>> Create(CreateWorkAssignmentCommand command, CancellationToken cancellationToken)
     {
         var assignment = await mediator.Send(command, cancellationToken);
+        if (assignment.EmployeeId.HasValue)
+        {
+            try
+            {
+                await publishEndpoint.Publish(new EmployeeAssignedEvent
+                {
+                    EmployeeId = assignment.EmployeeId.Value,
+                    EmployeeFullName = string.Empty,
+                    ProjectId = assignment.ProjectId,
+                    BrigadeId = assignment.BrigadeId ?? Guid.Empty,
+                    AssignmentRole = assignment.Title,
+                    IsResponsible = false,
+                    AssignedDate = DateTime.SpecifyKind(
+                        assignment.StartDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
+                }, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Work assignment {AssignmentId} was saved but its analytics event could not be published.", assignment.Id);
+            }
+        }
+
         return CreatedAtAction(nameof(Get), new { projectId = assignment.ProjectId }, assignment);
     }
 
