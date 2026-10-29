@@ -1,4 +1,5 @@
 using EventBus.Messages.Events;
+using IntegrationProjectStatus = EventBus.Messages.Enums.ProjectStatus;
 using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -18,6 +19,7 @@ public sealed class ProjectStagesController(
     IMediator mediator,
     IRepositoryBase<ProjectStage> stageRepository,
     IRepositoryBase<ProjectTask> taskRepository,
+    IRepositoryBase<LandscapeProject> projectRepository,
     IPublishEndpoint publishEndpoint,
     ILogger<ProjectStagesController> logger) : ControllerBase
 {
@@ -60,6 +62,7 @@ public sealed class ProjectStagesController(
                 // Project tasks already provide a real source for completion counts.
                 var tasks = await taskRepository.GetAsync(task => task.StageId == stage.Id);
                 var completedCount = tasks.LongCount(task => task.Status == ProjectTaskStatus.Completed);
+                var project = await projectRepository.GetByIdAsync(stage.ProjectId);
                 await publishEndpoint.Publish(new ProjectStageCompletedEvent
                 {
                     ProjectId = stage.ProjectId,
@@ -70,7 +73,7 @@ public sealed class ProjectStagesController(
                     CompletedDate = DateTime.SpecifyKind(
                         (stage.ActualEndDate ?? DateOnly.FromDateTime(DateTime.UtcNow)).ToDateTime(TimeOnly.MinValue),
                         DateTimeKind.Utc),
-                    ProjectStatus = ProjectStatus.Unknown
+                    ProjectStatus = MapProjectStatus(project?.Status ?? Project.Domain.Enums.ProjectStatus.Draft)
                 }, cancellationToken);
             }
             catch (Exception exception)
@@ -81,4 +84,15 @@ public sealed class ProjectStagesController(
         }
         return Ok(stage);
     }
+
+    private static IntegrationProjectStatus MapProjectStatus(Project.Domain.Enums.ProjectStatus status) => status switch
+    {
+        Project.Domain.Enums.ProjectStatus.Draft => IntegrationProjectStatus.Draft,
+        Project.Domain.Enums.ProjectStatus.Planned => IntegrationProjectStatus.Planned,
+        Project.Domain.Enums.ProjectStatus.InProgress => IntegrationProjectStatus.InProgress,
+        Project.Domain.Enums.ProjectStatus.OnHold => IntegrationProjectStatus.OnHold,
+        Project.Domain.Enums.ProjectStatus.Completed => IntegrationProjectStatus.Completed,
+        Project.Domain.Enums.ProjectStatus.Cancelled => IntegrationProjectStatus.Cancelled,
+        _ => IntegrationProjectStatus.Draft
+    };
 }
