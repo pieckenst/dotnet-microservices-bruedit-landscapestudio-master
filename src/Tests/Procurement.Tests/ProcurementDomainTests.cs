@@ -48,4 +48,19 @@ public sealed class ProcurementDomainTests
         Assert.Throws<ArgumentOutOfRangeException>(() => new StockMovement(
             Guid.NewGuid(), stock.Id, StockMovementType.Receipt, 0m, "PO-001"));
     }
+
+    [Fact]
+    public void DeliveryCanArriveEarlyAndTerminalStatesCannotBeReopened()
+    {
+        var delivery = new SupplierDelivery(Guid.NewGuid(), Guid.NewGuid(), "del-001",
+            new DateOnly(2026, 11, 10), "Studio Freight", "TRACK-1");
+        delivery.ChangeStatus(DeliveryStatus.Dispatched);
+        delivery.ChangeStatus(DeliveryStatus.Delivered, new DateOnly(2026, 11, 8));
+
+        Assert.Equal(DeliveryStatus.Delivered, delivery.Status);
+        Assert.Equal(new DateOnly(2026, 11, 8), delivery.ActualDate);
+        Assert.Throws<InvalidOperationException>(() => delivery.ChangeStatus(DeliveryStatus.Delayed));
+        Assert.Throws<ArgumentException>(() => new SupplierDelivery(Guid.NewGuid(), Guid.NewGuid(),
+            "del-002", new DateOnly(2026, 11, 10), "Carrier", "").ChangeStatus(DeliveryStatus.Delivered));
+    }
 }
