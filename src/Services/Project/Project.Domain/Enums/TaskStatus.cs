@@ -1,2 +1,2 @@
 namespace Project.Domain.Enums;
-public enum TaskStatus { NotStarted, InProgress, Blocked, Completed, Cancelled }
+public enum ProjectTaskStatus { NotStarted, InProgress, Blocked, Completed, Cancelled }

@@ -10,7 +10,7 @@ public sealed class ProjectTask : EntityBase
     {
         if (id == Guid.Empty || projectId == Guid.Empty || stageId == Guid.Empty) throw new ArgumentException("Task, project, and stage ids are required.");
         Id = id; ProjectId = projectId; StageId = stageId;
-        Update(title, description, dueDate, assignedEmployeeId, assignedBrigadeId); Status = TaskStatus.NotStarted;
+        Update(title, description, dueDate, assignedEmployeeId, assignedBrigadeId); Status = ProjectTaskStatus.NotStarted;
     }
     public Guid ProjectId { get; private set; }
     public Guid StageId { get; private set; }
@@ -19,7 +19,7 @@ public sealed class ProjectTask : EntityBase
     public DateOnly? DueDate { get; private set; }
     public Guid? AssignedEmployeeId { get; private set; }
     public Guid? AssignedBrigadeId { get; private set; }
-    public TaskStatus Status { get; private set; }
+    public ProjectTaskStatus Status { get; private set; }
     public DateOnly? CompletedDate { get; private set; }
     public void Update(string title, string description, DateOnly? dueDate, Guid? assignedEmployeeId, Guid? assignedBrigadeId)
     {
@@ -30,9 +30,9 @@ public sealed class ProjectTask : EntityBase
         Title = title.Trim(); Description = description?.Trim() ?? string.Empty; DueDate = dueDate;
         AssignedEmployeeId = assignedEmployeeId; AssignedBrigadeId = assignedBrigadeId;
     }
-    public void ChangeStatus(TaskStatus status, DateOnly today)
+    public void ChangeStatus(ProjectTaskStatus status, DateOnly today)
     {
-        if (Status == TaskStatus.Completed && status != TaskStatus.Completed) throw new InvalidOperationException("A completed task cannot be reopened.");
-        Status = status; CompletedDate = status == TaskStatus.Completed ? today : null;
+        if (Status == ProjectTaskStatus.Completed && status != ProjectTaskStatus.Completed) throw new InvalidOperationException("A completed task cannot be reopened.");
+        Status = status; CompletedDate = status == ProjectTaskStatus.Completed ? today : null;
     }
 }
