@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Project.Application.Contracts;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Project.Infrastructure.Persistence;
+using Project.Infrastructure.Repositories;
 using Shared.Common.Common;
 using Shared.Common.Persistence;
 
@@ -30,6 +32,7 @@ public static class InfrastructureServiceRegistration
         });
         services.AddScoped<DbContext>(serviceProvider => serviceProvider.GetRequiredService<ProjectContext>());
         services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
+        services.AddScoped<IEstimateRepository, EstimateRepository>();
         return services;
     }
 }

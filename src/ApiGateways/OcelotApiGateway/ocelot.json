@@ -170,6 +170,48 @@
       "UpstreamPathTemplate": "/LandPlots",
       "UpstreamHttpMethod": [ "GET", "POST" ]
     },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-stages/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/ProjectStages/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-stages",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/ProjectStages",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-tasks/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/ProjectTasks/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-tasks",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/ProjectTasks",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/estimates/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Estimates/{everything}",
+      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/estimates",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Estimates",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
     //Catalog resource/item routes must be separate so the optional id segment is preserved.
     {
       "DownstreamPathTemplate": "/api/v1/{resource}/{id}",

@@ -37,6 +37,7 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         {
             ForbiddenException => (403, "Forbidden", "You do not have permission to perform this action.", null),
             NotFoundException => (404, "Resource not found", exception.Message, null),
+            KeyNotFoundException => (404, "Resource not found", exception.Message, null),
             FluentValidation.ValidationException validation => (400, "Validation failed", "One or more fields are invalid.",
                 validation.Errors.GroupBy(error => error.PropertyName).ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray())),
             DomainValidationException validation => (400, "Validation failed", "One or more fields are invalid.", validation.Errors),
