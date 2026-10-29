@@ -1,181 +1,431 @@
 {
   "Routes": [
-    //Transaction API
-    //Legacy Customer API retained until Project's client/reference model has been migrated.
     {
-      "DownstreamPathTemplate": "/api/v1/Customers",
+      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses/{addressId}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "customer.api",
+          "Host": "account.api",
           "Port": "8080"
         }
       ],
-      "UpstreamPathTemplate": "/Customers",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamPathTemplate": "/Accounts/me/addresses/{addressId}",
+      "UpstreamHttpMethod": [
+        "PUT",
+        "DELETE"
+      ]
     },
     {
-      "DownstreamPathTemplate": "/api/v1/Customers/{id}",
+      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "customer.api",
+          "Host": "account.api",
           "Port": "8080"
         }
       ],
-      "UpstreamPathTemplate": "/Customers/{id}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamPathTemplate": "/Accounts/me/addresses",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
-    // Identity authentication and protected user management.
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/me/preferences",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Accounts/me/preferences",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/me",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Accounts/me",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/plants/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/Plants/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/plants",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/Plants",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/materials/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/Materials/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/materials",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/Materials",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-types/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/WorkTypes/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-types",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/WorkTypes",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/measurement-units/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/MeasurementUnits/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/measurement-units",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/MeasurementUnits",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
     {
       "DownstreamPathTemplate": "/api/v1/auth/{everything}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "identity.api", "Port": "8080" }
+        {
+          "Host": "identity.api",
+          "Port": "8080"
+        }
       ],
       "UpstreamPathTemplate": "/Auth/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/users/{id}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "identity.api", "Port": "8080" }
+        {
+          "Host": "identity.api",
+          "Port": "8080"
+        }
       ],
       "UpstreamPathTemplate": "/Users/{id}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/users",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
-        { "Host": "identity.api", "Port": "8080" }
+        {
+          "Host": "identity.api",
+          "Port": "8080"
+        }
       ],
       "UpstreamPathTemplate": "/Users",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
-    //Landscaping Project domain. Downstream APIs validate the Bearer JWT and permission claims.
     {
       "DownstreamPathTemplate": "/api/v1/projects/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/Projects/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/projects",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/Projects",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/clients/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/Clients/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/clients",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/Clients",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/land-plots/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/LandPlots/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/land-plots",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/LandPlots",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-stages/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/ProjectStages/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-stages",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/ProjectStages",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-tasks/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/ProjectTasks/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-tasks",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/ProjectTasks",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/estimates/{everything}",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/Estimates/{everything}",
-      "UpstreamHttpMethod": [ "GET", "POST", "PUT", "PATCH", "DELETE" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/estimates",
       "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": "8080"
+        }
+      ],
       "UpstreamPathTemplate": "/Estimates",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
     },
-    // Account profile service: authentication is performed by Identity, profile endpoints accept only the caller's own subject except admin lookup.
-    {
-      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses/{addressId}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
-      "UpstreamPathTemplate": "/Accounts/me/addresses/{addressId}",
-      "UpstreamHttpMethod": [ "PUT", "DELETE" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
-      "UpstreamPathTemplate": "/Accounts/me/addresses",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/accounts/me/preferences",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
-      "UpstreamPathTemplate": "/Accounts/me/preferences",
-      "UpstreamHttpMethod": [ "GET", "PUT" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/accounts/me",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
-      "UpstreamPathTemplate": "/Accounts/me",
-      "UpstreamHttpMethod": [ "GET", "PUT" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/accounts/{userId}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
-      "UpstreamPathTemplate": "/Accounts/{userId}",
-      "UpstreamHttpMethod": [ "GET" ]
-    },
-    //Catalog resource/item routes must be separate so the optional id segment is preserved.
     {
       "DownstreamPathTemplate": "/api/v1/{resource}/{id}",
       "DownstreamScheme": "http",
@@ -186,7 +436,11 @@
         }
       ],
       "UpstreamPathTemplate": "/Catalog/{resource}/{id}",
-      "UpstreamHttpMethod": [ "GET", "PUT", "DELETE" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ]
     },
     {
       "DownstreamPathTemplate": "/api/v1/{resource}",
@@ -198,7 +452,24 @@
         }
       ],
       "UpstreamPathTemplate": "/Catalog/{resource}",
-      "UpstreamHttpMethod": [ "GET", "POST" ]
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/{userId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "account.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Accounts/{userId}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
     }
   ],
   "GlobalConfiguration": {
