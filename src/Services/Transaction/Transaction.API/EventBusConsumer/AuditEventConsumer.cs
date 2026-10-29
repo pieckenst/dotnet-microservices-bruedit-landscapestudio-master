@@ -9,6 +9,9 @@ public sealed class AuditEventConsumer(
     ILogger<AuditEventConsumer> logger,
     IAuditEventRepository repository) : IConsumer<AuditEvent>
 {
+    private static readonly string[] SensitiveMetadataTerms =
+        ["password", "secret", "token", "authorization", "credential", "email", "phone", "address", "fullname", "full_name"];
+
     public async Task Consume(ConsumeContext<AuditEvent> context)
     {
         var message = context.Message;
@@ -27,22 +30,35 @@ public sealed class AuditEventConsumer(
             OccurredAtUtc = message.CreationDate.Kind == DateTimeKind.Utc
                 ? message.CreationDate
                 : DateTime.SpecifyKind(message.CreationDate, DateTimeKind.Utc),
-            SourceService = message.SourceService.Trim(),
-            Action = message.Action.Trim(),
-            EntityType = message.EntityType.Trim(),
+            SourceService = Limit(message.SourceService.Trim(), 100),
+            Action = Limit(message.Action.Trim(), 100),
+            EntityType = Limit(message.EntityType.Trim(), 100),
             EntityId = Normalize(message.EntityId),
             ActorId = Normalize(message.ActorId),
             CorrelationId = Normalize(message.CorrelationId) ?? context.CorrelationId?.ToString(),
-            Metadata = message.Metadata is null
-                ? new Dictionary<string, string>(StringComparer.Ordinal)
-                : new Dictionary<string, string>(message.Metadata
-                    .Where(item => !string.IsNullOrWhiteSpace(item.Key) && item.Value is not null)
-                    .Take(30)
-                    .ToDictionary(item => item.Key.Trim(), item => Limit(item.Value, 500)), StringComparer.Ordinal)
+            Metadata = NormalizeMetadata(message.Metadata)
         };
 
         await repository.AddAsync(record, context.CancellationToken);
         logger.LogDebug("Stored audit event {EventId} from {SourceService}", record.Id, record.SourceService);
+    }
+
+    private static Dictionary<string, string> NormalizeMetadata(IReadOnlyDictionary<string, string>? metadata)
+    {
+        var normalized = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (metadata is null) return normalized;
+        foreach (var item in metadata.Take(100))
+        {
+            var key = item.Key?.Trim();
+            var value = item.Value;
+            if (string.IsNullOrWhiteSpace(key) || value is null ||
+                SensitiveMetadataTerms.Any(term => key.Contains(term, StringComparison.OrdinalIgnoreCase)))
+                continue;
+            key = Limit(key, 100);
+            if (normalized.ContainsKey(key)) continue;
+            normalized.Add(key, Limit(value, 500));
+        }
+        return normalized;
     }
 
     private static string? Normalize(string? value) =>
