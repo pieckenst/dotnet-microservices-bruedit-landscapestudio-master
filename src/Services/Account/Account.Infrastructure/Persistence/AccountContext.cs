@@ -27,6 +27,7 @@ public sealed class AccountContext(DbContextOptions<AccountContext> options) : D
             entity.ToTable("AccountProfiles");
             entity.HasKey(x => x.Id);
             entity.Property(x => x.DisplayName).HasMaxLength(120).IsRequired();
+            entity.Property(x => x.CreatedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.Property(x => x.FirstName).HasMaxLength(80);
             entity.Property(x => x.LastName).HasMaxLength(80);
             entity.Property(x => x.Email).HasMaxLength(254);
@@ -39,9 +40,12 @@ public sealed class AccountContext(DbContextOptions<AccountContext> options) : D
         {
             entity.ToTable("AccountPreferences");
             entity.HasKey(x => x.Id);
-            entity.Property(x => x.Theme).HasMaxLength(16).IsRequired();
-            entity.Property(x => x.Language).HasMaxLength(8).IsRequired();
-            entity.Property(x => x.TimeZone).HasMaxLength(80).IsRequired();
+            entity.Property(x => x.Theme).HasMaxLength(16).IsRequired().HasDefaultValue("system");
+            entity.Property(x => x.Language).HasMaxLength(8).IsRequired().HasDefaultValue("en");
+            entity.Property(x => x.TimeZone).HasMaxLength(80).IsRequired().HasDefaultValue("UTC");
+            entity.Property(x => x.EmailNotificationsEnabled).HasDefaultValue(true);
+            entity.Property(x => x.SmsNotificationsEnabled).HasDefaultValue(false);
+            entity.Property(x => x.CreatedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasOne<AccountProfile>().WithOne()
                 .HasForeignKey<AccountPreference>(x => x.Id)
                 .OnDelete(DeleteBehavior.Cascade);
@@ -51,6 +55,7 @@ public sealed class AccountContext(DbContextOptions<AccountContext> options) : D
         {
             entity.ToTable("AccountAddresses");
             entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasDefaultValueSql("gen_random_uuid()");
             entity.Property(x => x.Label).HasMaxLength(80).IsRequired();
             entity.Property(x => x.Line1).HasMaxLength(160).IsRequired();
             entity.Property(x => x.Line2).HasMaxLength(160);
@@ -58,6 +63,8 @@ public sealed class AccountContext(DbContextOptions<AccountContext> options) : D
             entity.Property(x => x.Region).HasMaxLength(100);
             entity.Property(x => x.PostalCode).HasMaxLength(24);
             entity.Property(x => x.Country).HasMaxLength(2).IsRequired();
+            entity.Property(x => x.IsDefault).HasDefaultValue(false);
+            entity.Property(x => x.CreatedDate).HasDefaultValueSql("CURRENT_TIMESTAMP");
             entity.HasIndex(x => new { x.UserId, x.IsDefault });
             entity.HasOne<AccountProfile>().WithMany()
                 .HasForeignKey(x => x.UserId)
