@@ -34,7 +34,6 @@ namespace Shared.ServiceKit
                 throw new ArgumentException("At least one application assembly must be supplied.", nameof(assemblies));
 
             services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(assemblies));
-            services.AddAutoMapper(assemblies);
 
             foreach (var assembly in assemblies)
                 services.AddValidatorsFromAssembly(assembly);
