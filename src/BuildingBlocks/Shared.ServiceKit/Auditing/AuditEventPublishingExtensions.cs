@@ -13,7 +13,7 @@ public static class AuditEventPublishingExtensions
         if (string.IsNullOrWhiteSpace(sourceService))
             throw new ArgumentException("A source service name is required.", nameof(sourceService));
 
-        services.Configure<AuditServiceOptions>(options => options.SourceService = sourceService);
+        configuration["Audit:SourceService"] = sourceService;
         services.AddScoped<AuditEventActionFilter>();
         services.AddMassTransit(registration =>
         {
@@ -26,9 +26,4 @@ public static class AuditEventPublishingExtensions
 
         return services.AddControllers(options => options.Filters.AddService<AuditEventActionFilter>());
     }
-}
-
-public sealed class AuditServiceOptions
-{
-    public string SourceService { get; set; } = string.Empty;
 }
