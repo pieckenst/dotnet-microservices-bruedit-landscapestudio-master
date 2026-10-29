@@ -37,7 +37,7 @@ public sealed class ProjectStagesController(IMediator mediator) : ControllerBase
 
     [HttpPatch("{id:guid}/status")]
     [Authorize(Policy = "projects.write")]
-    public async Task<ActionResult<ProjectStageDto>> ChangeStatus(Guid id, StageStatus status, CancellationToken cancellationToken)
+    public async Task<ActionResult<ProjectStageDto>> ChangeStatus(Guid id, [FromQuery] StageStatus status, CancellationToken cancellationToken)
     {
         var stage = await mediator.Send(new ChangeProjectStageStatusCommand(id, status), cancellationToken);
         return stage is null ? NotFound() : Ok(stage);
