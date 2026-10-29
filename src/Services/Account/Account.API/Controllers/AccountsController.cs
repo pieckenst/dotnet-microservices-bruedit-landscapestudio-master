@@ -230,8 +230,6 @@ public sealed class AccountsController(
             await publishEndpoint.Publish(new ProfileUpdatedEvent
             {
                 UserId = profile.Id,
-                FullName = profile.DisplayName,
-                Email = profile.Email ?? string.Empty,
                 UpdatedFields = updatedFields,
                 UpdatedAt = DateTime.UtcNow
             }, HttpContext.RequestAborted);
