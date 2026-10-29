@@ -64,7 +64,7 @@ public sealed class ProjectContext(DbContextOptions<ProjectContext> options) : D
             entity.Property(x => x.Description).HasMaxLength(4000).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
             entity.HasIndex(x => new { x.ProjectId, x.Sequence }).IsUnique();
-            entity.HasMany(x => x.Tasks).WithOne().HasForeignKey(x => x.StageId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasAlternateKey(x => new { x.ProjectId, x.Id });
         });
         modelBuilder.Entity<ProjectTask>(entity =>
         {
@@ -73,7 +73,9 @@ public sealed class ProjectContext(DbContextOptions<ProjectContext> options) : D
             entity.Property(x => x.Description).HasMaxLength(4000).IsRequired();
             entity.Property(x => x.Status).HasConversion<string>().HasMaxLength(24);
             entity.HasOne<LandscapeProject>().WithMany().HasForeignKey(x => x.ProjectId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne<ProjectStage>().WithMany().HasForeignKey(x => x.StageId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<ProjectStage>().WithMany(x => x.Tasks)
+                .HasForeignKey(x => new { x.ProjectId, x.StageId })
+                .HasPrincipalKey(x => new { x.ProjectId, x.Id }).OnDelete(DeleteBehavior.Cascade);
             entity.HasIndex(x => new { x.ProjectId, x.Status });
             entity.HasIndex(x => x.DueDate);
         });
