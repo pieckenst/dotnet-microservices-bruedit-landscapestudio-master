@@ -17,8 +17,7 @@ public static class InfrastructureServiceRegistration
         services.AddSingleton<IDatabaseProviderStrategy, SqlServerProviderStrategy>();
         services.AddSingleton<IDatabaseProviderStrategy, SqliteProviderStrategy>();
         services.AddSingleton<DatabaseProviderFactory>();
-
-        services.AddDbContext<CatalogContext>((serviceProvider, options) =>
+        services.AddSingleton<DatabaseProviderResolution>(serviceProvider =>
         {
             var providerFactory = serviceProvider.GetRequiredService<DatabaseProviderFactory>();
             var provider = configuration["Database:Provider"] ?? "PostgreSQL";
@@ -26,7 +25,14 @@ public static class InfrastructureServiceRegistration
             var fallbackConnection = configuration.GetConnectionString("SqliteConnectionString")
                 ?? "Data Source=catalog.db";
 
-            var resolved = providerFactory.Resolve(provider, primaryConnection, fallbackConnection);
+            // Resolve once per service process. A database outage after startup must not route
+            // a later request to a different, empty SQLite database and silently fork the data.
+            return providerFactory.Resolve(provider, primaryConnection, fallbackConnection);
+        });
+
+        services.AddDbContext<CatalogContext>((serviceProvider, options) =>
+        {
+            var resolved = serviceProvider.GetRequiredService<DatabaseProviderResolution>();
             resolved.Strategy.Configure(options, resolved.ConnectionString);
         });
 
