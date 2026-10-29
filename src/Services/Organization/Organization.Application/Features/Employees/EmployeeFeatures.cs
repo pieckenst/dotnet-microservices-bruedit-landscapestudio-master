@@ -24,10 +24,6 @@ public sealed class GetEmployeesQueryValidator : AbstractValidator<GetEmployeesQ
         RuleFor(x => x.Status).Must(status => !status.HasValue || Enum.IsDefined(status.Value));
     }
 }
-public sealed class EmployeeInputRules<T> : AbstractValidator<T> where T : notnull
-{
-    protected void AddRules(IRuleBuilderInitial<T, string> employeeNumberRule) { }
-}
 public sealed class CreateEmployeeCommandValidator : AbstractValidator<CreateEmployeeCommand>
 {
     public CreateEmployeeCommandValidator()
