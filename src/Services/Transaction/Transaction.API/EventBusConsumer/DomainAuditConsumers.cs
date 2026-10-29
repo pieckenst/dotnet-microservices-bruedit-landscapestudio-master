@@ -174,7 +174,7 @@ public sealed class MaterialReceivedAuditConsumer(IAuditEventRepository reposito
         {
             ["purchaseOrderId"] = DomainAuditRecordFactory.Id(message.PurchaseOrderId),
             ["materialId"] = DomainAuditRecordFactory.Id(message.MaterialId),
-            ["measurementUnitId"] = DomainAuditRecordFactory.Id(message.MeasurementUnitId),
+            ["unitSymbol"] = string.IsNullOrWhiteSpace(message.UnitSymbol) ? "unspecified" : message.UnitSymbol.Trim()[..Math.Min(message.UnitSymbol.Trim().Length, 24)],
             ["quantityReceived"] = DomainAuditRecordFactory.Number(message.QuantityReceived),
             ["unitCost"] = DomainAuditRecordFactory.Number(message.UnitCost),
             ["totalCost"] = DomainAuditRecordFactory.Number(message.TotalCost)
