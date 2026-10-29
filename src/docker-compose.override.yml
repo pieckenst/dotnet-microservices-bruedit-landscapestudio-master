@@ -111,3 +111,14 @@ services:
       HealthChecksUI__HealthChecks__6__Uri: http://analytics.api:8080/health
     ports:
       - "8007:8080"
+
+  landscapestudio.web:
+    container_name: landscapestudio.web
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Gateway__BaseUrl: http://ocelotapigateway:8080/
+    depends_on:
+      ocelotapigateway:
+        condition: service_started
+    ports:
+      - "8008:8080"
