@@ -1,79 +1,6 @@
 {
   "Routes": [
     //Transaction API
-    {
-      "DownstreamPathTemplate": "/api/v1/Transactions/{accountId}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "transaction.api",
-          "Port": "8080"
-        }
-      ],
-      "UpstreamPathTemplate": "/Transactions/{accountId}",
-      "UpstreamHttpMethod": [ "GET" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/Transactions",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "transaction.api",
-          "Port": "8080"
-        }
-      ],
-      "UpstreamPathTemplate": "/Transactions",
-      "UpstreamHttpMethod": [ "GET" ]
-    },
-    //Account API
-    {
-      "DownstreamPathTemplate": "/api/v1/Accounts",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "account.api",
-          "Port": "8080"
-        }
-      ],
-      "UpstreamPathTemplate": "/Accounts",
-      "UpstreamHttpMethod": [ "POST" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/Accounts/Adding",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "account.api",
-          "Port": "8080"
-        }
-      ],
-      "UpstreamPathTemplate": "/Accounts/Adding",
-      "UpstreamHttpMethod": [ "POST" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/Accounts/Withdrawing",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "account.api",
-          "Port": "8080"
-        }
-      ],
-      "UpstreamPathTemplate": "/Accounts/Withdrawing",
-      "UpstreamHttpMethod": [ "POST" ]
-    },
-    {
-      "DownstreamPathTemplate": "/api/v1/Accounts/{id}",
-      "DownstreamScheme": "http",
-      "DownstreamHostAndPorts": [
-        {
-          "Host": "account.api",
-          "Port": "8080"
-        }
-      ],
-      "UpstreamPathTemplate": "/Accounts/{id}",
-      "UpstreamHttpMethod": [ "GET" ]
-    },
     //Legacy Customer API retained until Project's client/reference model has been migrated.
     {
       "DownstreamPathTemplate": "/api/v1/Customers",
@@ -211,6 +138,42 @@
       "DownstreamHostAndPorts": [{ "Host": "project.api", "Port": "8080" }],
       "UpstreamPathTemplate": "/Estimates",
       "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    // Account profile service: authentication is performed by Identity, profile endpoints accept only the caller's own subject except admin lookup.
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses/{addressId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Accounts/me/addresses/{addressId}",
+      "UpstreamHttpMethod": [ "PUT", "DELETE" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Accounts/me/addresses",
+      "UpstreamHttpMethod": [ "GET", "POST" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/me/preferences",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Accounts/me/preferences",
+      "UpstreamHttpMethod": [ "GET", "PUT" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/me",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Accounts/me",
+      "UpstreamHttpMethod": [ "GET", "PUT" ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/{userId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [{ "Host": "account.api", "Port": "8080" }],
+      "UpstreamPathTemplate": "/Accounts/{userId}",
+      "UpstreamHttpMethod": [ "GET" ]
     },
     //Catalog resource/item routes must be separate so the optional id segment is preserved.
     {
