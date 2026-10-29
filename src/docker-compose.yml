@@ -77,6 +77,20 @@ services:
     volumes:
       - organization_postgres_data:/var/lib/postgresql/data
 
+  procurementdb:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ProcurementDb
+      POSTGRES_USER: landscape_app
+      POSTGRES_PASSWORD: ${PROCUREMENT_DB_PASSWORD:-procurement_dev_only}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U landscape_app -d ProcurementDb"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - procurement_postgres_data:/var/lib/postgresql/data
+
   organization.api:
     image: ${DOCKER_REGISTRY-}organizationapi
     build:
@@ -213,6 +227,28 @@ services:
     volumes:
       - project_sqlite_data:/app/data
 
+  procurement.api:
+    image: ${DOCKER_REGISTRY-}procurementapi
+    build:
+      context: .
+      dockerfile: Services/Procurement/Procurement.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+      Database__Provider: PostgreSQL
+      ConnectionStrings__ProcurementConnectionString: Host=procurementdb;Port=5432;Database=ProcurementDb;Username=landscape_app;Password=${PROCUREMENT_DB_PASSWORD:-procurement_dev_only}
+      ConnectionStrings__SqliteConnectionString: Data Source=/app/data/procurement.db
+      Jwt__Issuer: LandscapeStudio.Identity
+      Jwt__Audience: LandscapeStudio.Clients
+      Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
+    depends_on:
+      procurementdb:
+        condition: service_healthy
+    ports:
+      - "8006:8080"
+    volumes:
+      - procurement_sqlite_data:/app/data
+
   ocelotapigateway:
     image: ${DOCKER_REGISTRY-}ocelotapigateway
     build:
@@ -247,3 +283,5 @@ volumes:
   account_sqlite_data:
   organization_postgres_data:
   organization_sqlite_data:
+  procurement_postgres_data:
+  procurement_sqlite_data:
