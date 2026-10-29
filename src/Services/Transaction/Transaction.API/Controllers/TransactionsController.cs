@@ -1,45 +1,55 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Transaction.API.Data.DTOs.Requests;
 using Transaction.API.Data.DTOs.Responses;
-using Transaction.API.Services.Interfaces;
+using Transaction.API.Repositories.Interfaces;
+using Transaction.API.Services;
 
-namespace Transaction.API.Controllers
+namespace Transaction.API.Controllers;
+
+[ApiController]
+[Route("api/v1/audit-events")]
+[Authorize(Policy = "analytics.read")]
+public sealed class AuditEventsController(IAuditEventRepository repository) : ControllerBase
 {
-    [Route("api/v1/[controller]")]
-    [ApiController]
-    public class TransactionsController : ControllerBase
+    private const int ExportLimit = 10_000;
+
+    [HttpGet]
+    [ProducesResponseType(typeof(PagedAuditEventsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<PagedAuditEventsResponse>> Search(
+        [FromQuery] AuditEventQuery query, CancellationToken cancellationToken)
     {
-        private readonly ITransactionService _transactionService;
+        var validation = query.Validate();
+        if (validation is not null)
+            return BadRequest(new ProblemDetails { Title = "Invalid audit query", Detail = validation });
 
-        public TransactionsController(ITransactionService transactionService)
-        {
-            _transactionService = transactionService;
-        }
+        var result = await repository.QueryAsync(query, cancellationToken);
+        var totalPages = result.TotalCount == 0 ? 0 : (int)Math.Ceiling(result.TotalCount / (double)query.PageSize);
+        return Ok(new PagedAuditEventsResponse(
+            result.Items.Select(AuditEventMapping.ToDto).ToArray(), query.Page, query.PageSize, result.TotalCount, totalPages));
+    }
 
-        [HttpGet("{accountId}")]
-        [ProducesResponseType(typeof(List<TransactionDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesDefaultResponseType]
-        public async Task<ActionResult> GetByAccountId(Guid accountId)
-        {
-            var result = await _transactionService.GetByAccountId(accountId);
-            return Ok(result);
-        }
+    [HttpGet("export")]
+    [Produces("text/csv")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Export([FromQuery] AuditEventQuery query, CancellationToken cancellationToken)
+    {
+        var validation = query.Validate();
+        if (validation is not null)
+            return BadRequest(new ProblemDetails { Title = "Invalid audit query", Detail = validation });
 
-        [HttpGet]
-        [ProducesResponseType(typeof(List<TransactionDto>), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesDefaultResponseType]
-        public async Task<ActionResult> GetWithFilter([FromQuery] RequestFilter filter)
-        {
-            var result = await _transactionService.GetWithFilter(filter);
-            return Ok(result);
-        }
+        var records = await repository.GetForExportAsync(query, ExportLimit + 1, cancellationToken);
+        if (records.Count > ExportLimit)
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Export limit exceeded",
+                Detail = $"Narrow the filters so the export contains at most {ExportLimit:N0} records."
+            });
+
+        var csv = AuditCsvExporter.Export(records);
+        return File(System.Text.Encoding.UTF8.GetBytes(csv), "text/csv; charset=utf-8",
+            $"landscape-audit-{DateTime.UtcNow:yyyyMMdd-HHmmss}.csv");
     }
 }
