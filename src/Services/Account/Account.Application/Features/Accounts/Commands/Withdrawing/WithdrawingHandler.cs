@@ -1,41 +1,38 @@
-﻿using Account.Application.Contracts.Persistence;
+using Account.Application.Contracts.Persistence;
 using Account.Application.Exceptions;
-using AutoMapper;
 using MediatR;
-using Microsoft.Extensions.Logging;
 
 namespace Account.Application.Features.Accounts.Commands.Withdrawing
 {
-    public class WithdrawingHandler : IRequestHandler<WithdrawingCommand>
+    public sealed class WithdrawingHandler : IRequestHandler<WithdrawingCommand>
     {
         private readonly IAccountRepository _accountRepository;
-        private readonly IMapper _mapper;
-        private readonly ILogger<WithdrawingHandler> _logger;
 
-        public WithdrawingHandler(IAccountRepository accountRepository, IMapper mapper, ILogger<WithdrawingHandler> logger)
+        public WithdrawingHandler(IAccountRepository accountRepository)
         {
-            _accountRepository = accountRepository;
-            _mapper = mapper;
-            _logger = logger;
+            _accountRepository = accountRepository ?? throw new ArgumentNullException(nameof(accountRepository));
         }
 
-        public async Task<Unit> Handle(WithdrawingCommand request, CancellationToken cancellationToken)
+        public async Task Handle(WithdrawingCommand request, CancellationToken cancellationToken)
         {
-            var accountUpdate = await _accountRepository.GetByIdAsync(request.AccountId);
-            if (accountUpdate is null)
+            ArgumentNullException.ThrowIfNull(request);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            if (request.Amount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(request.Amount), "Withdrawal amount must be greater than zero.");
+
+            var account = await _accountRepository.GetByIdAsync(request.AccountId);
+            if (account is null)
                 throw new NotFoundException(nameof(Domain.Entities.Account), request.AccountId);
-            if (accountUpdate.CustomerId != request.CustomerId)
-                throw new UnauthorizedAccessException();
-            if (accountUpdate.Balance < request.Amount)
-                throw new InsufficientBalanceException(accountUpdate.Balance);
-            accountUpdate.Balance -= request.Amount;
-            await _accountRepository.UpdateAsync(accountUpdate);
-            return Unit.Value;
-        }
 
-        Task IRequestHandler<WithdrawingCommand>.Handle(WithdrawingCommand request, CancellationToken cancellationToken)
-        {
-            throw new NotImplementedException();
+            if (account.CustomerId != request.CustomerId)
+                throw new UnauthorizedAccessException("The account does not belong to the specified customer.");
+
+            if (account.Balance < request.Amount)
+                throw new InsufficientBalanceException(account.Balance);
+
+            account.Balance -= request.Amount;
+            await _accountRepository.UpdateAsync(account);
         }
     }
 }
