@@ -30,8 +30,8 @@ builder.Services
 
 var app = builder.Build();
 
-// This first implementation uses EnsureCreated until checked-in EF migrations are added.
-// Keep the schema lifecycle in one place; do not mix EnsureCreated with Database.Migrate.
+// This initial schema bootstrap is intentionally centralized until EF migrations are checked in.
+// Do not mix EnsureCreated with Database.Migrate in the same database.
 await using (var scope = app.Services.CreateAsyncScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<CatalogContext>();
@@ -59,4 +59,4 @@ app.MapHealthChecks("/health", new HealthCheckOptions
 
 await app.RunAsync();
 
-public partial class Program;
+public partial class Program { }
