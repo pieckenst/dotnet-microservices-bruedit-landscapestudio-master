@@ -4,7 +4,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Catalog.Infrastructure.Persistence;
 
-public static class CatalogContextSeed
+public sealed class CatalogContextSeed
 {
     private static MeasurementUnit[] CreateDefaultUnits() =>
     [
