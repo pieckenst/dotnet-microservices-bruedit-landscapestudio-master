@@ -602,6 +602,179 @@
         "PUT",
         "DELETE"
       ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/suppliers",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Suppliers",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/suppliers/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Suppliers/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/suppliers/{id}/active",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/Suppliers/{id}/active",
+      "UpstreamHttpMethod": [
+        "PATCH"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/stock-items",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/StockItems",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/stock-items/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/StockItems/{id}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/stock-items/{id}/movements",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/StockItems/{id}/movements",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/submit",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/submit",
+      "UpstreamHttpMethod": [
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/approve",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/approve",
+      "UpstreamHttpMethod": [
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/receive-lines/{lineId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/receive-lines/{lineId}",
+      "UpstreamHttpMethod": [
+        "POST"
+      ]
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/cancel",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": "8080"
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/cancel",
+      "UpstreamHttpMethod": [
+        "POST"
+      ]
     }
   ],
   "GlobalConfiguration": {
