@@ -4,63 +4,69 @@ using Microsoft.Extensions.Logging;
 namespace Shared.Common.Common
 {
     /// <summary>
-    /// Factory pattern + Strategy pattern: resolves the appropriate database provider at startup.
-    /// Tries the preferred provider first; if it cannot connect, automatically falls back to SQLite.
-    /// This guarantees the system is always operational — "fallback to local sqlite always possible".
+    /// Selects a configured EF Core provider and falls back to SQLite when the preferred
+    /// relational database is unavailable.
     /// </summary>
-    public class DatabaseProviderFactory
+    public sealed class DatabaseProviderFactory
     {
-        private readonly IEnumerable<IDatabaseProviderStrategy> _strategies;
+        private readonly IReadOnlyDictionary<string, IDatabaseProviderStrategy> _strategies;
         private readonly ILogger<DatabaseProviderFactory> _logger;
 
-        public DatabaseProviderFactory(IEnumerable<IDatabaseProviderStrategy> strategies, ILogger<DatabaseProviderFactory> logger)
+        public DatabaseProviderFactory(
+            IEnumerable<IDatabaseProviderStrategy> strategies,
+            ILogger<DatabaseProviderFactory> logger)
         {
-            _strategies = strategies ?? throw new ArgumentNullException(nameof(strategies));
+            ArgumentNullException.ThrowIfNull(strategies);
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _strategies = strategies.ToDictionary(
+                strategy => strategy.ProviderName,
+                StringComparer.OrdinalIgnoreCase);
+
+            if (!_strategies.ContainsKey("Sqlite"))
+                throw new InvalidOperationException("A SQLite database provider strategy must be registered.");
         }
 
-        /// <summary>
-        /// Resolves the best available provider strategy based on configuration preference and connectivity.
-        /// </summary>
-        /// <param name="preferredProvider">The provider name to try first ("PostgreSQL", "SqlServer", "Sqlite").</param>
-        /// <param name="primaryConnectionString">Connection string for the preferred provider.</param>
-        /// <param name="sqliteFallbackConnectionString">SQLite connection string used if primary is unreachable.</param>
-        /// <returns>The resolved strategy and its connection string.</returns>
         public (IDatabaseProviderStrategy Strategy, string ConnectionString) Resolve(
             string preferredProvider,
             string primaryConnectionString,
             string sqliteFallbackConnectionString)
         {
-            // If the preferred is SQLite, just use it directly
+            if (string.IsNullOrWhiteSpace(sqliteFallbackConnectionString))
+                throw new ArgumentException("A SQLite fallback connection string is required.", nameof(sqliteFallbackConnectionString));
+
             if (string.Equals(preferredProvider, "Sqlite", StringComparison.OrdinalIgnoreCase))
             {
-                var sqliteStrategy = GetStrategy("Sqlite");
-                _logger.LogInformation("Using SQLite provider directly: {ConnectionString}", sqliteFallbackConnectionString);
-                return (sqliteStrategy, sqliteFallbackConnectionString);
+                _logger.LogInformation("Using SQLite provider as configured.");
+                return (_strategies["Sqlite"], sqliteFallbackConnectionString);
             }
 
-            // Try the preferred provider
-            var preferred = GetStrategy(preferredProvider);
-            if (preferred != null && !string.IsNullOrEmpty(primaryConnectionString))
+            if (!_strategies.TryGetValue(preferredProvider ?? string.Empty, out var preferred))
             {
-                _logger.LogInformation("Attempting to connect to {Provider} at: {ConnectionString}", preferred.ProviderName, primaryConnectionString);
-                if (preferred.CanConnect(primaryConnectionString))
-                {
-                    _logger.LogInformation("{Provider} connection successful.", preferred.ProviderName);
-                    return (preferred, primaryConnectionString);
-                }
-                _logger.LogWarning("{Provider} is unreachable. Falling back to SQLite.", preferred.ProviderName);
+                _logger.LogWarning("Database provider {Provider} is not registered; falling back to SQLite.",
+                    string.IsNullOrWhiteSpace(preferredProvider) ? "(not configured)" : preferredProvider);
+                return (_strategies["Sqlite"], sqliteFallbackConnectionString);
             }
 
-            // Fallback to SQLite
-            var fallback = GetStrategy("Sqlite") ?? throw new InvalidOperationException("SQLite strategy not registered.");
-            _logger.LogWarning("Falling back to SQLite: {ConnectionString}", sqliteFallbackConnectionString);
-            return (fallback, sqliteFallbackConnectionString);
+            if (!string.IsNullOrWhiteSpace(primaryConnectionString))
+            {
+                try
+                {
+                    if (preferred.CanConnect(primaryConnectionString))
+                    {
+                        _logger.LogInformation("Database provider {Provider} is reachable.", preferred.ProviderName);
+                        return (preferred, primaryConnectionString);
+                    }
+                }
+                catch (Exception exception)
+                {
+                    _logger.LogWarning(exception, "Database connectivity check for {Provider} failed.", preferred.ProviderName);
+                }
+            }
+
+            _logger.LogWarning("Database provider {Provider} is unavailable; falling back to SQLite.", preferred.ProviderName);
+            return (_strategies["Sqlite"], sqliteFallbackConnectionString);
         }
 
-        /// <summary>
-        /// Configures the DbContextOptionsBuilder with the resolved provider.
-        /// </summary>
         public DbContextOptionsBuilder<TContext> ConfigureContext<TContext>(
             DbContextOptionsBuilder<TContext> builder,
             string preferredProvider,
@@ -68,14 +74,10 @@ namespace Shared.Common.Common
             string sqliteFallbackConnectionString)
             where TContext : DbContext
         {
-            var (strategy, connectionString) = Resolve(preferredProvider, primaryConnectionString, sqliteFallbackConnectionString);
+            ArgumentNullException.ThrowIfNull(builder);
+            var (strategy, connectionString) = Resolve(
+                preferredProvider, primaryConnectionString, sqliteFallbackConnectionString);
             return strategy.Configure(builder, connectionString);
-        }
-
-        private IDatabaseProviderStrategy GetStrategy(string providerName)
-        {
-            return _strategies.FirstOrDefault(s =>
-                string.Equals(s.ProviderName, providerName, StringComparison.OrdinalIgnoreCase));
         }
     }
 }
