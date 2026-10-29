@@ -28,12 +28,13 @@ internal sealed class CreateProjectDialog : KryptonForm
         Font = new Font("Segoe UI", 10f);
         BackColor = Color.FromArgb(246, 248, 246);
 
-        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28), ColumnCount = 1, RowCount = 7, BackColor = Color.White };
+        var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28), ColumnCount = 1, RowCount = 8, BackColor = Color.White };
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 66));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 82));
+        root.RowStyles.Add(new RowStyle(SizeType.Absolute, 60));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
         Controls.Add(root);
@@ -47,12 +48,19 @@ internal sealed class CreateProjectDialog : KryptonForm
         root.Controls.Add(Field("Client", _client), 0, 3);
         root.Controls.Add(Field("Land plot", _plot), 0, 4);
 
+        var schedule = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = new Padding(0, 3, 0, 2) };
+        schedule.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        schedule.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+        schedule.Controls.Add(Field("Planned start (optional)", _start), 0, 0);
+        schedule.Controls.Add(Field("Planned end (optional)", _end), 1, 0);
+        root.Controls.Add(schedule, 0, 5);
+
         var descriptionPanel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2 };
         descriptionPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 24));
         descriptionPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         descriptionPanel.Controls.Add(new Label { Text = "Description", Dock = DockStyle.Fill, ForeColor = Color.FromArgb(80, 98, 86), Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) }, 0, 0);
         descriptionPanel.Controls.Add(_description, 0, 1);
-        root.Controls.Add(descriptionPanel, 0, 5);
+        root.Controls.Add(descriptionPanel, 0, 6);
 
         var bottom = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
         bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -74,7 +82,7 @@ internal sealed class CreateProjectDialog : KryptonForm
         buttons.Controls.Add(cancel);
         buttons.Controls.Add(_save);
         bottom.Controls.Add(buttons, 1, 0);
-        root.Controls.Add(bottom, 0, 6);
+        root.Controls.Add(bottom, 0, 7);
         Shown += async (_, _) => await LoadReferencesAsync();
         AcceptButton = _save;
         CancelButton = cancel;
@@ -87,6 +95,7 @@ internal sealed class CreateProjectDialog : KryptonForm
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         panel.Controls.Add(new Label { Text = labelText, Dock = DockStyle.Fill, ForeColor = Color.FromArgb(80, 98, 86), Font = new Font("Segoe UI Semibold", 9f, FontStyle.Bold) }, 0, 0);
         if (editor is TextBox text) { text.BorderStyle = BorderStyle.FixedSingle; text.Font = new Font("Segoe UI", 10f); }
+        if (editor is DateTimePicker date) { date.Font = new Font("Segoe UI", 9.5f); date.Margin = new Padding(0, 0, 5, 0); }
         if (editor is ComboBox combo) { combo.Font = new Font("Segoe UI", 10f); combo.IntegralHeight = false; combo.DropDownHeight = 240; }
         panel.Controls.Add(editor, 0, 1);
         return panel;
