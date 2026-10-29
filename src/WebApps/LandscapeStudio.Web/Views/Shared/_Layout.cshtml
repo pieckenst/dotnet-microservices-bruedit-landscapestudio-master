@@ -1,7 +1,8 @@
 @using Microsoft.AspNetCore.Http
 @{
     var isAuthenticated = !string.IsNullOrWhiteSpace(Context.Session.GetString("access_token"));
-    var userName = Context.Session.GetString("user_name") ?? "Workspace user";
+    var userName = Context.Session.GetString("user_name");
+    if (string.IsNullOrWhiteSpace(userName)) userName = "Workspace user";
     var currentController = ViewContext.RouteData.Values["controller"]?.ToString() ?? "Home";
     var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "Index";
     var isLogin = string.Equals(currentController, "Auth", StringComparison.OrdinalIgnoreCase);
