@@ -155,7 +155,7 @@ public sealed class EstimateApprovedAuditConsumer(IAuditEventRepository reposito
             ["estimatedTotal"] = DomainAuditRecordFactory.Number(message.EstimatedTotal),
             ["materialsCost"] = DomainAuditRecordFactory.Number(message.MaterialsCost),
             ["worksCost"] = DomainAuditRecordFactory.Number(message.WorksCost),
-            ["currency"] = string.IsNullOrWhiteSpace(message.Currency) ? "BYN" : message.Currency.Trim()[..Math.Min(message.Currency.Trim().Length, 8)],
+            ["currency"] = string.IsNullOrWhiteSpace(message.Currency) ? "unspecified" : message.Currency.Trim()[..Math.Min(message.Currency.Trim().Length, 8)],
             ["lineItemCount"] = message.LineItemCount.ToString(CultureInfo.InvariantCulture)
         };
         return repository.AddAsync(DomainAuditRecordFactory.Create(message, "Project", "EstimateApproved",
