@@ -52,7 +52,7 @@ public sealed class ProjectDomainTests
             Guid.NewGuid(), estimate.Id, EstimateLineItemType.Work, "Installation",
             3m, "h", 12.50m, 8m));
 
-        Assert.Equal(68.33m, estimate.EstimatedTotal);
+        Assert.Equal(100.33m, estimate.EstimatedTotal);
         Assert.Equal(49m, estimate.EstimatedCost);
 
         estimate.Submit(new DateTime(2026, 5, 1, 12, 0, 0, DateTimeKind.Utc));

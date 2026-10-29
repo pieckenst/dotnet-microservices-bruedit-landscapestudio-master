@@ -39,5 +39,9 @@ jobs:
         run: dotnet restore src/Services/Project/Project.API/Project.API.csproj
       - name: Build Project API
         run: dotnet build src/Services/Project/Project.API/Project.API.csproj --configuration Release --no-restore
+      - name: Restore Project tests
+        run: dotnet restore src/Tests/Project.Tests/Project.Tests.csproj
+      - name: Run Project tests
+        run: dotnet test src/Tests/Project.Tests/Project.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
       - name: Validate Docker Compose configuration
         run: docker compose -f src/docker-compose.yml config --quiet
