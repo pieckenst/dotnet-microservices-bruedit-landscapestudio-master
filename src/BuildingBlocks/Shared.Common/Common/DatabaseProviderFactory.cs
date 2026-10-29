@@ -64,7 +64,7 @@ namespace Shared.Common.Common
             }
 
             _logger.LogWarning("Database provider {Provider} is unavailable; falling back to SQLite.", preferred.ProviderName);
-            return (_strategies["Sqlite"], sqliteFallbackConnectionString);
+            return new DatabaseProviderResolution(_strategies["Sqlite"], sqliteFallbackConnectionString);
         }
 
         public DbContextOptionsBuilder ConfigureContext<TContext>(
