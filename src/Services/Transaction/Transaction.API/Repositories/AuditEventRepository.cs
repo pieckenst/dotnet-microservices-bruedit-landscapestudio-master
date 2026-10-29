@@ -22,10 +22,10 @@ public sealed class AuditEventRepository(IAuditEventContext context) : IAuditEve
         return filters.Count == 0 ? f.Empty : f.And(filters);
     }
 
-    private static void AddExact<TField>(
+    private static void AddExact(
         ICollection<FilterDefinition<AuditRecord>> filters,
         FilterDefinitionBuilder<AuditRecord> builder,
-        System.Linq.Expressions.Expression<Func<AuditRecord, TField>> field,
+        System.Linq.Expressions.Expression<Func<AuditRecord, string?>> field,
         string? value)
     {
         if (!string.IsNullOrWhiteSpace(value)) filters.Add(builder.Eq(field, value.Trim()));
