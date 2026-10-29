@@ -43,5 +43,11 @@ jobs:
       - name: Build Identity API
         run: dotnet build src/Services/Identity/Identity.API/Identity.API.csproj --configuration Release --no-restore
 
+      - name: Restore Identity tests
+        run: dotnet restore src/Tests/Identity.Tests/Identity.Tests.csproj
+
+      - name: Run Identity tests
+        run: dotnet test src/Tests/Identity.Tests/Identity.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
+
       - name: Validate Docker Compose configuration
         run: docker compose -f src/docker-compose.yml config --quiet
