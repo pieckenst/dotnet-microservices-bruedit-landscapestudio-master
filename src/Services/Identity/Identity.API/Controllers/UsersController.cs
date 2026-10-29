@@ -1,5 +1,7 @@
 using Identity.Application.DTOs;
 using Identity.Application.Features.Users;
+using EventBus.Messages.Events;
+using MassTransit;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -9,7 +11,7 @@ namespace Identity.API.Controllers;
 [ApiController]
 [Authorize(Roles = "Administrator")]
 [Route("api/v1/users")]
-public sealed class UsersController(IMediator mediator) : ControllerBase
+public sealed class UsersController(IMediator mediator, IPublishEndpoint publishEndpoint) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<IdentityUserDto>), StatusCodes.Status200OK)]
@@ -35,6 +37,13 @@ public sealed class UsersController(IMediator mediator) : ControllerBase
     public async Task<ActionResult<IdentityUserDto>> Create(CreateUserCommand command, CancellationToken cancellationToken)
     {
         var user = await mediator.Send(command, cancellationToken);
+        await publishEndpoint.Publish(new UserRegisteredEvent
+        {
+            UserId = user.Id,
+            Username = user.UserName,
+            RoleName = user.Role,
+            RegisteredAt = user.CreatedDate
+        }, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
     }
 }
