@@ -59,17 +59,19 @@ public sealed class HttpCatalogItemLookupTests
     }
 
     [Theory]
-    [InlineData(0, "work-types", "basePrice", 125.50)]
-    [InlineData(2, "plants", "unitPrice", 34.75)]
+    [InlineData(0, "work-types", "basePrice", "125.50")]
+    [InlineData(2, "plants", "unitPrice", "34.75")]
     public async Task WorkAndPlantLookupsUseTheirCatalogSpecificPriceFields(
-        int itemType, string resource, string priceProperty, decimal expectedPrice)
+        int itemType, string resource, string priceProperty, string expectedPriceText)
     {
+        var expectedPrice = decimal.Parse(expectedPriceText, System.Globalization.CultureInfo.InvariantCulture);
         var itemId = Guid.NewGuid();
         var unitId = Guid.NewGuid();
-        var requestedPath = string.Empty;
+        var requestedPaths = new List<string>();
         var handler = new StubHandler(request =>
         {
-            requestedPath = request.RequestUri!.AbsolutePath;
+            var requestedPath = request.RequestUri!.AbsolutePath;
+            requestedPaths.Add(requestedPath);
             var json = requestedPath.EndsWith($"/measurement-units/{unitId:D}", StringComparison.Ordinal)
                 ? $"""{"id":"{{unitId:D}}","name":"Unit","symbol":"pcs","isActive":true}"""
                 : $"""{"id":"{{itemId:D}}","name":"Catalog item","description":"Description","measurementUnitId":"{{unitId:D}}","{{priceProperty}}":{{expectedPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"isActive":true}""";
@@ -90,7 +92,7 @@ public sealed class HttpCatalogItemLookupTests
 
         Assert.NotNull(result);
         Assert.Equal(expectedPrice, result.ListUnitPrice);
-        Assert.Contains($"/{resource}/{itemId:D}", requestedPath);
+        Assert.Contains(requestedPaths, path => path.EndsWith($"/{resource}/{itemId:D}", StringComparison.Ordinal));
     }
 
     [Fact]
