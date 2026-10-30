@@ -1,6 +1,6 @@
 using EventBus.Messages.Events;
 using IntegrationProjectStatus = EventBus.Messages.Enums.ProjectStatus;
-using MassTransit;
+using Shared.ServiceKit.Outbox;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,8 +20,7 @@ public sealed class ProjectStagesController(
     IRepositoryBase<ProjectStage> stageRepository,
     IRepositoryBase<ProjectTask> taskRepository,
     IRepositoryBase<LandscapeProject> projectRepository,
-    IPublishEndpoint publishEndpoint,
-    ILogger<ProjectStagesController> logger) : ControllerBase
+    IIntegrationOutbox outbox) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "projects.read")]
@@ -57,30 +56,28 @@ public sealed class ProjectStagesController(
 
         if (stage.Status == StageStatus.Completed && previous?.Status != StageStatus.Completed)
         {
-            try
+            // Stage state and its integration event are committed by the same request
+            // transaction. The outbox dispatcher publishes only after the database commit.
+            var tasks = await taskRepository.GetAsync(
+                predicate: task => task.StageId == stage.Id,
+                orderBy: null,
+                includeString: null,
+                disableTracking: true);
+            var completedCount = tasks.LongCount(task => task.Status == ProjectTaskStatus.Completed);
+            var project = await projectRepository.GetByIdAsync(stage.ProjectId);
+
+            outbox.Enqueue(new ProjectStageCompletedEvent
             {
-                // Project tasks already provide a real source for completion counts.
-                var tasks = await taskRepository.GetAsync(predicate: task => task.StageId == stage.Id, orderBy: null, includeString: null, disableTracking: true);
-                var completedCount = tasks.LongCount(task => task.Status == ProjectTaskStatus.Completed);
-                var project = await projectRepository.GetByIdAsync(stage.ProjectId);
-                await publishEndpoint.Publish(new ProjectStageCompletedEvent
-                {
-                    ProjectId = stage.ProjectId,
-                    StageId = stage.Id,
-                    StageName = stage.Name,
-                    CompletedTaskCount = checked((int)completedCount),
-                    TotalTaskCount = tasks.Count,
-                    CompletedDate = DateTime.SpecifyKind(
-                        (stage.ActualEndDate ?? DateOnly.FromDateTime(DateTime.UtcNow)).ToDateTime(TimeOnly.MinValue),
-                        DateTimeKind.Utc),
-                    ProjectStatus = MapProjectStatus(project?.Status ?? Project.Domain.Enums.ProjectStatus.Draft)
-                }, cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                // The stage status was already saved; event transport failure must not misreport the write.
-                logger.LogError(exception, "Stage {StageId} was completed but its audit event could not be published.", stage.Id);
-            }
+                ProjectId = stage.ProjectId,
+                StageId = stage.Id,
+                StageName = stage.Name,
+                CompletedTaskCount = checked((int)completedCount),
+                TotalTaskCount = tasks.Count,
+                CompletedDate = DateTime.SpecifyKind(
+                    (stage.ActualEndDate ?? DateOnly.FromDateTime(DateTime.UtcNow)).ToDateTime(TimeOnly.MinValue),
+                    DateTimeKind.Utc),
+                ProjectStatus = MapProjectStatus(project?.Status ?? Project.Domain.Enums.ProjectStatus.Draft)
+            });
         }
         return Ok(stage);
     }
