@@ -10,6 +10,7 @@
     };
     var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
+    var canManageReferences = Model.Resource is "clients" or "land-plots";
 }
 <div class="page-heading page-heading-compact">
     <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS</span><h1>@Model.Title <span>workspace.</span></h1><p>Live records returned by the connected service. Changes are validated and persisted by the service that owns each record.</p></div>
@@ -32,10 +33,32 @@
     <div class="section-heading section-heading-table"><div><span class="mini-kicker">CONNECTED SERVICE DATA</span><h2>@Model.Title</h2><p>@Model.Items.Count.ToString("N0") record(s) returned by the current request.</p></div><span class="gateway-status"><span class="status-dot"></span>Gateway</span></div>
     @if (Model.Items.Count > 0 && Model.Columns.Count > 0)
     {
-        <div class="table-wrap"><table><thead><tr>@foreach (var column in Model.Columns) { <th>@column</th> }</tr></thead><tbody>
+        <div class="table-wrap"><table><thead><tr>@foreach (var column in Model.Columns) { <th>@column</th> }@if (canManageReferences) { <th>Actions</th> }</tr></thead><tbody>
         @foreach (var item in Model.Items)
         {
-            <tr>@foreach (var column in Model.Columns) { <td>@(item.Values.TryGetValue(column, out var value) ? value : "—")</td> }</tr>
+            <tr>
+                @foreach (var column in Model.Columns) { <td>@(item.Values.TryGetValue(column, out var value) ? value : "—")</td> }
+                @if (canManageReferences)
+                {
+                    var idText = item.Values.TryGetValue("Id", out var idValue) ? idValue : string.Empty;
+                    var isArchived = item.Values.TryGetValue("Is Archived", out var archivedText) && bool.TryParse(archivedText, out var archived) && archived;
+                    <td class="table-actions">
+                        @if (Guid.TryParse(idText, out var id))
+                        {
+                            <a class="text-link" asp-action="Edit" asp-route-resource="@Model.Resource" asp-route-id="@id">Edit</a>
+                            @if (!isArchived)
+                            {
+                                <form asp-action="Archive" method="post" class="inline-action" onsubmit="return confirm('Archive this record? Existing projects keep their historical reference.');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="resource" value="@Model.Resource" />
+                                    <input type="hidden" name="id" value="@id" />
+                                    <button class="text-link text-link-danger" type="submit">Archive</button>
+                                </form>
+                            }
+                        }
+                    </td>
+                }
+            </tr>
         }
         </tbody></table></div>
         <div class="table-footer"><span>Displaying the latest records returned by the service.</span></div>

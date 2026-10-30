@@ -1,7 +1,9 @@
 @model OperationFormViewModel
 @{
-    ViewData["Title"] = "New " + Model.Title;
-    ViewData["Section"] = Model.Title + " / New";
+    var editId = ViewData["EditId"] is Guid value ? value : Guid.Empty;
+    var isEdit = editId != Guid.Empty;
+    ViewData["Title"] = (isEdit ? "Edit " : "New ") + Model.Title;
+    ViewData["Section"] = Model.Title + (isEdit ? " / Edit" : " / New");
     var resource = Model.Resource.ToLowerInvariant();
     var isClient = resource == "clients";
     var isLandPlot = resource == "land-plots";
@@ -10,10 +12,10 @@
     var isStock = resource == "stock-items";
 }
 <div class="page-heading page-heading-compact">
-    <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS / NEW RECORD</span><h1>Add to <span>@Model.Title.ToLowerInvariant().</span></h1><p>The request is validated by the owning service before it is saved.</p></div>
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS / @(isEdit ? "EDIT RECORD" : "NEW RECORD")</span><h1>@(isEdit ? "Update" : "Add to") <span>@Model.Title.ToLowerInvariant().</span></h1><p>The request is validated by the owning service before it is saved.</p></div>
     <a class="button button-quiet" asp-action="Index" asp-route-resource="@Model.Resource">← Back to @Model.Title.ToLowerInvariant()</a>
 </div>
-<form asp-action="Create" method="post" class="form-workspace">
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@(isEdit ? editId : (Guid?)null)" method="post" class="form-workspace">
     @Html.AntiForgeryToken()
     <input asp-for="Resource" type="hidden" />
     <div asp-validation-summary="All" class="validation-summary"></div>
@@ -116,5 +118,5 @@
             </div>
         </section>
     }
-    <div class="form-actions"><a class="button button-quiet" asp-action="Index" asp-route-resource="@Model.Resource">Cancel</a><button class="button button-primary" type="submit" @(isCatalog && Model.MeasurementUnits.Count == 0 ? "disabled" : null)>Create record <span aria-hidden="true">→</span></button></div>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index" asp-route-resource="@Model.Resource">Cancel</a><button class="button button-primary" type="submit" @(isCatalog && Model.MeasurementUnits.Count == 0 ? "disabled" : null)>@(isEdit ? "Save changes" : "Create record") <span aria-hidden="true">→</span></button></div>
 </form>

@@ -33,6 +33,15 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["stock-items"] = "/StockItems"
         };
 
+    // Edit/archive routes are deliberately limited to Project-owned reference data
+    // until the other owning services expose the complete update lifecycle.
+    private static readonly IReadOnlyDictionary<string, string> UpdateEndpoints =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["clients"] = "/Clients",
+            ["land-plots"] = "/LandPlots"
+        };
+
     public async Task<IActionResult> Index(string resource = "plants", CancellationToken cancellationToken = default)
     {
         if (!Resources.TryGetValue(resource, out var target))
@@ -122,6 +131,124 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         return View(model);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> Edit(string resource, Guid id, CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty || !UpdateEndpoints.TryGetValue(resource, out var endpoint))
+            return NotFound();
+
+        try
+        {
+            var item = await api.GetAsync<JsonElement>($"{endpoint}/{id:D}", cancellationToken);
+            var model = new OperationFormViewModel
+            {
+                Resource = resource,
+                Title = Resources[resource].Title,
+                IsActive = true,
+                Name = ReadString(item, resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ? "displayName" : "name") ?? string.Empty,
+                Email = ReadString(item, "email"),
+                Phone = ReadString(item, "phone"),
+                Address = ReadString(item, resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ? "billingAddress" : "address") ?? string.Empty,
+                AreaSquareMetres = ReadDecimal(item, "areaSquareMetres"),
+                SoilType = ReadString(item, "soilType"),
+                Notes = ReadString(item, "notes")
+            };
+            ViewData["EditId"] = id;
+            return View("Create", model);
+        }
+        catch (ApiException exception) when (exception.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return NotFound();
+        }
+        catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogWarning(exception, "Could not load {Resource} record {RecordId} for editing.", resource, id);
+            TempData["Error"] = "The record could not be loaded. Check the owning service and your permissions.";
+            return RedirectToAction(nameof(Index), new { resource });
+        }
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Edit(string resource, Guid id, OperationFormViewModel model, CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty || !UpdateEndpoints.TryGetValue(resource, out var endpoint))
+            return NotFound();
+
+        model.Resource = resource;
+        model.Title = Resources[resource].Title;
+        ValidateForResource(model);
+        ViewData["EditId"] = id;
+        if (!ModelState.IsValid)
+            return View("Create", model);
+
+        try
+        {
+            await api.SendAsync<JsonElement>(HttpMethod.Put, $"{endpoint}/{id:D}",
+                BuildUpdatePayload(model, id), cancellationToken: cancellationToken);
+            TempData["Success"] = $"{model.Title.TrimEnd('.')}: “{GetRecordName(model)}” updated successfully.";
+            return RedirectToAction(nameof(Index), new { resource });
+        }
+        catch (ApiException exception)
+        {
+            logger.LogWarning(exception, "The {Resource} API rejected update for record {RecordId}.", resource, id);
+            ModelState.AddModelError(string.Empty, exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogError(exception, "Could not confirm update for {Resource} record {RecordId}.", resource, id);
+            ModelState.AddModelError(string.Empty, "The service could not confirm the update. Refresh the list before retrying.");
+        }
+
+        return View("Create", model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Archive(string resource, Guid id, CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty || !UpdateEndpoints.ContainsKey(resource))
+            return NotFound();
+
+        var endpoint = UpdateEndpoints[resource];
+        var path = resource.Equals("clients", StringComparison.OrdinalIgnoreCase)
+            ? $"{endpoint}/{id:D}/archive"
+            : $"{endpoint}/{id:D}/archive?archived=true";
+
+        try
+        {
+            await api.SendAsync<object>(HttpMethod.Post, path, new { }, cancellationToken: cancellationToken);
+            TempData["Success"] = $"{Resources[resource].Title.TrimEnd('.')}: record archived.";
+        }
+        catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException)
+        {
+            logger.LogWarning(exception, "Could not archive {Resource} record {RecordId}.", resource, id);
+            TempData["Error"] = $"Archive failed: {exception.Message}";
+        }
+
+        return RedirectToAction(nameof(Index), new { resource });
+    }
+
+    private static object BuildUpdatePayload(OperationFormViewModel model, Guid id) =>
+        model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase)
+            ? new
+            {
+                id,
+                displayName = model.Name.Trim(),
+                email = Clean(model.Email),
+                phone = Clean(model.Phone),
+                billingAddress = Clean(model.Address)
+            }
+            : new
+            {
+                id,
+                name = model.Name.Trim(),
+                address = model.Address.Trim(),
+                areaSquareMetres = model.AreaSquareMetres,
+                soilType = Clean(model.SoilType),
+                notes = Clean(model.Notes)
+            };
+
     private async Task LoadLookupsAsync(OperationFormViewModel model, CancellationToken cancellationToken)
     {
         if (!IsCatalogItem(model.Resource)) return;
@@ -149,7 +276,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         {
             case "clients":
                 if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Client display name is required.");
-                if (model.Name.Length > 160) ModelState.AddModelError(nameof(model.Name), "Client display name cannot exceed 160 characters.");
+                else if (model.Name.Trim().Length > 160) ModelState.AddModelError(nameof(model.Name), "Client display name cannot exceed 160 characters.");
                 break;
             case "land-plots":
                 if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Land plot name is required.");
@@ -240,6 +367,19 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             },
             _ => throw new InvalidOperationException("The selected operation is not supported.")
         };
+
+    private static string? ReadString(JsonElement source, string property) =>
+        source.ValueKind == JsonValueKind.Object &&
+        source.TryGetProperty(property, out var value) &&
+        value.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined)
+            ? value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString()
+            : null;
+
+    private static decimal ReadDecimal(JsonElement source, string property) =>
+        decimal.TryParse(ReadString(source, property),
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out var value) ? value : 0m;
 
     private static bool IsCatalogItem(string? resource) =>
         resource is not null && resource.Equals("plants", StringComparison.OrdinalIgnoreCase) ||
