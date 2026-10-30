@@ -6,11 +6,16 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Load the shared route table first, then apply environment-specific overrides.
+// The development route file is intentionally optional: it must never replace the
+// complete Landscape Studio route map with retired banking endpoints.
+builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+builder.Configuration.AddJsonFile(
+    $"ocelot.{builder.Environment.EnvironmentName}.json",
+    optional: true,
+    reloadOnChange: true);
 
 builder.Services.AddOcelot().AddCacheManager(settings => settings.WithDictionaryHandle());
-
-builder.Configuration.AddJsonFile($"ocelot.{builder.Environment.EnvironmentName}.json", true, true);
 builder.Host.UseSerilog(SeriLogger.Configure);
 
 var app = builder.Build();
