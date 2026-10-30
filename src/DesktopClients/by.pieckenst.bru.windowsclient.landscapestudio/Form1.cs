@@ -115,7 +115,7 @@ public partial class Form1 : KryptonForm
 
         var groups = new[]
         {
-            ("WORKSPACE", new[] { "Overview", "Projects", "Estimates", "Customers", "Land plots" }),
+            ("WORKSPACE", new[] { "Overview", "Projects", "Estimates", "Clients", "Land plots" }),
             ("OPERATIONS", new[] { "Plant & material catalog", "Procurement", "Inventory", "Suppliers" }),
             ("ADMINISTRATION", new[] { "Organization", "Positions", "Work assignments", "Settings" })
         };
@@ -262,10 +262,10 @@ public partial class Form1 : KryptonForm
                 actions.Controls.Add(edit);
             }
             if (_api is not null &&
-                (page.Equals("Customers", StringComparison.OrdinalIgnoreCase) ||
+                (page.Equals("Clients", StringComparison.OrdinalIgnoreCase) ||
                  page.Equals("Land plots", StringComparison.OrdinalIgnoreCase)))
             {
-                var createLabel = page.Equals("Customers", StringComparison.OrdinalIgnoreCase)
+                var createLabel = page.Equals("Clients", StringComparison.OrdinalIgnoreCase)
                     ? "＋ New client" : "＋ New land plot";
                 var createReference = CreatePrimaryButton(createLabel);
                 createReference.Margin = new Padding(8, 0, 0, 0);
@@ -427,7 +427,7 @@ public partial class Form1 : KryptonForm
         "Overview" => "Live activity and operational signals from your service workspace.",
         "Projects" => "Plan and manage landscaping projects using live Project API records.",
         "Estimates" => "Review estimates returned by the configured project service.",
-        "Customers" => "Maintain client records owned by the Project service.",
+        "Clients" => "Maintain client records owned by the Project service.",
         "Land plots" => "Maintain project sites and their address, area and soil details.",
         "Plant & material catalog" => "Browse the plant, material and work-type catalogs.",
         "Procurement" => "Purchase orders and supplier deliveries from Procurement.",
@@ -615,7 +615,7 @@ public partial class Form1 : KryptonForm
                     await EditProjectAsync();
             };
         }
-        if (page.Equals("Customers", StringComparison.OrdinalIgnoreCase) ||
+        if (page.Equals("Clients", StringComparison.OrdinalIgnoreCase) ||
             page.Equals("Land plots", StringComparison.OrdinalIgnoreCase))
         {
             grid.SelectionChanged += (_, _) =>
@@ -750,7 +750,7 @@ public partial class Form1 : KryptonForm
         "Estimates" => _selectedEstimateProjectId is Guid estimateProjectId
             ? $"/Estimates?projectId={estimateProjectId:D}&page=1&pageSize=100"
             : null,
-        "Customers" => "/Clients?page=1&pageSize=100",
+        "Clients" => "/Clients?page=1&pageSize=100",
         "Land plots" => "/LandPlots?page=1&pageSize=100",
         "Plant & material catalog" => _catalogResource switch
         {
@@ -794,7 +794,7 @@ public partial class Form1 : KryptonForm
     private async Task CreateReferenceRecordAsync()
     {
         if (_api is null) return;
-        var resource = _activePage.Equals("Customers", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
+        var resource = _activePage.Equals("Clients", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
         using var dialog = new CreateReferenceRecordDialog(_api, resource);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync(_activePage);
@@ -811,7 +811,7 @@ public partial class Form1 : KryptonForm
             return;
         }
 
-        var resource = _activePage.Equals("Customers", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
+        var resource = _activePage.Equals("Clients", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
         using var dialog = new CreateReferenceRecordDialog(_api, resource, id.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync(_activePage);
@@ -823,7 +823,7 @@ public partial class Form1 : KryptonForm
         var id = GetSelectedGridRecordId();
         if (!id.HasValue) return;
 
-        var resource = _activePage.Equals("Customers", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
+        var resource = _activePage.Equals("Clients", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
         var label = GetSelectedGridValue(resource == "Clients" ? "displayName" : "name") ?? id.Value.ToString("D");
         if (MessageBox.Show(this, $"Archive {label}? Existing project history will retain its reference.",
                 "Archive record", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
