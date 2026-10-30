@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Procurement.Application;
 using Procurement.Infrastructure;
 using Procurement.Infrastructure.Persistence;
 using Serilog;
@@ -24,6 +25,7 @@ if (Encoding.UTF8.GetByteCount(signingKeyText) < 32)
 
 var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyText));
 builder.Host.UseSerilog(SeriLogger.Configure);
+builder.Services.AddProcurementApplication(builder.Configuration);
 builder.Services.AddProcurementInfrastructure(builder.Configuration);
 builder.Services.AddMutationAuditEvents(builder.Configuration, "Procurement");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
