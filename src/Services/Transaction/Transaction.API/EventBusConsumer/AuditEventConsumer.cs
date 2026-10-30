@@ -27,9 +27,12 @@ public sealed class AuditEventConsumer(
         var record = new AuditRecord
         {
             Id = message.Id,
-            OccurredAtUtc = message.CreationDate.Kind == DateTimeKind.Utc
-                ? message.CreationDate
-                : DateTime.SpecifyKind(message.CreationDate, DateTimeKind.Utc),
+            OccurredAtUtc = message.CreationDate.Kind switch
+            {
+                DateTimeKind.Utc => message.CreationDate,
+                DateTimeKind.Local => message.CreationDate.ToUniversalTime(),
+                _ => DateTime.SpecifyKind(message.CreationDate, DateTimeKind.Utc)
+            },
             SourceService = Limit(message.SourceService.Trim(), 100),
             Action = Limit(message.Action.Trim(), 100),
             EntityType = Limit(message.EntityType.Trim(), 100),
