@@ -655,7 +655,7 @@ public partial class Form1 : KryptonForm
         },
         "Procurement" => "/PurchaseOrders?page=1&pageSize=100",
         "Inventory" => "/StockItems?page=1&pageSize=100",
-        "Suppliers" => "/Suppliers?page=1&pageSize=100",
+        "Suppliers" => "/Suppliers?page=1&pageSize=100&includeInactive=true",
         "Organization" => "/Employees?page=1&pageSize=100",
         _ => null
     };

@@ -15,7 +15,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["plants"] = ("Plant catalog", "/Catalog/Plants?page=1&pageSize=100"),
             ["materials"] = ("Material catalog", "/Catalog/Materials?page=1&pageSize=100"),
             ["work-types"] = ("Work types", "/Catalog/WorkTypes?page=1&pageSize=100"),
-            ["suppliers"] = ("Suppliers", "/Suppliers?page=1&pageSize=100"),
+            ["suppliers"] = ("Suppliers", "/Suppliers?page=1&pageSize=100&includeInactive=true"),
             ["stock-items"] = ("Inventory", "/StockItems?page=1&pageSize=100"),
             ["purchase-orders"] = ("Purchase orders", "/PurchaseOrders?page=1&pageSize=100"),
             ["deliveries"] = ("Supplier deliveries", "/Deliveries?page=1&pageSize=100")
