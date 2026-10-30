@@ -11,7 +11,10 @@ namespace Identity.API.Controllers;
 [ApiController]
 [Authorize(Roles = "Administrator")]
 [Route("api/v1/users")]
-public sealed class UsersController(IMediator mediator, IPublishEndpoint publishEndpoint) : ControllerBase
+public sealed class UsersController(
+    IMediator mediator,
+    IPublishEndpoint publishEndpoint,
+    ILogger<UsersController> logger) : ControllerBase
 {
     [HttpGet]
     [ProducesResponseType(typeof(PagedResponse<IdentityUserDto>), StatusCodes.Status200OK)]
@@ -37,13 +40,27 @@ public sealed class UsersController(IMediator mediator, IPublishEndpoint publish
     public async Task<ActionResult<IdentityUserDto>> Create(CreateUserCommand command, CancellationToken cancellationToken)
     {
         var user = await mediator.Send(command, cancellationToken);
-        await publishEndpoint.Publish(new UserRegisteredEvent
+
+        // Identity has committed the credential before publishing. Do not report a failed
+        // user creation when only the downstream notification failed; Account can also
+        // bootstrap a missing profile on first authenticated access.
+        try
         {
-            UserId = user.Id,
-            Username = user.UserName,
-            RoleName = user.Role,
-            RegisteredAt = user.CreatedDate
-        }, cancellationToken);
+            await publishEndpoint.Publish(new UserRegisteredEvent
+            {
+                UserId = user.Id,
+                Username = user.UserName,
+                RoleName = user.Role,
+                RegisteredAt = user.CreatedDate
+            }, cancellationToken);
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception,
+                "Identity user {UserId} was created, but the UserRegistered event could not be published.",
+                user.Id);
+        }
+
         return CreatedAtAction(nameof(GetById), new { id = user.Id }, user);
     }
 }
