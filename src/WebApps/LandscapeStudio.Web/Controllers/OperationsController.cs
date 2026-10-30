@@ -18,6 +18,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["suppliers"] = ("Suppliers", "/Suppliers?page=1&pageSize=100&includeInactive=true"),
             ["stock-items"] = ("Inventory", "/StockItems?page=1&pageSize=100"),
             ["employees"] = ("Employees", "/Employees?page=1&pageSize=100"),
+            ["positions"] = ("Positions", "/Positions?page=1&pageSize=100&includeInactive=true"),
             ["purchase-orders"] = ("Purchase orders", "/PurchaseOrders?page=1&pageSize=100"),
             ["deliveries"] = ("Supplier deliveries", "/Deliveries?page=1&pageSize=100")
         };
@@ -32,7 +33,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["work-types"] = "/Catalog/WorkTypes",
             ["suppliers"] = "/Suppliers",
             ["stock-items"] = "/StockItems",
-            ["employees"] = "/Employees"
+            ["employees"] = "/Employees",
+            ["positions"] = "/Positions"
         };
 
     private static readonly IReadOnlyDictionary<string, string> UpdateEndpoints =
@@ -181,8 +183,16 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                     System.Globalization.CultureInfo.InvariantCulture,
                     System.Globalization.DateTimeStyles.None, out var hireDate)
                     ? hireDate : DateOnly.FromDateTime(DateTime.UtcNow),
-                IdentityUserId = ReadNullableGuid(item, "identityUserId")
+                IdentityUserId = ReadNullableGuid(item, "identityUserId"),
+                PositionRank = (int)ReadDecimal(item, "rank")
             };
+            if (resource.Equals("positions", StringComparison.OrdinalIgnoreCase))
+            {
+                model.Name = ReadString(item, "title") ?? string.Empty;
+                model.Code = ReadString(item, "code") ?? string.Empty;
+                model.Description = ReadString(item, "description") ?? string.Empty;
+                model.PositionRank = (int)ReadDecimal(item, "rank");
+            }
             await LoadLookupsAsync(model, cancellationToken);
             ViewData["EditId"] = id;
             return View("Create", model);
@@ -347,6 +357,15 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 email = Clean(model.Email),
                 phone = Clean(model.Phone)
             },
+            "positions" => new
+            {
+                id,
+                code = model.Code.Trim().ToUpperInvariant(),
+                title = model.Name.Trim(),
+                description = model.Description.Trim(),
+                rank = model.PositionRank,
+                isActive = model.IsActive
+            },
             _ => throw new InvalidOperationException($"Editing '{model.Resource}' is not supported.")
         };
 
@@ -434,6 +453,14 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 if (Missing(model.UnitSymbol)) ModelState.AddModelError(nameof(model.UnitSymbol), "Unit symbol is required.");
                 if (Missing(model.StorageLocation)) ModelState.AddModelError(nameof(model.StorageLocation), "Storage location is required.");
                 break;
+            case "positions":
+                if (Missing(model.Code)) ModelState.AddModelError(nameof(model.Code), "Position code is required.");
+                else if (model.Code.Trim().Length > 32 || !System.Text.RegularExpressions.Regex.IsMatch(model.Code.Trim(), "^[a-zA-Z0-9._-]+$"))
+                    ModelState.AddModelError(nameof(model.Code), "Use up to 32 letters, numbers, dots, underscores or hyphens.");
+                if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Position title is required.");
+                if (model.PositionRank is < 1 or > 1000) ModelState.AddModelError(nameof(model.PositionRank), "Rank must be between 1 and 1000.");
+                if (model.Description?.Length > 1000) ModelState.AddModelError(nameof(model.Description), "Description cannot exceed 1000 characters.");
+                break;
             case "employees":
                 if (Missing(model.EmployeeNumber)) ModelState.AddModelError(nameof(model.EmployeeNumber), "Employee number is required.");
                 if (Missing(model.FirstName)) ModelState.AddModelError(nameof(model.FirstName), "First name is required.");
@@ -504,6 +531,11 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 positionId = model.PositionId, hireDate = model.HireDate,
                 identityUserId = model.IdentityUserId, email = Clean(model.Email), phone = Clean(model.Phone)
             },
+            "positions" => new
+            {
+                code = model.Code.Trim().ToUpperInvariant(), title = model.Name.Trim(),
+                description = model.Description.Trim(), rank = model.PositionRank
+            },
             _ => throw new InvalidOperationException("The selected operation is not supported.")
         };
 
@@ -542,7 +574,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         model.Resource.Equals("stock-items", StringComparison.OrdinalIgnoreCase) ? model.Sku :
         model.Resource.Equals("employees", StringComparison.OrdinalIgnoreCase)
             ? $"{model.EmployeeNumber} — {model.FirstName} {model.LastName}"
-            : model.Name;
+            : model.Resource.Equals("positions", StringComparison.OrdinalIgnoreCase) ? model.Code : model.Name;
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
