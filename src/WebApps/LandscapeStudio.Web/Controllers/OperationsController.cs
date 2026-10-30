@@ -47,7 +47,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["work-types"] = "/Catalog/WorkTypes",
             ["suppliers"] = "/Suppliers",
             ["stock-items"] = "/StockItems",
-            ["employees"] = "/Employees"
+            ["employees"] = "/Employees",
+            ["positions"] = "/Positions"
         };
 
     public async Task<IActionResult> Index(string resource = "plants", CancellationToken cancellationToken = default)
