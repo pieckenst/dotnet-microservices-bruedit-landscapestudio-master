@@ -21,7 +21,8 @@ public sealed class OutboxTransactionMiddlewareTests
         await using var db = new ProjectContext(options);
         await db.Database.EnsureCreatedAsync();
 
-        var responseWasWritten = false;
+        var responseBody = new MemoryStream();
+        var responseEscapedBeforeCommit = false;
         var middleware = new OutboxTransactionMiddleware<ProjectContext>(
             async http =>
             {
@@ -31,19 +32,18 @@ public sealed class OutboxTransactionMiddlewareTests
                 await db.SaveChangesAsync();
                 http.Response.StatusCode = StatusCodes.Status201Created;
                 await http.Response.WriteAsync("created");
-                responseWasWritten = true;
+                responseEscapedBeforeCommit = responseBody.Length > 0;
             },
             NullLogger<OutboxTransactionMiddleware<ProjectContext>>.Instance);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Request.Method = HttpMethods.Post;
         httpContext.Request.Path = "/api/v1/clients";
-        var responseBody = new MemoryStream();
         httpContext.Response.Body = responseBody;
 
         await middleware.InvokeAsync(httpContext, db);
 
-        Assert.True(responseWasWritten);
+        Assert.False(responseEscapedBeforeCommit, "The HTTP response must not escape before the outbox transaction commits.");
         Assert.Equal("created", System.Text.Encoding.UTF8.GetString(responseBody.ToArray()));
         Assert.Equal(1, await db.Clients.AsNoTracking().CountAsync());
         Assert.Equal(1, await db.Set<IntegrationOutboxMessage>().AsNoTracking().CountAsync());
