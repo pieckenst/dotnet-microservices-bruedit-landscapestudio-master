@@ -96,7 +96,24 @@ namespace Shared.Common.Persistence
         public async Task UpdateAsync(T entity)
         {
             ArgumentNullException.ThrowIfNull(entity);
-            _dbContext.Entry(entity).State = EntityState.Modified;
+
+            // Query handlers commonly use no-tracking reads. A caller may nevertheless
+            // already have the same key tracked in this DbContext (for example, after a
+            // create earlier in the request or when a parent aggregate was loaded).
+            // Attaching a second instance would throw; merge its scalar values into the
+            // tracked instance instead and let EF persist a single entity identity.
+            var tracked = _dbContext.Set<T>().Local
+                .FirstOrDefault(existing => existing.Id == entity.Id);
+
+            if (tracked is not null && !ReferenceEquals(tracked, entity))
+            {
+                _dbContext.Entry(tracked).CurrentValues.SetValues(entity);
+            }
+            else if (tracked is null)
+            {
+                _dbContext.Entry(entity).State = EntityState.Modified;
+            }
+
             await _dbContext.SaveChangesAsync();
         }
 
