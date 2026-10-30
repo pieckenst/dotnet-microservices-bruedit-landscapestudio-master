@@ -22,6 +22,25 @@ namespace Account.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Shared.Common.Outbox.IntegrationOutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("DeadLetteredAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("LeaseExpiresAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<string>("LastError").HasMaxLength(2000).HasColumnType("character varying(2000)");
+                    b.Property<string>("MessageType").IsRequired().HasMaxLength(512).HasColumnType("character varying(512)");
+                    b.Property<int>("AttemptCount").HasColumnType("integer");
+                    b.Property<DateTime>("NextAttemptAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<string>("Payload").IsRequired().HasColumnType("text");
+                    b.Property<DateTime?>("PublishedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<long>("Version").IsConcurrencyToken().HasColumnType("bigint");
+                    b.HasKey("Id");
+                    b.HasIndex("PublishedAtUtc", "DeadLetteredAtUtc", "NextAttemptAtUtc", "LeaseExpiresAtUtc")
+                        .HasDatabaseName("IX_integration_outbox_dispatch");
+                    b.ToTable("integration_outbox");
+                });
+
             modelBuilder.Entity("Account.Domain.Entities.AccountProfile", b =>
                 {
                     b.Property<Guid>("Id").HasColumnType("uuid");
