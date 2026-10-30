@@ -75,7 +75,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Domain", "Services
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Infrastructure", "Services\Identity\Identity.Infrastructure\Identity.Infrastructure.csproj", "{D8D36C12-22A4-4B94-A613-8212A1D31005}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Identity.Tests", "Tests\Identity.Tests\Identity.Tests.csproj", "{F7B1E8A5-2DF7-45DD-9230-CC00A1001001}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Identity.Tests", "Tests\Identity.Tests\Identity.Tests.csproj", "{F7B1E8A5-2DF7-45DD-9230-CC00A1001001}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Project", "Project", "{AA23DB41-9D71-4A63-A2E7-000000000001}"
 EndProject
@@ -123,6 +123,10 @@ Global
 		SolutionGuid = {B8752804-FEC8-4A60-B7EA-09C18E44756F}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F7B1E8A5-2DF7-45DD-9230-CC00A1001001}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F7B1E8A5-2DF7-45DD-9230-CC00A1001001}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F7B1E8A5-2DF7-45DD-9230-CC00A1001001}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F7B1E8A5-2DF7-45DD-9230-CC00A1001001}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E7BD84EF-7CB0-49E3-90FB-B8F4B9AC2A10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E7BD84EF-7CB0-49E3-90FB-B8F4B9AC2A10}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E7BD84EF-7CB0-49E3-90FB-B8F4B9AC2A10}.Release|Any CPU.ActiveCfg = Release|Any CPU
