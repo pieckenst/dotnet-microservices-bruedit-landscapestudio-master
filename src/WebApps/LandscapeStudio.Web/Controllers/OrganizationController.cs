@@ -41,11 +41,11 @@ public sealed class OrganizationController(
                     var projectId = ReadGuid(item, "projectId");
                     var employeeId = ReadNullableGuid(item, "employeeId");
                     var brigadeId = ReadNullableGuid(item, "brigadeId");
-                    var assignedTo = employeeId.HasValue && employeeNames.TryGetValue(employeeId.Value, out var employee)
-                        ? employee
-                        : brigadeId.HasValue && brigadeNames.TryGetValue(brigadeId.Value, out var brigade)
-                            ? brigade ?? "Unknown brigade"
-                            : "Unassigned";
+                    var assignedTo = employeeId.HasValue
+                        ? employeeNames.TryGetValue(employeeId.Value, out var employee) ? employee : "Unknown employee"
+                        : brigadeId.HasValue
+                            ? brigadeNames.TryGetValue(brigadeId.Value, out var brigade) ? brigade ?? "Unknown brigade" : "Unknown brigade"
+                            : "Invalid assignment target";
                     return new WorkAssignmentRow(
                         ReadGuid(item, "id"),
                         projectNames.TryGetValue(projectId, out var project) ? project : projectId.ToString("D"),
