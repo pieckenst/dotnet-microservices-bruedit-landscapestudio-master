@@ -11,6 +11,7 @@
     var isSupplier = resource == "suppliers";
     var isStock = resource == "stock-items";
     var isEmployee = resource == "employees";
+    var isPosition = resource == "positions";
 }
 <div class="page-heading page-heading-compact">
     <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS / @(isEdit ? "EDIT RECORD" : "NEW RECORD")</span><h1>@(isEdit ? "Update" : "Add to") <span>@Model.Title.ToLowerInvariant().</span></h1><p>The request is validated by the owning service before it is saved.</p></div>
@@ -105,6 +106,22 @@
                 @if (isEdit)
                 {
                     <div class="field field-checkbox"><label class="toggle-line"><input asp-for="IsActive" type="checkbox" /> Active and available for new purchase orders</label></div>
+                }
+            </div>
+        </section>
+    }
+    else if (isPosition)
+    {
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">01</span><div><h2>Position definition</h2><p>Define an organizational role and its rank. Active positions can be assigned to employees.</p></div></div>
+            <div class="form-grid">
+                <div class="field"><label asp-for="Code">Position code <span class="required">*</span></label><input asp-for="Code" maxlength="32" placeholder="LANDSCAPE_DESIGNER" /><span asp-validation-for="Code" class="field-error"></span></div>
+                <div class="field"><label asp-for="Name">Title <span class="required">*</span></label><input asp-for="Name" maxlength="120" placeholder="Landscape designer" /><span asp-validation-for="Name" class="field-error"></span></div>
+                <div class="field"><label asp-for="PositionRank">Rank <span class="required">*</span></label><input asp-for="PositionRank" type="number" min="1" max="1000" step="1" /><span asp-validation-for="PositionRank" class="field-error"></span></div>
+                <div class="field field-full"><label asp-for="Description">Description</label><textarea asp-for="Description" rows="3" maxlength="1000"></textarea><span asp-validation-for="Description" class="field-error"></span></div>
+                @if (isEdit)
+                {
+                    <div class="field field-checkbox"><label class="toggle-line"><input asp-for="IsActive" type="checkbox" /> Active and available for new employee assignments</label></div>
                 }
             </div>
         </section>
