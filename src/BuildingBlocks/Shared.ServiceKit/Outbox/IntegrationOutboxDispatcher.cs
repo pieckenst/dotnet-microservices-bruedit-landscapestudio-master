@@ -93,9 +93,10 @@ public sealed class IntegrationOutboxDispatcher<TContext>(
         Type messageType;
         try
         {
-            if (!MessageTypes.TryGetValue(record.MessageType, out messageType!))
+            if (!MessageTypes.TryGetValue(record.MessageType, out var resolvedType))
                 throw new InvalidOperationException($"Outbox message type '{record.MessageType}' is not registered.");
 
+            messageType = resolvedType;
             message = JsonSerializer.Deserialize(record.Payload, messageType, JsonOptions)
                 ?? throw new InvalidOperationException($"Outbox payload for '{record.MessageType}' was empty.");
 
