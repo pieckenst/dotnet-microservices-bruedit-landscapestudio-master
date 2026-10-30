@@ -1626,3 +1626,200 @@ internal sealed class CreatePositionDialog : OperationDialogBase
         }
     }
 }
+
+internal sealed class CreateWorkAssignmentDialog : OperationDialogBase
+{
+    private readonly ComboBox _project = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox _targetType = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox _employee = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox _brigade = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly TextBox _title = new() { MaxLength = 160 };
+    private readonly TextBox _taskId = new() { MaxLength = 36 };
+    private readonly DateTimePicker _startDate = new() { Format = DateTimePickerFormat.Short, Value = DateTime.Today };
+    private readonly CheckBox _hasEndDate = new() { Checked = false };
+    private readonly DateTimePicker _endDate = new() { Format = DateTimePickerFormat.Short, Value = DateTime.Today, Enabled = false };
+    private readonly TextBox _notes = new() { MaxLength = 2000, Multiline = true, ScrollBars = ScrollBars.Vertical };
+
+    public CreateWorkAssignmentDialog(DesktopApiClient api)
+        : base(api, "New work assignment",
+            "Assign one active employee or brigade to a project. The Organization service validates the relationship.", 820)
+    {
+        _targetType.Items.AddRange(new object[] { "Employee", "Brigade" });
+        _targetType.SelectedIndex = 0;
+        AddField("Project *", _project);
+        AddField("Assignment target *", _targetType);
+        AddField("Employee", _employee);
+        AddField("Brigade", _brigade);
+        AddField("Assignment title *", _title);
+        AddField("Project task id (optional)", _taskId);
+        AddField("Start date *", _startDate);
+        AddCheckBox("Set an end date", _hasEndDate);
+        AddField("End date", _endDate);
+        AddField("Notes", _notes, height: 90);
+
+        _targetType.SelectedIndexChanged += (_, _) => UpdateTargetControls();
+        _hasEndDate.CheckedChanged += (_, _) => _endDate.Enabled = _hasEndDate.Checked;
+        SaveButton.Values.Text = "Create assignment  →";
+        Shown += async (_, _) => await LoadLookupsAsync();
+    }
+
+    private void UpdateTargetControls()
+    {
+        var employeeSelected = _targetType.SelectedItem?.ToString() == "Employee";
+        _employee.Enabled = employeeSelected;
+        _brigade.Enabled = !employeeSelected;
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        SaveButton.Enabled = false;
+        SetInfo("Loading projects, employees and brigades…");
+        try
+        {
+            var projects = await Api.GetAsync("/Projects?page=1&pageSize=200");
+            var employees = await Api.GetAsync("/Employees?page=1&pageSize=200");
+            var brigades = await Api.GetAsync("/Brigades?page=1&pageSize=200");
+
+            _project.Items.Clear();
+            foreach (var item in CreateEstimateDialog.GetItems(projects).EnumerateArray())
+            {
+                if (CreateEstimateDialog.ReadBoolean(item, "isArchived")) continue;
+                if (!Guid.TryParse(CreateEstimateDialog.ReadString(item, "id"), out var id) || id == Guid.Empty) continue;
+                var number = CreateEstimateDialog.ReadString(item, "projectNumber") ?? string.Empty;
+                var name = CreateEstimateDialog.ReadString(item, "name") ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(name)) continue;
+                _project.Items.Add(new ProjectOption(id, $"{number} — {name}"));
+            }
+
+            _employee.Items.Clear();
+            foreach (var item in CreateEstimateDialog.GetItems(employees).EnumerateArray())
+            {
+                var status = CreateEstimateDialog.ReadString(item, "status");
+                if (!string.Equals(status, "Active", StringComparison.OrdinalIgnoreCase) && status != "0") continue;
+                if (!Guid.TryParse(CreateEstimateDialog.ReadString(item, "id"), out var id) || id == Guid.Empty) continue;
+                var number = CreateEstimateDialog.ReadString(item, "employeeNumber") ?? string.Empty;
+                var name = CreateEstimateDialog.ReadString(item, "fullName") ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(name))
+                    _employee.Items.Add(new EmployeeOption(id, $"{number} — {name}"));
+            }
+
+            _brigade.Items.Clear();
+            foreach (var item in CreateEstimateDialog.GetItems(brigades).EnumerateArray())
+            {
+                if (!CreateEstimateDialog.ReadBoolean(item, "isActive")) continue;
+                if (!Guid.TryParse(CreateEstimateDialog.ReadString(item, "id"), out var id) || id == Guid.Empty) continue;
+                var name = CreateEstimateDialog.ReadString(item, "name");
+                if (!string.IsNullOrWhiteSpace(name))
+                    _brigade.Items.Add(new BrigadeOption(id, name));
+            }
+
+            if (_project.Items.Count > 0) _project.SelectedIndex = 0;
+            if (_employee.Items.Count > 0) _employee.SelectedIndex = 0;
+            if (_brigade.Items.Count > 0) _brigade.SelectedIndex = 0;
+            UpdateTargetControls();
+
+            if (_project.Items.Count == 0 || _employee.Items.Count == 0 && _brigade.Items.Count == 0)
+            {
+                SetError("An active project and at least one active employee or brigade are required.");
+                return;
+            }
+            SetInfo($"Loaded {_project.Items.Count} project(s), {_employee.Items.Count} employee(s) and {_brigade.Items.Count} brigade(s).");
+            SaveButton.Enabled = true;
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError($"Could not load assignment lookups: {exception.Message}");
+        }
+    }
+
+    protected override async Task SaveAsync()
+    {
+        if (_project.SelectedItem is not ProjectOption project)
+        {
+            SetError("Choose a project.");
+            return;
+        }
+
+        Guid? employeeId = null;
+        Guid? brigadeId = null;
+        if (_targetType.SelectedItem?.ToString() == "Employee")
+        {
+            if (_employee.SelectedItem is not EmployeeOption employee)
+            {
+                SetError("Choose an active employee.");
+                return;
+            }
+            employeeId = employee.Id;
+        }
+        else
+        {
+            if (_brigade.SelectedItem is not BrigadeOption brigade)
+            {
+                SetError("Choose an active brigade.");
+                return;
+            }
+            brigadeId = brigade.Id;
+        }
+
+        if (string.IsNullOrWhiteSpace(_title.Text))
+        {
+            SetError("Assignment title is required.");
+            return;
+        }
+
+        Guid? projectTaskId = null;
+        if (!string.IsNullOrWhiteSpace(_taskId.Text))
+        {
+            if (!Guid.TryParse(_taskId.Text.Trim(), out var taskId) || taskId == Guid.Empty)
+            {
+                SetError("Project task id must be a valid GUID or left blank.");
+                return;
+            }
+            projectTaskId = taskId;
+        }
+
+        var startDate = DateOnly.FromDateTime(_startDate.Value);
+        var endDate = _hasEndDate.Checked ? DateOnly.FromDateTime(_endDate.Value) : (DateOnly?)null;
+        if (endDate.HasValue && endDate.Value < startDate)
+        {
+            SetError("End date cannot precede the start date.");
+            return;
+        }
+
+        SaveButton.Enabled = false;
+        try
+        {
+            var created = await Api.PostAsync("/WorkAssignments", new
+            {
+                employeeId,
+                brigadeId,
+                projectId = project.Id,
+                projectTaskId,
+                title = _title.Text.Trim(),
+                startDate,
+                endDate,
+                notes = _notes.Text.Trim()
+            });
+            if (!Guid.TryParse(CreateEstimateDialog.ReadString(created, "id"), out var id) || id == Guid.Empty)
+                throw new DesktopApiException(HttpStatusCode.OK, "Organization did not return the created assignment id.");
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception)
+        {
+            SetError(exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException ? "The request timed out. Refresh the assignment list before retrying." : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
+    }
+
+    private sealed record ProjectOption(Guid Id, string Label) { public override string ToString() => Label; }
+    private sealed record EmployeeOption(Guid Id, string Label) { public override string ToString() => Label; }
+    private sealed record BrigadeOption(Guid Id, string Label) { public override string ToString() => Label; }
+}
