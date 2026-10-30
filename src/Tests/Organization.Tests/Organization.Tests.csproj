@@ -10,6 +10,8 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\..\Services\Organization\Organization.API\Organization.API.csproj" />
     <ProjectReference Include="..\..\Services\Organization\Organization.Application\Organization.Application.csproj" />
     <ProjectReference Include="..\..\Services\Organization\Organization.Domain\Organization.Domain.csproj" />
     <ProjectReference Include="..\..\Services\Organization\Organization.Infrastructure\Organization.Infrastructure.csproj" />
