@@ -24,6 +24,9 @@ public sealed class OperationFormViewModel
 
     public IReadOnlyList<PositionOption> Positions { get; set; } = Array.Empty<PositionOption>();
 
+    [Range(1, 1000)]
+    public int PositionRank { get; set; } = 1;
+
     [StringLength(160)]
     public string Name { get; set; } = string.Empty;
 
