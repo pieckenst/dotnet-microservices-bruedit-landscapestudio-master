@@ -78,7 +78,7 @@
                         var remaining = Math.Max(0, line.Quantity - line.ReceivedQuantity);
                         <div class="order-line">
                             <div class="order-line-main"><strong>@line.Description</strong><small>@ItemType(line.ItemType) · @line.UnitSymbol · @line.UnitPrice.ToString("N2") per unit</small></div>
-                            <div class="order-line-quantity"><strong>@line.ReceivedQuantity.ToString("N###") / @line.Quantity.ToString("N###")</strong><small>received</small></div>
+                            <div class="order-line-quantity"><strong>@line.ReceivedQuantity.ToString("0.###") / @line.Quantity.ToString("0.###")</strong><small>received</small></div>
                             @if (order.Status is 2 or 3 && remaining > 0)
                             {
                                 <form asp-action="ReceiveLine" method="post" class="receive-line-form">
@@ -118,7 +118,7 @@
             <div class="stock-list">
             @foreach (var item in Model.StockItems.OrderByDescending(x => x.IsBelowReorderLevel).ThenBy(x => x.Sku).Take(10))
             {
-                <div class="stock-list-item"><span class="stock-indicator @(item.IsBelowReorderLevel ? "stock-indicator-low" : "")"></span><div class="stock-item-copy"><strong>@item.Sku</strong><small>@item.Description · @item.StorageLocation</small></div><div class="stock-values"><strong>@item.QuantityOnHand.ToString("N###") @item.UnitSymbol</strong><small>reorder at @item.ReorderLevel.ToString("N###")</small></div><span class="stock-state @(item.IsBelowReorderLevel ? "stock-state-low" : "")">@(item.IsBelowReorderLevel ? "Reorder" : "In stock")</span></div>
+                <div class="stock-list-item"><span class="stock-indicator @(item.IsBelowReorderLevel ? "stock-indicator-low" : "")"></span><div class="stock-item-copy"><strong>@item.Sku</strong><small>@item.Description · @item.StorageLocation</small></div><div class="stock-values"><strong>@item.QuantityOnHand.ToString("0.###") @item.UnitSymbol</strong><small>reorder at @item.ReorderLevel.ToString("0.###")</small></div><span class="stock-state @(item.IsBelowReorderLevel ? "stock-state-low" : "")">@(item.IsBelowReorderLevel ? "Reorder" : "In stock")</span></div>
             }
             </div>
         }
