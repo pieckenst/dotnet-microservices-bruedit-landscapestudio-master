@@ -20,6 +20,14 @@ public sealed class ProjectTasksController(IMediator mediator) : ControllerBase
         CancellationToken cancellationToken = default) =>
         Ok(await mediator.Send(new GetProjectTasksQuery(projectId, page, pageSize, stageId, status), cancellationToken));
 
+    [HttpGet("{id:guid}")]
+    [Authorize(Policy = "projects.read")]
+    public async Task<ActionResult<ProjectTaskDto>> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var task = await mediator.Send(new GetProjectTaskByIdQuery(id), cancellationToken);
+        return task is null ? NotFound() : Ok(task);
+    }
+
     [HttpPost]
     [Authorize(Policy = "projects.write")]
     public async Task<ActionResult<ProjectTaskDto>> Create(CreateProjectTaskCommand command, CancellationToken cancellationToken)
