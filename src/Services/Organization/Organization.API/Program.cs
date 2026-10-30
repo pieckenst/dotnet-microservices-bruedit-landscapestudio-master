@@ -11,6 +11,7 @@ using Organization.Infrastructure.Persistence;
 using Serilog;
 using Shared.ServiceKit.Auditing;
 using Shared.ServiceKit.Outbox;
+using Shared.Common.Outbox;
 using System.Security.Claims;
 using System.Text;
 
@@ -66,6 +67,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<OrganizationContext>();
     await context.Database.EnsureCreatedAsync();
+    await context.Database.EnsureIntegrationOutboxSchemaAsync();
 }
 if (app.Environment.IsDevelopment())
 {
