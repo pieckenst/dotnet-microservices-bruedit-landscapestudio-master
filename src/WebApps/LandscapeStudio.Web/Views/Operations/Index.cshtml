@@ -53,17 +53,23 @@
                             {
                                 var employeeStatus = item.Values.TryGetValue("Status", out var currentStatus) ? currentStatus : "Active";
                                 employeeStatus = employeeStatus switch { "0" => "Active", "1" => "OnLeave", "2" => "Inactive", "3" => "Terminated", _ => employeeStatus };
-                                <form asp-action="ChangeEmployeeStatus" method="post" class="inline-action employee-status-form">
-                                    @Html.AntiForgeryToken()
-                                    <input type="hidden" name="id" value="@id" />
-                                    <select name="status" aria-label="Employee status">
-                                        <option value="Active" selected="@(employeeStatus == "Active" ? "selected" : null)">Active</option>
-                                        <option value="OnLeave" selected="@(employeeStatus == "OnLeave" ? "selected" : null)">On leave</option>
-                                        <option value="Inactive" selected="@(employeeStatus == "Inactive" ? "selected" : null)">Inactive</option>
-                                        <option value="Terminated" selected="@(employeeStatus == "Terminated" ? "selected" : null)">Terminated</option>
-                                    </select>
-                                    <button class="text-link" type="submit">Save status</button>
-                                </form>
+                                @if (employeeStatus == "Terminated")
+                                {
+                                    <span class="status-pill">Terminated</span>
+                                }
+                                else
+                                {
+                                    <form asp-action="ChangeEmployeeStatus" method="post" class="inline-action employee-status-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@id" />
+                                        <select name="status" aria-label="Employee status">
+                                            <option value="Active" selected="@(employeeStatus == "Active" ? "selected" : null)">Active</option>
+                                            <option value="OnLeave" selected="@(employeeStatus == "OnLeave" ? "selected" : null)">On leave</option>
+                                            <option value="Inactive" selected="@(employeeStatus == "Inactive" ? "selected" : null)">Inactive</option>
+                                        </select>
+                                        <button class="text-link" type="submit">Save status</button>
+                                    </form>
+                                }
                             }
                             @if (canArchive && !isArchived)
                             {
