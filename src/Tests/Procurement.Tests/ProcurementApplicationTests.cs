@@ -120,6 +120,16 @@ public sealed class ProcurementApplicationTests
         Assert.Equal(45, updated.PaymentTermDays);
         Assert.Equal("EUR", updated.CurrencyCode);
         Assert.False(updated.IsActive);
+
+        // The original supplier instance is still tracked by this context. The update
+        // must merge into that instance and persist without an EF duplicate-key tracker error.
+        var persisted = await context.Suppliers.AsNoTracking().SingleAsync(x => x.Id == supplier.Id);
+        Assert.Equal("Green Supply Ltd", persisted.Name);
+        Assert.Equal("orders@example.test", persisted.Email);
+        Assert.Equal(45, persisted.PaymentTermDays);
+        Assert.Equal("EUR", persisted.CurrencyCode);
+        Assert.False(persisted.IsActive);
+        Assert.Single(context.ChangeTracker.Entries<Supplier>());
     }
 
     [Fact]
