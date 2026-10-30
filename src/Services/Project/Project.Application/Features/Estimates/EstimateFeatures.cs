@@ -55,10 +55,12 @@ public sealed class AddEstimateLineItemCommandValidator : AbstractValidator<AddE
     {
         RuleFor(x => x.EstimateId).NotEmpty();
         RuleFor(x => x.ItemType).IsInEnum();
-        RuleFor(x => x.Description).NotEmpty().MaximumLength(500);
+        // These three values are ignored and replaced with the owning Catalog snapshot
+        // when CatalogItemId is present. Validate them only for genuinely custom lines.
+        RuleFor(x => x.Description).NotEmpty().MaximumLength(500).When(x => !x.CatalogItemId.HasValue);
         RuleFor(x => x.Quantity).GreaterThan(0).LessThanOrEqualTo(1_000_000_000m);
-        RuleFor(x => x.UnitSymbol).NotEmpty().MaximumLength(24);
-        RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0);
+        RuleFor(x => x.UnitSymbol).NotEmpty().MaximumLength(24).When(x => !x.CatalogItemId.HasValue);
+        RuleFor(x => x.UnitPrice).GreaterThanOrEqualTo(0).When(x => !x.CatalogItemId.HasValue);
         RuleFor(x => x.UnitCost).GreaterThanOrEqualTo(0).When(x => x.UnitCost.HasValue);
         RuleFor(x => x.CatalogItemId).Must(id => !id.HasValue || id.Value != Guid.Empty);
     }
