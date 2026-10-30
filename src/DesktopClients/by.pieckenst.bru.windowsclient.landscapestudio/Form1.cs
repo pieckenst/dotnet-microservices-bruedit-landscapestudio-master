@@ -26,6 +26,7 @@ public partial class Form1 : KryptonForm
     private readonly Dictionary<string, KryptonButton> _navButtons = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Label> _metricValues = new(StringComparer.OrdinalIgnoreCase);
     private readonly KryptonButton _connectButton = new() { Width = 136, Height = 38, ButtonStyle = ButtonStyle.Standalone };
+    private KryptonButton? _editProjectButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -181,6 +182,7 @@ public partial class Form1 : KryptonForm
         layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 90));
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
+        _editProjectButton = null;
         var header = BuildPageHeader(page);
         layout.Controls.Add(header, 0, 0);
         var body = new Panel { Dock = DockStyle.Fill, BackColor = Canvas, Padding = Padding.Empty };
@@ -235,6 +237,15 @@ public partial class Form1 : KryptonForm
                 create.Margin = new Padding(8, 0, 0, 0);
                 create.Click += async (_, _) => await CreateProjectAsync();
                 actions.Controls.Add(create);
+            }
+            if (_api is not null && page.Equals("Projects", StringComparison.OrdinalIgnoreCase))
+            {
+                var edit = CreateSecondaryButton("Edit selected");
+                edit.Margin = new Padding(8, 0, 0, 0);
+                edit.Enabled = false;
+                edit.Click += async (_, _) => await EditProjectAsync();
+                _editProjectButton = edit;
+                actions.Controls.Add(edit);
             }
             if (_api is not null && page.Equals("Estimates", StringComparison.OrdinalIgnoreCase))
             {
@@ -473,6 +484,19 @@ public partial class Form1 : KryptonForm
 
         var grid = CreateGrid();
         _currentGrid = grid;
+        if (page.Equals("Projects", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                if (_editProjectButton is not null && !_editProjectButton.IsDisposed)
+                    _editProjectButton.Enabled = GetSelectedGridRecordId().HasValue;
+            };
+            grid.CellDoubleClick += async (_, args) =>
+            {
+                if (args.RowIndex >= 0)
+                    await EditProjectAsync();
+            };
+        }
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -520,6 +544,22 @@ public partial class Form1 : KryptonForm
     {
         if (_api is null) return;
         using var dialog = new CreateProjectDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Projects");
+    }
+
+    private async Task EditProjectAsync()
+    {
+        if (_api is null) return;
+        var projectId = GetSelectedGridRecordId();
+        if (!projectId.HasValue)
+        {
+            MessageBox.Show(this, "Select a project in the table first.",
+                "No project selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new CreateProjectDialog(_api, projectId.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Projects");
     }

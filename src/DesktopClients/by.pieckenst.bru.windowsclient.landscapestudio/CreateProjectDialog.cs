@@ -6,6 +6,7 @@ namespace by.pieckenst.bru.windowsclient.landscapestudio;
 internal sealed class CreateProjectDialog : KryptonForm
 {
     private readonly DesktopApiClient _api;
+    private readonly Guid? _projectId;
     private readonly TextBox _number = new() { Dock = DockStyle.Fill, MaxLength = 40 };
     private readonly TextBox _name = new() { Dock = DockStyle.Fill, MaxLength = 200 };
     private readonly TextBox _description = new() { Dock = DockStyle.Fill, Multiline = true, ScrollBars = ScrollBars.Vertical, MaxLength = 4000 };
@@ -17,10 +18,11 @@ internal sealed class CreateProjectDialog : KryptonForm
     private readonly KryptonButton _save = new() { Width = 175, Height = 40, ButtonStyle = ButtonStyle.Standalone };
     private bool _referencesLoaded;
 
-    public CreateProjectDialog(DesktopApiClient api)
+    public CreateProjectDialog(DesktopApiClient api, Guid? projectId = null)
     {
         _api = api;
-        Text = "Create project";
+        _projectId = projectId;
+        Text = projectId.HasValue ? "Edit project" : "Create project";
         StartPosition = FormStartPosition.CenterParent;
         MinimumSize = new Size(760, 760);
         ClientSize = new Size(790, 790);
@@ -40,8 +42,8 @@ internal sealed class CreateProjectDialog : KryptonForm
         Controls.Add(root);
 
         var heading = new Panel { Dock = DockStyle.Fill };
-        heading.Controls.Add(new Label { Text = "New landscape project", AutoSize = true, Font = new Font("Segoe UI Semibold", 18f, FontStyle.Bold), ForeColor = Color.FromArgb(33, 47, 40) });
-        heading.Controls.Add(new Label { Text = "Create a project using existing client and site records.", AutoSize = true, Location = new Point(1, 37), Font = new Font("Segoe UI", 9f), ForeColor = Color.FromArgb(112, 127, 118) });
+        heading.Controls.Add(new Label { Text = projectId.HasValue ? "Edit landscape project" : "New landscape project", AutoSize = true, Font = new Font("Segoe UI Semibold", 18f, FontStyle.Bold), ForeColor = Color.FromArgb(33, 47, 40) });
+        heading.Controls.Add(new Label { Text = projectId.HasValue ? "Update project details and its active client/site references." : "Create a project using existing client and site records.", AutoSize = true, Location = new Point(1, 37), Font = new Font("Segoe UI", 9f), ForeColor = Color.FromArgb(112, 127, 118) });
         root.Controls.Add(heading, 0, 0);
         root.Controls.Add(Field("Project number", _number), 0, 1);
         root.Controls.Add(Field("Project name", _name), 0, 2);
@@ -71,7 +73,7 @@ internal sealed class CreateProjectDialog : KryptonForm
         var cancel = new KryptonButton { Width = 100, Height = 40, ButtonStyle = ButtonStyle.LowProfile };
         cancel.Values.Text = "Cancel";
         cancel.Click += (_, _) => { DialogResult = DialogResult.Cancel; Close(); };
-        _save.Values.Text = "Create project  →";
+        _save.Values.Text = projectId.HasValue ? "Save changes  →" : "Create project  →";
         _save.StateCommon.Back.Color1 = Color.FromArgb(66, 125, 91);
         _save.StateCommon.Back.Color2 = Color.FromArgb(66, 125, 91);
         _save.StateCommon.Border.DrawBorders = PaletteDrawBorders.None;
@@ -110,6 +112,21 @@ internal sealed class CreateProjectDialog : KryptonForm
             var plots = await _api.GetAsync("/LandPlots?page=1&pageSize=200");
             FillCombo(_client, clients, "displayName", "id");
             FillCombo(_plot, plots, "name", "id", "address");
+
+            if (_projectId is Guid projectId)
+            {
+                var project = await _api.GetAsync($"Projects/{projectId:D}");
+                _number.Text = ReadString(project, "projectNumber") ?? string.Empty;
+                _name.Text = ReadString(project, "name") ?? string.Empty;
+                _description.Text = ReadString(project, "description") ?? string.Empty;
+                if (Guid.TryParse(ReadString(project, "clientId"), out var clientId))
+                    SelectReference(_client, clientId);
+                if (Guid.TryParse(ReadString(project, "landPlotId"), out var plotId))
+                    SelectReference(_plot, plotId);
+                SetDate(_start, ReadString(project, "plannedStartDate"));
+                SetDate(_end, ReadString(project, "plannedEndDate"));
+            }
+
             _referencesLoaded = _client.Items.Count > 0 && _plot.Items.Count > 0;
             _status.ForeColor = _referencesLoaded ? Color.FromArgb(75, 115, 83) : Color.DarkGoldenrod;
             _status.Text = _referencesLoaded
@@ -185,9 +202,27 @@ internal sealed class CreateProjectDialog : KryptonForm
         _status.Text = "Saving project…";
         try
         {
-            await _api.PostAsync("Projects", request);
+            if (_projectId is Guid projectId)
+            {
+                await _api.PutAsync($"Projects/{projectId:D}", new
+                {
+                    id = projectId,
+                    projectNumber = request.ProjectNumber,
+                    name = request.Name,
+                    clientId = request.ClientId,
+                    landPlotId = request.LandPlotId,
+                    description = request.Description,
+                    plannedStartDate = request.PlannedStartDate,
+                    plannedEndDate = request.PlannedEndDate
+                });
+            }
+            else
+            {
+                await _api.PostAsync("Projects", request);
+            }
+
             _status.ForeColor = Color.FromArgb(75, 115, 83);
-            _status.Text = "Project created successfully.";
+            _status.Text = _projectId.HasValue ? "Project updated successfully." : "Project created successfully.";
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -204,6 +239,33 @@ internal sealed class CreateProjectDialog : KryptonForm
         finally
         {
             if (!IsDisposed) _save.Enabled = _referencesLoaded;
+        }
+    }
+
+    private static void SelectReference(ComboBox combo, Guid id)
+    {
+        for (var index = 0; index < combo.Items.Count; index++)
+        {
+            if (combo.Items[index] is ReferenceItem item && item.Id == id)
+            {
+                combo.SelectedIndex = index;
+                return;
+            }
+        }
+        combo.SelectedIndex = -1;
+    }
+
+    private static void SetDate(DateTimePicker picker, string? value)
+    {
+        if (DateOnly.TryParse(value, System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None, out var date))
+        {
+            picker.Value = date.ToDateTime(TimeOnly.MinValue);
+            picker.Checked = true;
+        }
+        else
+        {
+            picker.Checked = false;
         }
     }
 
