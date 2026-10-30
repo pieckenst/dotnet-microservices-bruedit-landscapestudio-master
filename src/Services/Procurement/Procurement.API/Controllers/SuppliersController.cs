@@ -42,11 +42,11 @@ public sealed class SuppliersController(IMediator mediator) : ControllerBase
     [HttpPut("{id:guid}")]
     [Authorize(Policy = "procurement.write")]
     public async Task<ActionResult<SupplierDto>> Update(
-        Guid id, [FromBody] SupplierRequest request, CancellationToken cancellationToken)
+        Guid id, [FromBody] UpdateSupplierRequest request, CancellationToken cancellationToken)
     {
         var supplier = await mediator.Send(new UpdateSupplierCommand(id, request.Code, request.Name,
             request.ContactName, request.Email, request.Phone, request.TaxIdentifier, request.Address,
-            request.PaymentTermDays, request.CurrencyCode), cancellationToken);
+            request.PaymentTermDays, request.CurrencyCode, request.IsActive), cancellationToken);
         return supplier is null ? NotFound() : Ok(supplier);
     }
 
@@ -63,4 +63,8 @@ public sealed class SuppliersController(IMediator mediator) : ControllerBase
 public sealed record SupplierRequest(
     string Code, string Name, string ContactName, string? Email, string? Phone,
     string? TaxIdentifier, string Address, int PaymentTermDays, string CurrencyCode = "BYN");
+public sealed record UpdateSupplierRequest(
+    string Code, string Name, string ContactName, string? Email, string? Phone,
+    string? TaxIdentifier, string Address, int PaymentTermDays, string CurrencyCode = "BYN",
+    bool? IsActive = null);
 public sealed record SetSupplierActiveRequest(bool IsActive);

@@ -96,6 +96,33 @@ public sealed class ProcurementApplicationTests
     }
 
     [Fact]
+    public async Task SupplierUpdateCanChangeActiveStateWithoutLosingCommercialDetails()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ProcurementContext>().UseSqlite(connection).Options;
+        await using var context = new ProcurementContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var supplier = new Supplier(Guid.NewGuid(), "SUP-001", "Green Supply", "Alex",
+            "alex@example.test", null, null, "Main street 1", 30, "BYN");
+        context.Suppliers.Add(supplier);
+        await context.SaveChangesAsync();
+
+        var handler = new UpdateSupplierCommandHandler(new RepositoryBase<Supplier>(context));
+        var updated = await handler.Handle(new UpdateSupplierCommand(
+            supplier.Id, "SUP-001", "Green Supply Ltd", "Alex", "orders@example.test",
+            null, null, "Main street 2", 45, "EUR", IsActive: false), CancellationToken.None);
+
+        Assert.NotNull(updated);
+        Assert.Equal("Green Supply Ltd", updated.Name);
+        Assert.Equal("orders@example.test", updated.Email);
+        Assert.Equal(45, updated.PaymentTermDays);
+        Assert.Equal("EUR", updated.CurrencyCode);
+        Assert.False(updated.IsActive);
+    }
+
+    [Fact]
     public async Task StockMovementAndQuantityAreCommittedTogetherAndInvalidConsumptionRollsBack()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

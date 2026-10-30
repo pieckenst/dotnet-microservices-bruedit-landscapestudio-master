@@ -13,8 +13,8 @@ public sealed record CreateSupplierCommand(string Code, string Name, string Cont
     string? Phone, string? TaxIdentifier, string Address, int PaymentTermDays, string CurrencyCode = "BYN")
     : IRequest<SupplierDto>;
 public sealed record UpdateSupplierCommand(Guid Id, string Code, string Name, string ContactName, string? Email,
-    string? Phone, string? TaxIdentifier, string Address, int PaymentTermDays, string CurrencyCode = "BYN")
-    : IRequest<SupplierDto?>;
+    string? Phone, string? TaxIdentifier, string Address, int PaymentTermDays, string CurrencyCode = "BYN",
+    bool? IsActive = null) : IRequest<SupplierDto?>;
 public sealed record SetSupplierActiveCommand(Guid Id, bool IsActive) : IRequest<bool>;
 
 public sealed class GetSuppliersQueryValidator : AbstractValidator<GetSuppliersQuery>
@@ -121,6 +121,8 @@ public sealed class UpdateSupplierCommandHandler(IRepositoryBase<Supplier> suppl
             throw new InvalidOperationException("A supplier with that code already exists.");
         entity.Update(request.Code, request.Name, request.ContactName, request.Email, request.Phone,
             request.TaxIdentifier, request.Address, request.PaymentTermDays, request.CurrencyCode);
+        if (request.IsActive is bool isActive)
+            entity.SetActive(isActive);
         await suppliers.UpdateAsync(entity);
         return SupplierMapping.ToDto(entity);
     }
