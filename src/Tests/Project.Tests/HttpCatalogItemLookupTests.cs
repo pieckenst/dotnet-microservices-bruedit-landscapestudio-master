@@ -58,6 +58,41 @@ public sealed class HttpCatalogItemLookupTests
         http.Dispose();
     }
 
+    [Theory]
+    [InlineData(0, "work-types", "basePrice", 125.50)]
+    [InlineData(2, "plants", "unitPrice", 34.75)]
+    public async Task WorkAndPlantLookupsUseTheirCatalogSpecificPriceFields(
+        int itemType, string resource, string priceProperty, decimal expectedPrice)
+    {
+        var itemId = Guid.NewGuid();
+        var unitId = Guid.NewGuid();
+        var requestedPath = string.Empty;
+        var handler = new StubHandler(request =>
+        {
+            requestedPath = request.RequestUri!.AbsolutePath;
+            var json = requestedPath.EndsWith($"/measurement-units/{unitId:D}", StringComparison.Ordinal)
+                ? $"""{"id":"{{unitId:D}}","name":"Unit","symbol":"pcs","isActive":true}"""
+                : $"""{"id":"{{itemId:D}}","name":"Catalog item","description":"Description","measurementUnitId":"{{unitId:D}}","{{priceProperty}}":{{expectedPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"isActive":true}""";
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+        });
+
+        using var http = new HttpClient(handler) { BaseAddress = new Uri("http://catalog.test/") };
+        var context = new DefaultHttpContext();
+        context.Request.Headers.Authorization = "Bearer user-access-token";
+        var lookup = new HttpCatalogItemLookup(
+            http, new HttpContextAccessor { HttpContext = context },
+            NullLogger<HttpCatalogItemLookup>.Instance);
+
+        var result = await lookup.FindAsync(itemId, (EstimateLineItemType)itemType, CancellationToken.None);
+
+        Assert.NotNull(result);
+        Assert.Equal(expectedPrice, result.ListUnitPrice);
+        Assert.Contains($"/{resource}/{itemId:D}", requestedPath);
+    }
+
     [Fact]
     public async Task CatalogPermissionFailureIsReturnedAsAccessDenied()
     {
