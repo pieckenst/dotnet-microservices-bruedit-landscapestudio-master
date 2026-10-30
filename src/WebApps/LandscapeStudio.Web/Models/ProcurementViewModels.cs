@@ -89,4 +89,5 @@ public sealed class CreateDeliveryViewModel
     public string? TrackingReference { get; set; }
 
     public IReadOnlyList<PurchaseOrderSummary> EligibleOrders { get; set; } = Array.Empty<PurchaseOrderSummary>();
+    public string? LookupError { get; set; }
 }
