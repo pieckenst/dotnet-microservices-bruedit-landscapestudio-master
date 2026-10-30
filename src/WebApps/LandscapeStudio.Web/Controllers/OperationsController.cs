@@ -10,6 +10,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     private static readonly IReadOnlyDictionary<string, (string Title, string ApiPath)> Resources =
         new Dictionary<string, (string, string)>(StringComparer.OrdinalIgnoreCase)
         {
+            ["clients"] = ("Clients", "/Clients?page=1&pageSize=100"),
+            ["land-plots"] = ("Land plots", "/LandPlots?page=1&pageSize=100"),
             ["plants"] = ("Plant catalog", "/Catalog/Plants?page=1&pageSize=100"),
             ["materials"] = ("Material catalog", "/Catalog/Materials?page=1&pageSize=100"),
             ["work-types"] = ("Work types", "/Catalog/WorkTypes?page=1&pageSize=100"),
@@ -22,6 +24,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     private static readonly IReadOnlyDictionary<string, string> CreateEndpoints =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
+            ["clients"] = "/Clients",
+            ["land-plots"] = "/LandPlots",
             ["plants"] = "/Catalog/Plants",
             ["materials"] = "/Catalog/Materials",
             ["work-types"] = "/Catalog/WorkTypes",
@@ -143,6 +147,16 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         static bool Missing(string? value) => string.IsNullOrWhiteSpace(value);
         switch (model.Resource.ToLowerInvariant())
         {
+            case "clients":
+                if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Client display name is required.");
+                if (model.Name.Length > 160) ModelState.AddModelError(nameof(model.Name), "Client display name cannot exceed 160 characters.");
+                break;
+            case "land-plots":
+                if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Land plot name is required.");
+                if (Missing(model.Address)) ModelState.AddModelError(nameof(model.Address), "Land plot address is required.");
+                if (model.AreaSquareMetres is < 0.01m or > 1_000_000_000m)
+                    ModelState.AddModelError(nameof(model.AreaSquareMetres), "Area must be between 0.01 and 1,000,000,000 square metres.");
+                break;
             case "plants":
                 if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Plant name is required.");
                 if (model.MeasurementUnitId == Guid.Empty) ModelState.AddModelError(nameof(model.MeasurementUnitId), "Choose an active measurement unit.");
@@ -179,6 +193,21 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     private static object BuildPayload(OperationFormViewModel model) =>
         model.Resource.ToLowerInvariant() switch
         {
+            "clients" => new
+            {
+                displayName = model.Name.Trim(),
+                email = Clean(model.Email),
+                phone = Clean(model.Phone),
+                billingAddress = Clean(model.Address)
+            },
+            "land-plots" => new
+            {
+                name = model.Name.Trim(),
+                address = model.Address.Trim(),
+                areaSquareMetres = model.AreaSquareMetres,
+                soilType = Clean(model.SoilType),
+                notes = Clean(model.Notes)
+            },
             "plants" => new
             {
                 name = model.Name.Trim(), latinName = Clean(model.LatinName),
