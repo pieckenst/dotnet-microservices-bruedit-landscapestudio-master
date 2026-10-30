@@ -1,8 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Procurement.Application.Contracts;
 using Procurement.Infrastructure.Persistence;
+using Procurement.Infrastructure.Repositories;
 using Shared.Common.Common;
+using Shared.Common.Persistence;
 
 namespace Procurement.Infrastructure;
 
@@ -28,7 +31,8 @@ public static class InfrastructureServiceRegistration
             selection.Strategy.Configure(options, selection.ConnectionString);
         });
         services.AddScoped<DbContext>(sp => sp.GetRequiredService<ProcurementContext>());
-        services.AddScoped(typeof(Shared.Common.Persistence.IRepositoryBase<>), typeof(Shared.Common.Persistence.RepositoryBase<>));
+        services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
+        services.AddScoped<IProcurementUnitOfWork, EfCoreProcurementUnitOfWork>();
         return services;
     }
 }
