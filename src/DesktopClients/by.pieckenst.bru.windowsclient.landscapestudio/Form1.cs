@@ -26,6 +26,7 @@ public partial class Form1 : KryptonForm
     private readonly Dictionary<string, KryptonButton> _navButtons = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Label> _metricValues = new(StringComparer.OrdinalIgnoreCase);
     private readonly KryptonButton _connectButton = new() { Width = 136, Height = 38, ButtonStyle = ButtonStyle.Standalone };
+    private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
     private int _loadGeneration;
@@ -157,6 +158,7 @@ public partial class Form1 : KryptonForm
     private async Task ShowPageAsync(string page)
     {
         _activePage = page;
+        _currentGrid = null;
         _loadCancellation?.Cancel();
         _loadCancellation?.Dispose();
         _loadCancellation = new CancellationTokenSource(TimeSpan.FromSeconds(35));
@@ -268,12 +270,26 @@ public partial class Form1 : KryptonForm
                 create.Click += async (_, _) => await CreateStockItemAsync();
                 actions.Controls.Add(create);
             }
+            if (_api is not null && page.Equals("Inventory", StringComparison.OrdinalIgnoreCase))
+            {
+                var movement = CreateSecondaryButton("Record movement…");
+                movement.Margin = new Padding(8, 0, 0, 0);
+                movement.Click += async (_, _) => await RecordStockMovementAsync();
+                actions.Controls.Add(movement);
+            }
             if (_api is not null && page.Equals("Procurement", StringComparison.OrdinalIgnoreCase))
             {
                 var create = CreatePrimaryButton("＋ New purchase order");
                 create.Margin = new Padding(8, 0, 0, 0);
                 create.Click += async (_, _) => await CreatePurchaseOrderAsync();
                 actions.Controls.Add(create);
+            }
+            if (_api is not null && page.Equals("Procurement", StringComparison.OrdinalIgnoreCase))
+            {
+                var manage = CreateSecondaryButton("Manage selected…");
+                manage.Margin = new Padding(8, 0, 0, 0);
+                manage.Click += async (_, _) => await ManagePurchaseOrderAsync();
+                actions.Controls.Add(manage);
             }
         }
         header.Controls.Add(actions, 1, 0);
@@ -456,6 +472,7 @@ public partial class Form1 : KryptonForm
         }
 
         var grid = CreateGrid();
+        _currentGrid = grid;
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -547,6 +564,76 @@ public partial class Form1 : KryptonForm
         using var dialog = new CreatePurchaseOrderDialog(_api);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Procurement");
+    }
+
+    private async Task RecordStockMovementAsync()
+    {
+        if (_api is null) return;
+        var stockItemId = GetSelectedGridRecordId();
+        if (stockItemId is null)
+        {
+            MessageBox.Show(this, "Select a stock item in the inventory table first.",
+                "No stock item selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var itemLabel = GetSelectedGridValue("sku") ?? stockItemId.Value.ToString("D");
+        using var dialog = new StockMovementDialog(_api, stockItemId.Value, itemLabel);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Inventory");
+    }
+
+    private async Task ManagePurchaseOrderAsync()
+    {
+        if (_api is null) return;
+        var orderId = GetSelectedGridRecordId();
+        if (orderId is null)
+        {
+            MessageBox.Show(this, "Select a purchase order in the table first.",
+                "No purchase order selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new PurchaseOrderManagementDialog(_api, orderId.Value);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Procurement");
+    }
+
+    private Guid? GetSelectedGridRecordId()
+    {
+        var row = _currentGrid?.SelectedRows.Count > 0
+            ? _currentGrid.SelectedRows[0]
+            : _currentGrid?.CurrentRow;
+        if (row is null || row.IsNewRow) return null;
+
+        foreach (DataGridViewCell cell in row.Cells)
+        {
+            var propertyName = cell.OwningColumn?.DataPropertyName;
+            if (string.IsNullOrWhiteSpace(propertyName))
+                propertyName = cell.OwningColumn?.Name;
+            if (string.Equals(propertyName, "id", StringComparison.OrdinalIgnoreCase) &&
+                Guid.TryParse(Convert.ToString(cell.Value), out var id) && id != Guid.Empty)
+                return id;
+        }
+        return null;
+    }
+
+    private string? GetSelectedGridValue(string columnName)
+    {
+        var row = _currentGrid?.SelectedRows.Count > 0
+            ? _currentGrid.SelectedRows[0]
+            : _currentGrid?.CurrentRow;
+        if (row is null || row.IsNewRow) return null;
+
+        foreach (DataGridViewCell cell in row.Cells)
+        {
+            var propertyName = cell.OwningColumn?.DataPropertyName;
+            if (string.IsNullOrWhiteSpace(propertyName))
+                propertyName = cell.OwningColumn?.Name;
+            if (string.Equals(propertyName, columnName, StringComparison.OrdinalIgnoreCase))
+                return Convert.ToString(cell.Value);
+        }
+        return null;
     }
 
     private async Task OpenConnectionDialogAsync()

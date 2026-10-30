@@ -567,3 +567,327 @@ internal sealed class CreatePurchaseOrderDialog : OperationDialogBase
         public override string ToString() => Label;
     }
 }
+
+
+internal sealed class StockMovementDialog : OperationDialogBase
+{
+    private readonly Guid _stockItemId;
+    private readonly ComboBox _movementType = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly NumericUpDown _quantity = new()
+    {
+        Minimum = 0.001m, Maximum = 1_000_000_000m, DecimalPlaces = 3, Increment = 1m, Value = 1m
+    };
+    private readonly TextBox _sourceDocument = new() { MaxLength = 100 };
+    private readonly TextBox _projectId = new() { MaxLength = 36 };
+    private readonly TextBox _notes = new() { MaxLength = 2000, Multiline = true };
+
+    public StockMovementDialog(DesktopApiClient api, Guid stockItemId, string itemLabel)
+        : base(api, "Record stock movement", $"Inventory ledger entry for {itemLabel}.", 610)
+    {
+        if (stockItemId == Guid.Empty) throw new ArgumentException("A stock item id is required.", nameof(stockItemId));
+        _stockItemId = stockItemId;
+
+        _movementType.Items.AddRange(new object[]
+        {
+            new MovementOption(0, "Receipt — stock increases"),
+            new MovementOption(1, "Consumption — stock decreases"),
+            new MovementOption(2, "Return — stock increases"),
+            new MovementOption(3, "Adjustment — apply signed correction as increase"),
+            new MovementOption(4, "Transfer in — stock increases"),
+            new MovementOption(5, "Transfer out — stock decreases")
+        });
+        _movementType.SelectedIndex = 0;
+
+        AddField("Movement type *", _movementType);
+        AddField("Quantity *", _quantity);
+        AddField("Source document *", _sourceDocument);
+        AddField("Project ID (optional)", _projectId);
+        AddField("Notes", _notes, height: 90);
+        SetInfo("Consumption and transfer-out quantities are deducted from on-hand stock.");
+    }
+
+    protected override async Task SaveAsync()
+    {
+        if (_movementType.SelectedItem is not MovementOption movement)
+        {
+            SetError("Choose a movement type.");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(_sourceDocument.Text))
+        {
+            SetError("A source document or reference is required.");
+            return;
+        }
+
+        Guid? projectId = null;
+        if (!string.IsNullOrWhiteSpace(_projectId.Text))
+        {
+            if (!Guid.TryParse(_projectId.Text.Trim(), out var parsed) || parsed == Guid.Empty)
+            {
+                SetError("Project ID must be a valid GUID or left blank.");
+                return;
+            }
+            projectId = parsed;
+        }
+
+        await SubmitAsync($"StockItems/{_stockItemId:D}/movements", new
+        {
+            movementType = movement.Value,
+            quantity = _quantity.Value,
+            sourceDocument = _sourceDocument.Text.Trim(),
+            projectId,
+            notes = _notes.Text.Trim()
+        });
+    }
+
+    private sealed record MovementOption(int Value, string Label)
+    {
+        public override string ToString() => Label;
+    }
+}
+
+internal sealed class PurchaseOrderManagementDialog : OperationDialogBase
+{
+    private readonly Guid _orderId;
+    private readonly Label _orderIdentity = new()
+    {
+        AutoSize = true, ForeColor = Color.FromArgb(55, 73, 61),
+        Font = new Font("Segoe UI Semibold", 10f, FontStyle.Bold)
+    };
+    private readonly Label _orderState = new()
+    {
+        AutoSize = true, ForeColor = Color.FromArgb(112, 127, 118),
+        Font = new Font("Segoe UI", 9f)
+    };
+    private readonly ComboBox _lines = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly NumericUpDown _quantity = new()
+    {
+        Minimum = 0.001m, Maximum = 1_000_000_000m, DecimalPlaces = 3, Increment = 1m, Value = 1m
+    };
+    private readonly DateTimePicker _actionDate = new()
+    {
+        Format = DateTimePickerFormat.Custom, CustomFormat = "dd MMM yyyy", Value = DateTime.Today
+    };
+    private KryptonButton? _cancelOrder;
+    private int _status = -1;
+
+    public PurchaseOrderManagementDialog(DesktopApiClient api, Guid orderId)
+        : base(api, "Purchase order workflow", "Submit, approve and receive goods against a live purchase order.", 700)
+    {
+        if (orderId == Guid.Empty) throw new ArgumentException("A purchase order id is required.", nameof(orderId));
+        _orderId = orderId;
+        Fields.Controls.Add(_orderIdentity);
+        Fields.Controls.Add(_orderState);
+        AddField("Purchase-order line", _lines, height: 74);
+        AddField("Receipt quantity", _quantity);
+        AddField("Action date", _actionDate);
+        _lines.SelectedIndexChanged += (_, _) => UpdateRemainingQuantity();
+
+        _cancelOrder = new KryptonButton { Width = 150, Height = 38, ButtonStyle = ButtonStyle.LowProfile };
+        _cancelOrder.Values.Text = "Cancel purchase order";
+        _cancelOrder.StateCommon.Content.ShortText.Color1 = Color.FromArgb(153, 62, 56);
+        _cancelOrder.Click += async (_, _) => await CancelOrderAsync();
+        Fields.Controls.Add(_cancelOrder);
+
+        SaveButton.Enabled = false;
+        SaveButton.Values.Text = "Loading order…";
+        Shown += async (_, _) => await LoadOrderAsync();
+    }
+
+    private async Task LoadOrderAsync()
+    {
+        SetInfo("Loading the latest purchase-order state…");
+        try
+        {
+            var order = await Api.GetAsync($"PurchaseOrders/{_orderId:D}");
+            _orderIdentity.Text = $"{ReadText(order, "orderNumber") ?? _orderId.ToString("D")}  ·  {ReadText(order, "supplierId") ?? "Supplier not available"}";
+            _status = ReadStatus(order);
+            var statusName = _status switch
+            {
+                0 => "Draft",
+                1 => "Submitted",
+                2 => "Approved",
+                3 => "Partially received",
+                4 => "Received",
+                5 => "Cancelled",
+                _ => "Unknown"
+            };
+            _orderState.Text = $"Current status: {statusName}  ·  Order value: {ReadDecimal(order, "orderTotal").ToString("N2", CultureInfo.InvariantCulture)}";
+
+            if (order.TryGetProperty("lines", out var lineItems) && lineItems.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var line in lineItems.EnumerateArray())
+                {
+                    if (!Guid.TryParse(ReadText(line, "id"), out var lineId) || lineId == Guid.Empty)
+                        continue;
+
+                    var ordered = ReadDecimal(line, "quantity");
+                    var received = ReadDecimal(line, "receivedQuantity");
+                    var remaining = decimal.Round(ordered - received, 3, MidpointRounding.AwayFromZero);
+                    var description = ReadText(line, "description") ?? "Purchase-order line";
+                    var unit = ReadText(line, "unitSymbol") ?? string.Empty;
+                    _lines.Items.Add(new PurchaseOrderLineOption(
+                        lineId, description, unit, ordered, received, remaining));
+                }
+            }
+
+            if (_lines.Items.Count > 0)
+            {
+                _lines.SelectedIndex = 0;
+                UpdateRemainingQuantity();
+            }
+
+            SaveButton.Enabled = true;
+            _cancelOrder.Enabled = _status is 0 or 1 or 2;
+            SaveButton.Values.Text = _status switch
+            {
+                0 => "Submit order  →",
+                1 => "Approve order  →",
+                2 or 3 => "Receive line  →",
+                _ => "No action available"
+            };
+
+            if (_status is 2 or 3 && _lines.Items.Count == 0)
+            {
+                SaveButton.Enabled = false;
+                SetInfo("This order has no receivable lines.");
+            }
+            else if (_status is 0)
+                SetInfo("Submit this draft when its lines and supplier details are correct.");
+            else if (_status is 1)
+                SetInfo("Approval records the date and allows line receipts.");
+            else if (_status is 2 or 3)
+                SetInfo("Choose a line with remaining quantity, then record the quantity received.");
+            else
+            {
+                SaveButton.Enabled = false;
+                SetInfo(statusName is "Received" ? "All ordered quantities have been received." : "This purchase order is not open for further actions.");
+            }
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SaveButton.Enabled = false;
+            if (_cancelOrder is not null) _cancelOrder.Enabled = false;
+            SetError("Purchase order could not be loaded: " + exception.Message);
+        }
+    }
+
+    private void UpdateRemainingQuantity()
+    {
+        if (_lines.SelectedItem is not PurchaseOrderLineOption line)
+            return;
+
+        var remaining = line.Remaining;
+        if (remaining <= 0)
+        {
+            _quantity.Enabled = false;
+            SaveButton.Enabled = false;
+            SetInfo("This line is fully received.");
+            return;
+        }
+
+        _quantity.Enabled = true;
+        _quantity.Maximum = Math.Max(_quantity.Minimum, remaining);
+        _quantity.Value = Math.Min(_quantity.Maximum, Math.Max(_quantity.Minimum, Math.Min(1m, remaining)));
+        if (_status is 2 or 3)
+            SaveButton.Enabled = true;
+    }
+
+    protected override async Task SaveAsync()
+    {
+        switch (_status)
+        {
+            case 0:
+                await SubmitAsync($"PurchaseOrders/{_orderId:D}/submit", new { });
+                break;
+            case 1:
+                await SubmitAsync($"PurchaseOrders/{_orderId:D}/approve", new
+                {
+                    approvalDate = DateOnly.FromDateTime(_actionDate.Value.Date)
+                });
+                break;
+            case 2:
+            case 3:
+                if (_lines.SelectedItem is not PurchaseOrderLineOption line)
+                {
+                    SetError("Choose a purchase-order line.");
+                    return;
+                }
+                if (line.Remaining <= 0 || _quantity.Value > line.Remaining)
+                {
+                    SetError("Receipt quantity must not exceed the remaining ordered quantity.");
+                    return;
+                }
+                await SubmitAsync($"PurchaseOrders/{_orderId:D}/receive-lines/{line.Id:D}", new
+                {
+                    quantity = _quantity.Value,
+                    receivedDate = DateOnly.FromDateTime(_actionDate.Value.Date)
+                });
+                break;
+            default:
+                SetError("This purchase order has no available state transition.");
+                break;
+        }
+    }
+
+    private async Task CancelOrderAsync()
+    {
+        if (_status is not (0 or 1 or 2))
+            return;
+
+        var confirmed = MessageBox.Show(this,
+            "Cancel this purchase order? This action cannot be undone.",
+            "Confirm cancellation", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+        if (confirmed != DialogResult.Yes)
+            return;
+
+        await SubmitAsync($"PurchaseOrders/{_orderId:D}/cancel", new { });
+    }
+
+    private static int ReadStatus(JsonElement source)
+    {
+        if (!source.TryGetProperty("status", out var value) &&
+            !source.TryGetProperty("Status", out value))
+            return -1;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var numeric))
+            return numeric;
+        if (value.ValueKind == JsonValueKind.String)
+        {
+            var text = value.GetString();
+            return text switch
+            {
+                "Draft" => 0,
+                "Submitted" => 1,
+                "Approved" => 2,
+                "PartiallyReceived" => 3,
+                "Received" => 4,
+                "Cancelled" => 5,
+                _ => -1
+            };
+        }
+        return -1;
+    }
+
+    private static decimal ReadDecimal(JsonElement source, string name)
+    {
+        if (!source.TryGetProperty(name, out var value) &&
+            !source.TryGetProperty(char.ToUpperInvariant(name[0]) + name[1..], out value))
+            return 0m;
+        if (value.ValueKind == JsonValueKind.Number && value.TryGetDecimal(out var number))
+            return number;
+        return value.ValueKind == JsonValueKind.String &&
+               decimal.TryParse(value.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out number)
+            ? number
+            : 0m;
+    }
+
+    private static string? ReadText(JsonElement source, string name) =>
+        CreateEstimateDialog.ReadString(source, name);
+
+    private sealed record PurchaseOrderLineOption(
+        Guid Id, string Description, string Unit, decimal Ordered, decimal Received, decimal Remaining)
+    {
+        public override string ToString() =>
+            $"{Description} · {Received:N3}/{Ordered:N3} {Unit} received";
+    }
+}
