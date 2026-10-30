@@ -223,20 +223,11 @@ public sealed class AccountsController(
                 address.Region, address.PostalCode, address.Country, false);
     }
 
-    private async Task PublishProfileUpdatedAsync(AccountProfile profile, string updatedFields)
-    {
-        try
+    private Task PublishProfileUpdatedAsync(AccountProfile profile, string updatedFields) =>
+        publishEndpoint.Publish(new ProfileUpdatedEvent
         {
-            await publishEndpoint.Publish(new ProfileUpdatedEvent
-            {
-                UserId = profile.Id,
-                UpdatedFields = updatedFields,
-                UpdatedAt = DateTime.UtcNow
-            }, HttpContext.RequestAborted);
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Account profile was saved but its profile-updated event could not be published for {UserId}", profile.Id);
-        }
-    }
+            UserId = profile.Id,
+            UpdatedFields = updatedFields,
+            UpdatedAt = DateTime.UtcNow
+        }, HttpContext.RequestAborted);
 }
