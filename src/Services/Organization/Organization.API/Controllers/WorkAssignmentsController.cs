@@ -42,7 +42,7 @@ public sealed class WorkAssignmentsController(
                 EmployeeId = employee.Id,
                 EmployeeFullName = employee.FullName,
                 ProjectId = assignment.ProjectId,
-                BrigadeId = assignment.BrigadeId ?? Guid.Empty,
+                BrigadeId = assignment.BrigadeId,
                 AssignmentRole = assignment.Title,
                 IsResponsible = false,
                 AssignedDate = DateTime.SpecifyKind(
