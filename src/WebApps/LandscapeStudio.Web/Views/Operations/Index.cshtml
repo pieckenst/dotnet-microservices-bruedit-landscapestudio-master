@@ -3,11 +3,12 @@
     ViewData["Title"] = Model.Title;
     ViewData["Section"] = Model.Title;
     var resources = new[] {
+        ("clients", "Clients"), ("land-plots", "Land plots"),
         ("plants", "Plant catalog"), ("materials", "Materials"), ("work-types", "Work types"),
         ("suppliers", "Suppliers"), ("stock-items", "Inventory"), ("purchase-orders", "Purchase orders"),
         ("deliveries", "Deliveries")
     };
-    var canCreate = new[] { "plants", "materials", "work-types", "suppliers", "stock-items" }
+    var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
 }
 <div class="page-heading page-heading-compact">
