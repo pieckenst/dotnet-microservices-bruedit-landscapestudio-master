@@ -14,6 +14,7 @@ using Transaction.API.Data.Interfaces;
 using Transaction.API.EventBusConsumer;
 using Transaction.API.Repositories;
 using Transaction.API.Repositories.Interfaces;
+using Transaction.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog(SeriLogger.Configure);
@@ -129,6 +130,8 @@ builder.Services.AddHealthChecks()
     .AddRabbitMQ(rabbitHost, name: "audit-event-bus");
 
 var app = builder.Build();
+app.UseSerilogRequestLogging();
+app.UseMiddleware<AnalyticsExceptionHandlingMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
