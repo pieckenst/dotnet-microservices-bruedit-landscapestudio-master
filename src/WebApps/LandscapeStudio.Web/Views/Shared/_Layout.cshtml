@@ -39,6 +39,7 @@
             <nav class="main-nav" aria-label="Operational workflows">
                 <a class="@(Context.Request.Query["resource"] == "employees" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="employees"><span class="nav-icon">♙</span>Employees</a>
                 <a class="@(Context.Request.Query["resource"] == "positions" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="positions"><span class="nav-icon">▣</span>Positions</a>
+                <a class="@(currentController == "Organization" ? "active" : "")" asp-controller="Organization" asp-action="Assignments"><span class="nav-icon">♧</span>Work assignments</a>
                 <a class="@(Context.Request.Query["resource"] == "suppliers" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="suppliers"><span class="nav-icon">⌘</span>Suppliers</a>
                 <a class="@(Context.Request.Query["resource"] == "stock-items" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="stock-items"><span class="nav-icon">▤</span>Inventory</a>
                 <a class="@(currentController == "Procurement" ? "active" : "")" asp-controller="Procurement" asp-action="Index"><span class="nav-icon">▣</span>Procurement</a>
