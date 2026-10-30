@@ -10,6 +10,8 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\..\BuildingBlocks\Shared.ServiceKit\Shared.ServiceKit.csproj" />
     <ProjectReference Include="..\..\Services\Project\Project.Application\Project.Application.csproj" />
     <ProjectReference Include="..\..\Services\Project\Project.Domain\Project.Domain.csproj" />
     <ProjectReference Include="..\..\Services\Project\Project.Infrastructure\Project.Infrastructure.csproj" />

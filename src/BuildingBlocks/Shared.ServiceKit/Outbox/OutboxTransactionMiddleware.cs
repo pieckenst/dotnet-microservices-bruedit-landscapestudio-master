@@ -8,7 +8,8 @@ namespace Shared.ServiceKit.Outbox;
 /// <summary>
 /// Wraps a mutating HTTP request in one database transaction. Application handlers may call
 /// SaveChanges as usual; those writes remain uncommitted until the audit filter and explicit
-/// integration-event producers have added their outbox rows.
+/// integration-event producers have added their outbox rows. The response body is buffered so
+/// a successful status is not sent to the client until the database commit has succeeded.
 /// </summary>
 public sealed class OutboxTransactionMiddleware<TContext>(
     RequestDelegate next,
@@ -29,6 +30,10 @@ public sealed class OutboxTransactionMiddleware<TContext>(
         }
 
         await using var transaction = await context.Database.BeginTransactionAsync(httpContext.RequestAborted);
+        var originalBody = httpContext.Response.Body;
+        await using var responseBuffer = new MemoryStream();
+        httpContext.Response.Body = responseBuffer;
+
         try
         {
             await next(httpContext);
@@ -42,6 +47,12 @@ public sealed class OutboxTransactionMiddleware<TContext>(
             {
                 await transaction.RollbackAsync(CancellationToken.None);
             }
+
+            // Flush only after commit/rollback has completed. If commit fails, the catch
+            // path restores the original stream and lets the outer exception handler write 500.
+            responseBuffer.Position = 0;
+            httpContext.Response.Body = originalBody;
+            await responseBuffer.CopyToAsync(originalBody, httpContext.RequestAborted);
         }
         catch
         {
@@ -56,7 +67,12 @@ public sealed class OutboxTransactionMiddleware<TContext>(
                     httpContext.TraceIdentifier);
             }
 
+            httpContext.Response.Body = originalBody;
             throw;
+        }
+        finally
+        {
+            httpContext.Response.Body = originalBody;
         }
     }
 }
