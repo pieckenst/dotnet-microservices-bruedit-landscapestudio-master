@@ -10,6 +10,8 @@ namespace Project.Application.Features.Tasks;
 
 public sealed record GetProjectTasksQuery(Guid ProjectId, int Page = 1, int PageSize = 50,
     Guid? StageId = null, ProjectTaskStatus? Status = null) : IRequest<PagedResponse<ProjectTaskDto>>;
+public sealed record GetProjectTaskByIdQuery(Guid Id) : IRequest<ProjectTaskDto?>;
+
 public sealed record CreateProjectTaskCommand(Guid ProjectId, Guid StageId, string Title, string Description,
     DateOnly? DueDate, Guid? AssignedEmployeeId, Guid? AssignedBrigadeId) : IRequest<ProjectTaskDto>;
 public sealed record UpdateProjectTaskCommand(Guid Id, string Title, string Description, DateOnly? DueDate,
@@ -59,6 +61,18 @@ public sealed class ChangeProjectTaskStatusCommandValidator : AbstractValidator<
     {
         RuleFor(x => x.Id).NotEmpty();
         RuleFor(x => x.Status).IsInEnum();
+    }
+}
+
+public sealed class GetProjectTaskByIdQueryHandler(IRepositoryBase<ProjectTask> tasks)
+    : IRequestHandler<GetProjectTaskByIdQuery, ProjectTaskDto?>
+{
+    public async Task<ProjectTaskDto?> Handle(GetProjectTaskByIdQuery request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        if (request.Id == Guid.Empty) return null;
+        var task = await tasks.GetByIdAsync(request.Id);
+        return task is null ? null : GetProjectTasksQueryHandler.Map(task);
     }
 }
 
