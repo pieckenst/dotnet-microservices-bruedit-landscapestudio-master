@@ -710,7 +710,7 @@ public partial class Form1 : KryptonForm
                 var status = grid.SelectedRows.Count > 0 && statusColumn is not null
                     ? grid.SelectedRows[0].Cells[statusColumn.Index].Value?.ToString()
                     : null;
-                var terminal = status is "Completed" or "Cancelled";
+                var terminal = status is "Completed" or "Cancelled" or "2" or "3";
                 if (_changeAssignmentStatusButton is not null && !_changeAssignmentStatusButton.IsDisposed)
                     _changeAssignmentStatusButton.Enabled = selected && !terminal;
             };
@@ -888,6 +888,7 @@ public partial class Form1 : KryptonForm
         var currentStatus = _currentGrid?.SelectedRows.Count > 0 && statusColumn is not null
             ? _currentGrid.SelectedRows[0].Cells[statusColumn.Index].Value?.ToString() ?? "Planned"
             : "Planned";
+        currentStatus = currentStatus switch { "0" => "Planned", "1" => "Active", "2" => "Completed", "3" => "Cancelled", _ => currentStatus };
         if (currentStatus is "Completed" or "Cancelled")
         {
             MessageBox.Show(this, "Completed and cancelled assignments are terminal.",
