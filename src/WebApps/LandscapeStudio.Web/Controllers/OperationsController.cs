@@ -194,7 +194,10 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         ValidateForResource(model);
         ViewData["EditId"] = id;
         if (!ModelState.IsValid)
+        {
+            await LoadLookupsAsync(model, cancellationToken);
             return View("Create", model);
+        }
 
         try
         {
@@ -214,6 +217,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ModelState.AddModelError(string.Empty, "The service could not confirm the update. Refresh the list before retrying.");
         }
 
+        await LoadLookupsAsync(model, cancellationToken);
         return View("Create", model);
     }
 
