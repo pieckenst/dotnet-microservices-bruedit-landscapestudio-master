@@ -1823,3 +1823,47 @@ internal sealed class CreateWorkAssignmentDialog : OperationDialogBase
     private sealed record EmployeeOption(Guid Id, string Label) { public override string ToString() => Label; }
     private sealed record BrigadeOption(Guid Id, string Label) { public override string ToString() => Label; }
 }
+
+internal sealed class ChangeAssignmentStatusDialog : OperationDialogBase
+{
+    private readonly Guid _assignmentId;
+    private readonly ComboBox _status = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+
+    public ChangeAssignmentStatusDialog(DesktopApiClient api, Guid assignmentId, string currentStatus)
+        : base(api, "Change assignment status",
+            "Completed and cancelled assignments are terminal. Organization validates the transition.", 420)
+    {
+        if (assignmentId == Guid.Empty) throw new ArgumentException("Assignment id is required.", nameof(assignmentId));
+        _assignmentId = assignmentId;
+        _status.Items.AddRange(new object[] { "Planned", "Active", "Completed", "Cancelled" });
+        _status.SelectedItem = _status.Items.Cast<string>()
+            .FirstOrDefault(value => value.Equals(currentStatus, StringComparison.OrdinalIgnoreCase)) ?? "Planned";
+        AddField("Assignment status", _status);
+        SaveButton.Values.Text = "Save status  →";
+    }
+
+    protected override async Task SaveAsync()
+    {
+        if (_status.SelectedItem is not string selected) return;
+        SaveButton.Enabled = false;
+        SetInfo("Updating assignment status…");
+        try
+        {
+            await Api.PatchAsync($"/WorkAssignments/{_assignmentId:D}/status?status={Uri.EscapeDataString(selected)}");
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception)
+        {
+            SetError(exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException ? "The request timed out." : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
+    }
+}
