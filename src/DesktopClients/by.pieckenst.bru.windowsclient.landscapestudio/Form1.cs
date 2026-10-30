@@ -33,6 +33,7 @@ public partial class Form1 : KryptonForm
     private KryptonButton? _editCatalogButton;
     private KryptonButton? _editSupplierButton;
     private KryptonButton? _editEmployeeButton;
+    private KryptonButton? _changeEmployeeStatusButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -364,6 +365,13 @@ public partial class Form1 : KryptonForm
                 edit.Click += async (_, _) => await EditEmployeeAsync();
                 _editEmployeeButton = edit;
                 actions.Controls.Add(edit);
+
+                var changeStatus = CreateSecondaryButton("Change status");
+                changeStatus.Margin = new Padding(8, 0, 0, 0);
+                changeStatus.Enabled = false;
+                changeStatus.Click += async (_, _) => await ChangeEmployeeStatusAsync();
+                _changeEmployeeStatusButton = changeStatus;
+                actions.Controls.Add(changeStatus);
             }
             if (_api is not null && page.Equals("Procurement", StringComparison.OrdinalIgnoreCase))
             {
@@ -635,8 +643,11 @@ public partial class Form1 : KryptonForm
         {
             grid.SelectionChanged += (_, _) =>
             {
+                var hasSelection = GetSelectedGridRecordId().HasValue;
                 if (_editEmployeeButton is not null && !_editEmployeeButton.IsDisposed)
-                    _editEmployeeButton.Enabled = GetSelectedGridRecordId().HasValue;
+                    _editEmployeeButton.Enabled = hasSelection;
+                if (_changeEmployeeStatusButton is not null && !_changeEmployeeStatusButton.IsDisposed)
+                    _changeEmployeeStatusButton.Enabled = hasSelection;
             };
             grid.CellDoubleClick += async (_, args) =>
             {
@@ -819,6 +830,28 @@ public partial class Form1 : KryptonForm
         }
 
         using var dialog = new CreateEmployeeDialog(_api, id.Value);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Organization");
+    }
+
+    private async Task ChangeEmployeeStatusAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select an employee in the Organization table first.",
+                "No employee selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var status = "Active";
+        var statusColumn = _currentGrid?.Columns.Cast<DataGridViewColumn>()
+            .FirstOrDefault(column => column.Name.Equals("Status", StringComparison.OrdinalIgnoreCase));
+        if (_currentGrid?.SelectedRows.Count > 0 && statusColumn is not null)
+            status = _currentGrid.SelectedRows[0].Cells[statusColumn.Index].Value?.ToString() ?? "Active";
+
+        using var dialog = new ChangeEmployeeStatusDialog(_api, id.Value, status);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Organization");
     }
