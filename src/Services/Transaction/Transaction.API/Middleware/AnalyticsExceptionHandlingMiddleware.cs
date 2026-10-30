@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace Transaction.API.Middleware;
 
@@ -39,7 +40,7 @@ public sealed class AnalyticsExceptionHandlingMiddleware(
                 Title = "An unexpected server error occurred."
             };
             problem.Extensions["traceId"] = context.TraceIdentifier;
-            await context.Response.WriteAsJsonAsync(problem, "application/problem+json", cancellationToken: context.RequestAborted);
+            await JsonSerializer.SerializeAsync(context.Response.Body, problem, cancellationToken: context.RequestAborted);
         }
     }
 }
