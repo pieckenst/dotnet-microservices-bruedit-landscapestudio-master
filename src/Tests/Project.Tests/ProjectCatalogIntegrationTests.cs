@@ -74,6 +74,34 @@ public sealed class ProjectCatalogIntegrationTests
         Assert.False(repository.LineItemWasAdded);
     }
 
+    [Fact]
+    public async Task CatalogLinkedLineDoesNotRequireClientOwnedDescriptionUnitOrPrice()
+    {
+        var validator = new AddEstimateLineItemCommandValidator();
+        var command = new AddEstimateLineItemCommand(
+            Guid.NewGuid(), EstimateLineItemType.Material, string.Empty,
+            2m, string.Empty, -1m, null, Guid.NewGuid());
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task CustomLineStillRequiresDescriptionUnitAndNonNegativePrice()
+    {
+        var validator = new AddEstimateLineItemCommandValidator();
+        var command = new AddEstimateLineItemCommand(
+            Guid.NewGuid(), EstimateLineItemType.Other, string.Empty,
+            2m, string.Empty, -1m, null, null);
+
+        var result = await validator.ValidateAsync(command);
+
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(AddEstimateLineItemCommand.Description));
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(AddEstimateLineItemCommand.UnitSymbol));
+        Assert.Contains(result.Errors, error => error.PropertyName == nameof(AddEstimateLineItemCommand.UnitPrice));
+    }
+
     private sealed class FakeCatalogItemLookup(CatalogItemReference? item) : ICatalogItemLookup
     {
         public Task<CatalogItemReference?> FindAsync(
