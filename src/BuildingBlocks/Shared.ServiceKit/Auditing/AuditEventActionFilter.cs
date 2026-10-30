@@ -37,6 +37,14 @@ public sealed class AuditEventActionFilter(
         var action = routeValues.TryGetValue("action", out var actionName)
             ? actionName ?? method
             : method;
+
+        // Login is intentionally outside the business outbox transaction: failed-login
+        // counters must persist even when Identity responds with 401. Authentication
+        // telemetry belongs in the dedicated security logging path, not this CRUD audit stream.
+        if (controller.Equals("Auth", StringComparison.OrdinalIgnoreCase) &&
+            action.Equals("Login", StringComparison.OrdinalIgnoreCase))
+            return;
+
         var resourceId = ResolveResourceId(http.Request.RouteValues);
         var actorId = http.User.FindFirstValue(ClaimTypes.NameIdentifier) ?? http.User.FindFirstValue("sub");
         var correlationId = http.Request.Headers["X-Correlation-ID"].FirstOrDefault();
