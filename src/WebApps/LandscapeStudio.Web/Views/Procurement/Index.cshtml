@@ -1,0 +1,155 @@
+@model ProcurementIndexViewModel
+@{
+    ViewData["Title"] = "Procurement";
+    ViewData["Section"] = "Procurement";
+    string OrderStatus(int status) => status switch { 0 => "Draft", 1 => "Submitted", 2 => "Approved", 3 => "Partially received", 4 => "Received", 5 => "Cancelled", _ => "Unknown" };
+    string DeliveryStatus(int status) => status switch { 0 => "Planned", 1 => "Dispatched", 2 => "Partially received", 3 => "Delivered", 4 => "Delayed", 5 => "Cancelled", _ => "Unknown" };
+    string ItemType(int type) => type switch { 0 => "Material", 1 => "Plant", 2 => "Equipment", 3 => "Service", 4 => "Other", _ => "Item" };
+    var submitted = Model.Orders.Count(x => x.Status == 1);
+    var activeOrders = Model.Orders.Count(x => x.Status is 2 or 3);
+    var lowStock = Model.StockItems.Count(x => x.IsBelowReorderLevel);
+}
+<div class="page-heading page-heading-compact procurement-heading">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> SUPPLY CHAIN</span><h1>Procurement <span>workspace.</span></h1><p>Manage suppliers, purchasing, receipts and inventory from one connected operational view.</p></div>
+    <div class="heading-actions">
+        <a class="button button-quiet" asp-controller="Operations" asp-action="Index" asp-route-resource="suppliers">Manage suppliers</a>
+        <a class="button button-primary" asp-action="CreateOrder">＋ New purchase order</a>
+    </div>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-warning" role="status">@Model.Error</div>
+}
+<section class="metric-grid procurement-metrics">
+    <article class="metric-card metric-card-featured"><div class="metric-top"><span class="metric-label">PURCHASE ORDERS</span><span class="metric-symbol">▣</span></div><div class="metric-value">@Model.Orders.Count.ToString("N0")</div><div class="metric-note">Latest 50 orders</div><div class="metric-bottom">@submitted submitted for approval</div></article>
+    <article class="metric-card"><div class="metric-top"><span class="metric-label">IN PROGRESS</span><span class="metric-symbol metric-symbol-muted">↗</span></div><div class="metric-value">@activeOrders.ToString("N0")</div><div class="metric-note">Approved or partially received</div><div class="metric-bottom">Pending fulfilment</div></article>
+    <article class="metric-card"><div class="metric-top"><span class="metric-label">LOW STOCK</span><span class="metric-symbol metric-symbol-muted">!</span></div><div class="metric-value">@lowStock.ToString("N0")</div><div class="metric-note">At or below reorder level</div><div class="metric-bottom">Across @Model.StockItems.Count.ToString("N0") stock items</div></article>
+    <article class="metric-card"><div class="metric-top"><span class="metric-label">DELIVERIES</span><span class="metric-symbol metric-symbol-muted">⇢</span></div><div class="metric-value">@Model.Deliveries.Count.ToString("N0")</div><div class="metric-note">Scheduled supplier deliveries</div><div class="metric-bottom">@Model.Deliveries.Count(x => x.Status is 0 or 1 or 2 or 4) active</div></article>
+</section>
+
+<section class="surface-card procurement-panel">
+    <div class="section-heading section-heading-table">
+        <div><span class="mini-kicker">PURCHASING</span><h2>Purchase orders</h2><p>Submit, approve and receive order lines without leaving the workspace.</p></div>
+        <a class="text-link" asp-action="CreateOrder">Create order <span>↗</span></a>
+    </div>
+    @if (Model.Orders.Count == 0)
+    {
+        <div class="empty-state"><span class="empty-illustration">▣</span><h3>No purchase orders yet</h3><p>Create the first purchase order and start tracking supplier fulfilment and material receipts.</p><a class="button button-primary" asp-action="CreateOrder">Create purchase order</a></div>
+    }
+    else
+    {
+        <div class="table-wrap"><table class="procurement-table"><thead><tr><th>Order</th><th>Supplier</th><th>Order date</th><th>Expected</th><th>Value</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+        @foreach (var order in Model.Orders.OrderByDescending(x => x.OrderDate))
+        {
+            <tr>
+                <td><strong class="order-number">@order.OrderNumber</strong><small class="cell-sub">@order.Lines.Count line(s)</small></td>
+                <td><span class="mono">@order.SupplierId.ToString("N")[..8]</span></td>
+                <td>@order.OrderDate.ToString("dd MMM yyyy")</td>
+                <td>@(order.ExpectedDeliveryDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                <td class="money-cell">@order.OrderTotal.ToString("N2")</td>
+                <td><span class="status-pill @(order.Status == 5 ? "status-pill-muted" : order.Status == 1 ? "status-pill-pending" : order.Status == 3 ? "status-pill-progress" : order.Status == 4 ? "status-pill-complete" : "")">@OrderStatus(order.Status)</span></td>
+                <td>
+                    <div class="workflow-actions">
+                        @if (order.Status == 0)
+                        {
+                            <form asp-action="SubmitOrder" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@order.Id" /><button class="button button-small button-secondary" type="submit">Submit</button></form>
+                        }
+                        @if (order.Status == 1)
+                        {
+                            <form asp-action="ApproveOrder" method="post">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@order.Id" /><button class="button button-small button-primary" type="submit">Approve</button></form>
+                        }
+                        @if (order.Status is 0 or 1 or 2)
+                        {
+                            <form asp-action="CancelOrder" method="post" onsubmit="return confirm('Cancel this purchase order?');">@Html.AntiForgeryToken()<input type="hidden" name="id" value="@order.Id" /><button class="button button-small button-quiet" type="submit">Cancel</button></form>
+                        }
+                        @if (order.Status is 2 or 3)
+                        {
+                            <a class="button button-small button-quiet" asp-action="CreateDelivery" title="Schedule a supplier delivery">Schedule delivery</a>
+                        }
+                    </div>
+                </td>
+            </tr>
+            <tr class="order-lines-row"><td colspan="7">
+                <details class="order-lines">
+                    <summary>View line items and receive quantities <span>@order.Lines.Count item(s)</span></summary>
+                    <div class="order-line-list">
+                    @foreach (var line in order.Lines)
+                    {
+                        var remaining = Math.Max(0, line.Quantity - line.ReceivedQuantity);
+                        <div class="order-line">
+                            <div class="order-line-main"><strong>@line.Description</strong><small>@ItemType(line.ItemType) · @line.UnitSymbol · @line.UnitPrice.ToString("N2") per unit</small></div>
+                            <div class="order-line-quantity"><strong>@line.ReceivedQuantity.ToString("N###") / @line.Quantity.ToString("N###")</strong><small>received</small></div>
+                            @if (order.Status is 2 or 3 && remaining > 0)
+                            {
+                                <form asp-action="ReceiveLine" method="post" class="receive-line-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@order.Id" />
+                                    <input type="hidden" name="lineId" value="@line.Id" />
+                                    <label class="sr-only" for="qty-@line.Id">Quantity received</label>
+                                    <input id="qty-@line.Id" name="quantity" type="number" min="0.001" max="@remaining.ToString(System.Globalization.CultureInfo.InvariantCulture)" step="0.001" value="@remaining.ToString(System.Globalization.CultureInfo.InvariantCulture)" required />
+                                    <label class="sr-only" for="date-@line.Id">Received date</label>
+                                    <input id="date-@line.Id" name="receivedDate" type="date" value="@DateOnly.FromDateTime(DateTime.UtcNow).ToString("yyyy-MM-dd")" required />
+                                    <button class="button button-small button-primary" type="submit">Record receipt</button>
+                                </form>
+                            }
+                            else if (remaining <= 0)
+                            {
+                                <span class="receipt-complete">Fully received</span>
+                            }
+                        </div>
+                    }
+                    </div>
+                </details>
+            </td></tr>
+        }
+        </tbody></table></div>
+    }
+</section>
+
+<div class="procurement-lower-grid">
+    <section class="surface-card procurement-panel">
+        <div class="section-heading section-heading-table"><div><span class="mini-kicker">INVENTORY CONTROL</span><h2>Stock at a glance</h2><p>Live quantity and reorder thresholds.</p></div><a class="text-link" asp-controller="Operations" asp-action="Index" asp-route-resource="stock-items">All stock <span>↗</span></a></div>
+        @if (Model.StockItems.Count == 0)
+        {
+            <div class="compact-empty"><strong>No stock records</strong><p>Add stock items in the inventory workspace.</p></div>
+        }
+        else
+        {
+            <div class="stock-list">
+            @foreach (var item in Model.StockItems.OrderByDescending(x => x.IsBelowReorderLevel).ThenBy(x => x.Sku).Take(10))
+            {
+                <div class="stock-list-item"><span class="stock-indicator @(item.IsBelowReorderLevel ? "stock-indicator-low" : "")"></span><div class="stock-item-copy"><strong>@item.Sku</strong><small>@item.Description · @item.StorageLocation</small></div><div class="stock-values"><strong>@item.QuantityOnHand.ToString("N###") @item.UnitSymbol</strong><small>reorder at @item.ReorderLevel.ToString("N###")</small></div><span class="stock-state @(item.IsBelowReorderLevel ? "stock-state-low" : "")">@(item.IsBelowReorderLevel ? "Reorder" : "In stock")</span></div>
+            }
+            </div>
+        }
+    </section>
+    <section class="surface-card procurement-panel">
+        <div class="section-heading section-heading-table"><div><span class="mini-kicker">LOGISTICS</span><h2>Supplier deliveries</h2><p>Inbound deliveries associated with approved orders.</p></div><a class="text-link" asp-action="CreateDelivery">Schedule <span>↗</span></a></div>
+        @if (Model.Deliveries.Count == 0)
+        {
+            <div class="compact-empty"><strong>No deliveries scheduled</strong><p>Schedule a delivery from an approved purchase order.</p></div>
+        }
+        else
+        {
+            <div class="delivery-list">
+            @foreach (var delivery in Model.Deliveries.OrderBy(x => x.ExpectedDate).Take(8))
+            {
+                <div class="delivery-item"><div class="delivery-date"><strong>@delivery.ExpectedDate.ToString("dd")</strong><small>@delivery.ExpectedDate.ToString("MMM")</small></div><div class="delivery-copy"><strong>@delivery.DeliveryNumber</strong><small>@delivery.Carrier · PO @delivery.PurchaseOrderId.ToString("N")[..8]</small></div><span class="status-pill @(delivery.Status == 3 ? "status-pill-complete" : delivery.Status == 5 ? "status-pill-muted" : "")">@DeliveryStatus(delivery.Status)</span>
+                    @if (delivery.Status is 0 or 1 or 2 or 4)
+                    {
+                        <form asp-action="ChangeDeliveryStatus" method="post" class="delivery-status-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@delivery.Id" />
+                            <select name="status" aria-label="New delivery status">
+                                <option value="1">Dispatched</option><option value="2">Partially received</option><option value="3">Delivered</option><option value="4">Delayed</option><option value="5">Cancelled</option>
+                            </select>
+                            <input name="actualDate" type="date" aria-label="Actual delivery date (required for delivered)" />
+                            <button class="button button-small button-quiet" type="submit">Update</button>
+                        </form>
+                    }
+                </div>
+            }
+            </div>
+        }
+    </section>
+</div>
