@@ -32,6 +32,7 @@ public partial class Form1 : KryptonForm
     private KryptonButton? _editStockItemButton;
     private KryptonButton? _editCatalogButton;
     private KryptonButton? _editSupplierButton;
+    private KryptonButton? _editEmployeeButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -350,6 +351,20 @@ public partial class Form1 : KryptonForm
                 movement.Click += async (_, _) => await RecordStockMovementAsync();
                 actions.Controls.Add(movement);
             }
+            if (_api is not null && page.Equals("Organization", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New employee");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreateEmployeeAsync();
+                actions.Controls.Add(create);
+
+                var edit = CreateSecondaryButton("Edit selected");
+                edit.Margin = new Padding(8, 0, 0, 0);
+                edit.Enabled = false;
+                edit.Click += async (_, _) => await EditEmployeeAsync();
+                _editEmployeeButton = edit;
+                actions.Controls.Add(edit);
+            }
             if (_api is not null && page.Equals("Procurement", StringComparison.OrdinalIgnoreCase))
             {
                 var create = CreatePrimaryButton("＋ New purchase order");
@@ -616,6 +631,19 @@ public partial class Form1 : KryptonForm
                     await EditSupplierAsync();
             };
         }
+        if (page.Equals("Organization", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                if (_editEmployeeButton is not null && !_editEmployeeButton.IsDisposed)
+                    _editEmployeeButton.Enabled = GetSelectedGridRecordId().HasValue;
+            };
+            grid.CellDoubleClick += async (_, args) =>
+            {
+                if (args.RowIndex >= 0)
+                    await EditEmployeeAsync();
+            };
+        }
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -769,6 +797,30 @@ public partial class Form1 : KryptonForm
         using var dialog = new CreateCatalogRecordDialog(_api, _catalogResource, id.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Plant & material catalog");
+    }
+
+    private async Task CreateEmployeeAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreateEmployeeDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Organization");
+    }
+
+    private async Task EditEmployeeAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select an employee in the Organization table first.",
+                "No employee selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new CreateEmployeeDialog(_api, id.Value);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Organization");
     }
 
     private async Task CreateSupplierAsync()
