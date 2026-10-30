@@ -104,17 +104,23 @@ public sealed class EmployeeAssignedAuditConsumer(IAuditEventRepository reposito
     public Task Consume(ConsumeContext<EmployeeAssignedEvent> context)
     {
         var message = context.Message;
-        if (message.EmployeeId == Guid.Empty || message.ProjectId == Guid.Empty) return Task.CompletedTask;
+        var entityId = message.EmployeeId ?? message.BrigadeId;
+        if (!entityId.HasValue || entityId.Value == Guid.Empty || message.ProjectId == Guid.Empty)
+            return Task.CompletedTask;
         // Deliberately exclude EmployeeFullName: analytics needs identifiers and assignment facts, not full personal names.
         var metadata = new Dictionary<string, string>(StringComparer.Ordinal)
         {
             ["projectId"] = DomainAuditRecordFactory.Id(message.ProjectId),
+            ["employeeId"] = message.EmployeeId?.ToString("D") ?? string.Empty,
             ["brigadeId"] = message.BrigadeId?.ToString("D") ?? string.Empty,
             ["assignmentRole"] = string.IsNullOrWhiteSpace(message.AssignmentRole) ? "unspecified" : message.AssignmentRole.Trim()[..Math.Min(message.AssignmentRole.Trim().Length, 100)],
             ["isResponsible"] = message.IsResponsible.ToString(CultureInfo.InvariantCulture)
         };
-        return repository.AddAsync(DomainAuditRecordFactory.Create(message, "Organization", "EmployeeAssigned",
-            "EmployeeAssignment", message.EmployeeId, null, message.AssignedDate, metadata), context.CancellationToken);
+        var isEmployeeAssignment = message.EmployeeId.HasValue;
+        return repository.AddAsync(DomainAuditRecordFactory.Create(message, "Organization",
+            isEmployeeAssignment ? "EmployeeAssigned" : "BrigadeAssigned",
+            isEmployeeAssignment ? "EmployeeAssignment" : "BrigadeAssignment",
+            entityId.Value, null, message.AssignedDate, metadata), context.CancellationToken);
     }
 }
 
