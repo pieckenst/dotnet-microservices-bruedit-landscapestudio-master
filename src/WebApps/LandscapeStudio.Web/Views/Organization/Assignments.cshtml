@@ -1,0 +1,37 @@
+@model WorkAssignmentListViewModel
+@{
+    ViewData["Title"] = "Work assignments";
+    ViewData["Section"] = "Organization / Work assignments";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> ORGANIZATION</span><h1>Work assignments <span>by project.</span></h1><p>Assign an active employee or brigade to a project and track the planned work period.</p></div>
+    <a class="button button-primary" asp-action="CreateAssignment">＋ New assignment</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-error" role="alert">@Model.Error</div>
+}
+<section class="surface-card">
+    <div class="section-heading section-heading-table"><div><span class="mini-kicker">WORKFORCE SCHEDULE</span><h2>Assignments</h2><p>@Model.Items.Count.ToString("N0") assignment(s) returned by Organization.</p></div></div>
+    @if (Model.Items.Count > 0)
+    {
+        <div class="table-wrap"><table><thead><tr><th>Project</th><th>Assigned to</th><th>Assignment</th><th>Start</th><th>End</th><th>Status</th><th>Notes</th></tr></thead><tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@item.Project</td>
+                <td>@item.AssignedTo</td>
+                <td><strong>@item.Title</strong></td>
+                <td>@item.StartDate.ToString("dd MMM yyyy")</td>
+                <td>@(item.EndDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                <td><span class="status-pill">@item.Status</span></td>
+                <td>@(string.IsNullOrWhiteSpace(item.Notes) ? "—" : item.Notes)</td>
+            </tr>
+        }
+        </tbody></table></div>
+    }
+    else if (string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="empty-state"><span class="empty-illustration">♙</span><h3>No work assignments yet</h3><p>Choose a project and assign an employee or brigade to get started.</p><a class="button button-secondary" asp-action="CreateAssignment">Create first assignment</a></div>
+    }
+</section>
