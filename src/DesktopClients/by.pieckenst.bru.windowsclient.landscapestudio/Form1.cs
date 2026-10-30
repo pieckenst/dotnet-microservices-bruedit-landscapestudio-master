@@ -116,7 +116,7 @@ public partial class Form1 : KryptonForm
         {
             ("WORKSPACE", new[] { "Overview", "Projects", "Estimates", "Customers", "Land plots" }),
             ("OPERATIONS", new[] { "Plant & material catalog", "Procurement", "Inventory", "Suppliers" }),
-            ("ADMINISTRATION", new[] { "Organization", "Positions", "Settings" })
+            ("ADMINISTRATION", new[] { "Organization", "Positions", "Work assignments", "Settings" })
         };
         foreach (var group in groups)
         {
@@ -353,6 +353,13 @@ public partial class Form1 : KryptonForm
                 movement.Click += async (_, _) => await RecordStockMovementAsync();
                 actions.Controls.Add(movement);
             }
+            if (_api is not null && page.Equals("Work assignments", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New assignment");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreateWorkAssignmentAsync();
+                actions.Controls.Add(create);
+            }
             if (_api is not null && page.Equals("Positions", StringComparison.OrdinalIgnoreCase))
             {
                 var create = CreatePrimaryButton("＋ New position");
@@ -420,6 +427,7 @@ public partial class Form1 : KryptonForm
         "Suppliers" => "Supplier records and contact channels from Procurement.",
         "Organization" => "Employee records and their Identity account links from Organization.",
         "Positions" => "Manage organizational roles and ranking used by employee records.",
+        "Work assignments" => "Schedule employees and brigades against landscaping projects.",
         "Settings" => "Configure the gateway connection and authenticate with Identity.",
         _ => "Live service-backed data from Landscape Studio."
     };
@@ -726,6 +734,7 @@ public partial class Form1 : KryptonForm
         "Suppliers" => "/Suppliers?page=1&pageSize=100&includeInactive=true",
         "Organization" => "/Employees?page=1&pageSize=100",
         "Positions" => "/Positions?page=1&pageSize=100&includeInactive=true",
+        "Work assignments" => "/WorkAssignments?page=1&pageSize=100",
         _ => null
     };
 
@@ -838,6 +847,14 @@ public partial class Form1 : KryptonForm
         using var dialog = new CreateCatalogRecordDialog(_api, _catalogResource, id.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Plant & material catalog");
+    }
+
+    private async Task CreateWorkAssignmentAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreateWorkAssignmentDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Work assignments");
     }
 
     private async Task CreatePositionAsync()
