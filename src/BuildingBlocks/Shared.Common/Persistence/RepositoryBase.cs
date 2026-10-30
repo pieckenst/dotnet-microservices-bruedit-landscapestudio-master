@@ -18,10 +18,8 @@ namespace Shared.Common.Persistence
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
-        public async Task<IReadOnlyList<T>> GetAllAsync()
-        {
-            return await _dbContext.Set<T>().AsNoTracking().ToListAsync();
-        }
+        public async Task<IReadOnlyList<T>> GetAllAsync() =>
+            await _dbContext.Set<T>().AsNoTracking().ToListAsync();
 
         public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate)
         {
@@ -37,13 +35,9 @@ namespace Shared.Common.Persistence
         {
             IQueryable<T> query = _dbContext.Set<T>();
             if (disableTracking) query = query.AsNoTracking();
-
             if (!string.IsNullOrWhiteSpace(includeString)) query = query.Include(includeString);
             if (predicate != null) query = query.Where(predicate);
-
-            return orderBy is not null
-                ? await orderBy(query).ToListAsync()
-                : await query.ToListAsync();
+            return orderBy is not null ? await orderBy(query).ToListAsync() : await query.ToListAsync();
         }
 
         public async Task<IReadOnlyList<T>> GetAsync(
@@ -54,22 +48,18 @@ namespace Shared.Common.Persistence
         {
             IQueryable<T> query = _dbContext.Set<T>();
             if (disableTracking) query = query.AsNoTracking();
-
             if (includes is not null)
                 query = includes.Aggregate(query, (current, include) => current.Include(include));
-
             if (predicate is not null) query = query.Where(predicate);
-
-            return orderBy is not null
-                ? await orderBy(query).ToListAsync()
-                : await query.ToListAsync();
+            return orderBy is not null ? await orderBy(query).ToListAsync() : await query.ToListAsync();
         }
 
         public async Task<PagedResult<T>> GetPagedAsync(
             int page,
             int pageSize,
             Expression<Func<T, bool>>? predicate = null,
-            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null)
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+            List<Expression<Func<T, object>>>? includes = null)
         {
             if (page < 1)
                 throw new ArgumentOutOfRangeException(nameof(page), "Page must be at least 1.");
@@ -77,28 +67,18 @@ namespace Shared.Common.Persistence
                 throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be between 1 and 200.");
 
             IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
-            if (predicate is not null)
-                query = query.Where(predicate);
-
+            if (predicate is not null) query = query.Where(predicate);
             var totalCount = await query.CountAsync();
-            var orderedQuery = orderBy is not null
-                ? orderBy(query)
-                : query.OrderBy(entity => entity.Id);
+            var orderedQuery = orderBy is not null ? orderBy(query) : query.OrderBy(entity => entity.Id);
+            if (includes is not null)
+                orderedQuery = includes.Aggregate(orderedQuery, (current, include) => (IOrderedQueryable<T>)current.Include(include));
 
-            var items = await orderedQuery
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
+            var items = await orderedQuery.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return new PagedResult<T>(items, page, pageSize, totalCount);
         }
 
-        public virtual async Task<T?> GetByIdAsync(Guid id)
-        {
-            return await _dbContext.Set<T>()
-                .AsNoTracking()
-                .FirstOrDefaultAsync(entity => entity.Id == id);
-        }
+        public virtual async Task<T?> GetByIdAsync(Guid id) =>
+            await _dbContext.Set<T>().AsNoTracking().FirstOrDefaultAsync(entity => entity.Id == id);
 
         public async Task<T> AddAsync(T entity)
         {
