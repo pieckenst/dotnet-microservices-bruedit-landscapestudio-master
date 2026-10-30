@@ -11,7 +11,7 @@ namespace Project.Tests;
 public sealed class ProjectCatalogIntegrationTests
 {
     [Fact]
-    public async Task CatalogLinkedEstimateLineItemRequiresActiveMatchingCatalogUnit()
+    public async Task CatalogLinkedEstimateLineItemUsesAuthoritativeCatalogSnapshot()
     {
         var estimate = new Estimate(Guid.NewGuid(), Guid.NewGuid(), "V1");
         var catalogId = Guid.NewGuid();
@@ -22,44 +22,50 @@ public sealed class ProjectCatalogIntegrationTests
 
         var handler = new AddEstimateLineItemCommandHandler(repository, catalog);
         var result = await handler.Handle(new AddEstimateLineItemCommand(
-            estimate.Id, EstimateLineItemType.Material, "Granite paving",
-            12m, "m²", 52m, 31m, catalogId), CancellationToken.None);
+            estimate.Id, EstimateLineItemType.Material, "Client supplied description",
+            12m, "pcs", 999m, 31m, catalogId), CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.True(repository.LineItemWasAdded);
-        Assert.Equal(catalogId, estimate.LineItems.Single().CatalogItemId);
-        Assert.Equal("m²", estimate.LineItems.Single().UnitSymbol);
+        var line = Assert.Single(estimate.LineItems);
+        Assert.Equal(catalogId, line.CatalogItemId);
+        Assert.Equal("Granite paving", line.Description);
+        Assert.Equal("m²", line.UnitSymbol);
+        Assert.Equal(48.50m, line.UnitPrice);
+        Assert.Equal(31m, line.UnitCost);
+        Assert.Equal(582m, line.LineTotal);
     }
 
     [Fact]
-    public async Task CatalogLinkedEstimateLineItemRejectsMismatchedMeasurementUnit()
+    public async Task CatalogLinkedEstimateLineItemRejectsInactiveItems()
     {
         var estimate = new Estimate(Guid.NewGuid(), Guid.NewGuid(), "V1");
         var catalogId = Guid.NewGuid();
         var repository = new FakeEstimateRepository(estimate);
         var catalog = new FakeCatalogItemLookup(new CatalogItemReference(
             catalogId, "Paving", "Stone paving", Guid.NewGuid(), "m²",
-            48.50m, IsActive: true, MeasurementUnitIsActive: true));
+            48.50m, IsActive: false, MeasurementUnitIsActive: true));
 
         var handler = new AddEstimateLineItemCommandHandler(repository, catalog);
 
         await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(new AddEstimateLineItemCommand(
             estimate.Id, EstimateLineItemType.Material, "Paving",
-            12m, "pcs", 52m, null, catalogId), CancellationToken.None));
+            12m, "m²", 52m, null, catalogId), CancellationToken.None));
 
         Assert.False(repository.LineItemWasAdded);
     }
 
     [Fact]
-    public async Task CatalogLinkedEstimateLineItemRejectsInactiveItemsOrUnits()
+    public async Task CatalogLinkedEstimateLineItemRejectsInactiveMeasurementUnits()
     {
         var estimate = new Estimate(Guid.NewGuid(), Guid.NewGuid(), "V1");
         var catalogId = Guid.NewGuid();
         var repository = new FakeEstimateRepository(estimate);
-        var inactiveItemLookup = new FakeCatalogItemLookup(new CatalogItemReference(
+        var catalog = new FakeCatalogItemLookup(new CatalogItemReference(
             catalogId, "Paving", "Stone paving", Guid.NewGuid(), "m²",
-            48.50m, IsActive: false, MeasurementUnitIsActive: true));
-        var handler = new AddEstimateLineItemCommandHandler(repository, inactiveItemLookup);
+            48.50m, IsActive: true, MeasurementUnitIsActive: false));
+
+        var handler = new AddEstimateLineItemCommandHandler(repository, catalog);
 
         await Assert.ThrowsAsync<ValidationException>(() => handler.Handle(new AddEstimateLineItemCommand(
             estimate.Id, EstimateLineItemType.Material, "Paving",
