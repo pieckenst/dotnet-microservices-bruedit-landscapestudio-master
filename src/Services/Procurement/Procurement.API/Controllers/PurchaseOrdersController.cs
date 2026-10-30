@@ -1,5 +1,5 @@
 using EventBus.Messages.Events;
-using MassTransit;
+using Shared.ServiceKit.Outbox;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +7,6 @@ using Procurement.Application.DTOs;
 using Procurement.Application.Features.PurchaseOrders;
 using Procurement.Application.Features.Suppliers;
 using Procurement.Domain.Enums;
-using Shared.Common.Persistence;
 
 namespace Procurement.API.Controllers;
 
@@ -16,8 +15,7 @@ namespace Procurement.API.Controllers;
 [Authorize]
 public sealed class PurchaseOrdersController(
     IMediator mediator,
-    IPublishEndpoint publishEndpoint,
-    ILogger<PurchaseOrdersController> logger) : ControllerBase
+    IIntegrationOutbox outbox) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "procurement.read")]
@@ -42,24 +40,17 @@ public sealed class PurchaseOrdersController(
     {
         var order = await mediator.Send(command, cancellationToken);
         var supplier = await mediator.Send(new GetSupplierByIdQuery(order.SupplierId), cancellationToken);
-        try
+        outbox.Enqueue(new PurchaseOrderCreatedEvent
         {
-            await publishEndpoint.Publish(new PurchaseOrderCreatedEvent
-            {
-                PurchaseOrderId = order.Id,
-                SupplierId = order.SupplierId,
-                SupplierName = supplier?.Name ?? string.Empty,
-                OrderNumber = order.OrderNumber,
-                TotalAmount = order.OrderTotal,
-                Currency = supplier?.CurrencyCode ?? "BYN",
-                OrderDate = ToUtcDateTime(order.OrderDate),
-                ExpectedDeliveryDate = order.ExpectedDeliveryDate is null ? null : ToUtcDateTime(order.ExpectedDeliveryDate.Value)
-            }, cancellationToken);
-        }
-        catch (Exception exception)
-        {
-            logger.LogError(exception, "Purchase order {OrderId} was saved but its analytics event could not be published.", order.Id);
-        }
+            PurchaseOrderId = order.Id,
+            SupplierId = order.SupplierId,
+            SupplierName = supplier?.Name ?? string.Empty,
+            OrderNumber = order.OrderNumber,
+            TotalAmount = order.OrderTotal,
+            Currency = supplier?.CurrencyCode ?? "BYN",
+            OrderDate = ToUtcDateTime(order.OrderDate),
+            ExpectedDeliveryDate = order.ExpectedDeliveryDate is null ? null : ToUtcDateTime(order.ExpectedDeliveryDate.Value)
+        });
         return CreatedAtAction(nameof(GetById), new { id = order.Id }, order);
     }
 
@@ -92,26 +83,19 @@ public sealed class PurchaseOrdersController(
         var line = result.ReceivedLine;
         if (result.StockMovementId.HasValue && line.ItemType == ProcurementItemType.Material && line.CatalogItemId.HasValue)
         {
-            try
+            outbox.Enqueue(new MaterialReceivedEvent
             {
-                await publishEndpoint.Publish(new MaterialReceivedEvent
-                {
-                    MaterialReceiptId = result.StockMovementId.Value,
-                    PurchaseOrderId = id,
-                    MaterialId = line.CatalogItemId.Value,
-                    MaterialName = line.Description,
-                    UnitSymbol = line.UnitSymbol,
-                    QuantityReceived = request.Quantity,
-                    UnitCost = line.UnitPrice,
-                    TotalCost = decimal.Round(request.Quantity * line.UnitPrice, 2, MidpointRounding.AwayFromZero),
-                    ReceivedDate = ToUtcDateTime(request.ReceivedDate),
-                    ReceivedBy = User.Identity?.Name ?? string.Empty
-                }, cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Inventory receipt {MovementId} was saved but its analytics event could not be published.", result.StockMovementId.Value);
-            }
+                MaterialReceiptId = result.StockMovementId.Value,
+                PurchaseOrderId = id,
+                MaterialId = line.CatalogItemId.Value,
+                MaterialName = line.Description,
+                UnitSymbol = line.UnitSymbol,
+                QuantityReceived = request.Quantity,
+                UnitCost = line.UnitPrice,
+                TotalCost = decimal.Round(request.Quantity * line.UnitPrice, 2, MidpointRounding.AwayFromZero),
+                ReceivedDate = ToUtcDateTime(request.ReceivedDate),
+                ReceivedBy = User.Identity?.Name ?? string.Empty
+            });
         }
         return Ok(result.Order);
     }
