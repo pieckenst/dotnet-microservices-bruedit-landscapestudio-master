@@ -19,6 +19,15 @@ public sealed class OperationFormViewModel
     [StringLength(4000)]
     public string Description { get; set; } = string.Empty;
 
+    [Range(typeof(decimal), "0.01", "1000000000")]
+    public decimal AreaSquareMetres { get; set; }
+
+    [StringLength(100)]
+    public string? SoilType { get; set; }
+
+    [StringLength(2000)]
+    public string? Notes { get; set; }
+
     public Guid MeasurementUnitId { get; set; }
 
     [Range(typeof(decimal), "0", "1000000000")]
