@@ -31,7 +31,7 @@ public sealed class AuditEventsController(IAuditEventRepository repository) : Co
     }
 
     [HttpGet("export")]
-    [Produces("text/csv")]
+    [Produces("text/csv", "text/plain")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Export(
@@ -51,7 +51,7 @@ public sealed class AuditEventsController(IAuditEventRepository repository) : Co
                 Detail = $"Narrow the filters so the export contains at most {ExportLimit:N0} records."
             });
 
-        var normalizedFormat = format.Trim().ToLowerInvariant();
+        var normalizedFormat = (format ?? "csv").Trim().ToLowerInvariant();
         var (content, contentType, extension) = normalizedFormat switch
         {
             "csv" => (AuditCsvExporter.Export(records), "text/csv; charset=utf-8", "csv"),
