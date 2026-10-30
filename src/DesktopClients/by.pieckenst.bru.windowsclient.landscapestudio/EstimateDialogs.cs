@@ -219,6 +219,7 @@ internal sealed class EstimateDetailsDialog : KryptonForm
     private readonly ComboBox _itemType = new() { Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
     private readonly ComboBox _catalogItem = new() { Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
     private bool _loadingCatalogItems;
+    private bool _suppressCatalogReload;
     private readonly TextBox _description = new() { Width = 230, MaxLength = 500 };
     private readonly NumericUpDown _quantity = new() { Width = 86, DecimalPlaces = 3, Minimum = .001M, Maximum = 1000000000M, Value = 1, Increment = .5M };
     private readonly TextBox _unit = new() { Width = 64, MaxLength = 24, Text = "pcs" };
@@ -269,7 +270,11 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         _itemType.SelectedIndex = 1;
         _catalogItem.Items.Add(new CatalogItemOption(null, 1, "Custom line — no Catalog reference", string.Empty, "pcs", 0m));
         _catalogItem.SelectedIndex = 0;
-        _itemType.SelectedIndexChanged += async (_, _) => await LoadCatalogItemsAsync();
+        _itemType.SelectedIndexChanged += async (_, _) =>
+        {
+            if (!_suppressCatalogReload)
+                await LoadCatalogItemsAsync();
+        };
         _catalogItem.SelectedIndexChanged += (_, _) => ApplyCatalogSelection();
         _add.Values.Text = "Add line item";
         CreateEstimateDialog.SetPrimaryStyle(_add);
@@ -457,8 +462,12 @@ internal sealed class EstimateDetailsDialog : KryptonForm
             .Select(index => _itemType.Items[index])
             .OfType<ItemType>()
             .FirstOrDefault(item => item.Value == selected.ItemType);
-        if (matchingType is not null)
-            _itemType.SelectedItem = matchingType;
+        if (matchingType is not null && !Equals(_itemType.SelectedItem, matchingType))
+        {
+            _suppressCatalogReload = true;
+            try { _itemType.SelectedItem = matchingType; }
+            finally { _suppressCatalogReload = false; }
+        }
 
         _description.Text = selected.Description;
         _unit.Text = selected.UnitSymbol;
