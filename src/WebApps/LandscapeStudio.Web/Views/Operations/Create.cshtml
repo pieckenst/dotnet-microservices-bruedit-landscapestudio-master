@@ -153,5 +153,5 @@
             </div>
         </section>
     }
-    <div class="form-actions"><a class="button button-quiet" asp-action="Index" asp-route-resource="@Model.Resource">Cancel</a><button class="button button-primary" type="submit" @(isCatalog && Model.MeasurementUnits.Count == 0 ? "disabled" : null)>@(isEdit ? "Save changes" : "Create record") <span aria-hidden="true">→</span></button></div>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index" asp-route-resource="@Model.Resource">Cancel</a><button class="button button-primary" type="submit" @((isCatalog && Model.MeasurementUnits.Count == 0) || (isEmployee && Model.Positions.Count == 0) ? "disabled" : null)>@(isEdit ? "Save changes" : "Create record") <span aria-hidden="true">→</span></button></div>
 </form>
