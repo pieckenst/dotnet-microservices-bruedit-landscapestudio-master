@@ -25,7 +25,8 @@ namespace Shared.Common.Persistence
             int page,
             int pageSize,
             Expression<Func<T, bool>>? predicate = null,
-            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null);
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+            List<Expression<Func<T, object>>>? includes = null);
         Task<T?> GetByIdAsync(Guid id);
         Task<T> AddAsync(T entity);
         Task UpdateAsync(T entity);
