@@ -241,6 +241,40 @@ public partial class Form1 : KryptonForm
                 create.Click += async (_, _) => await CreateEstimateAsync();
                 actions.Controls.Add(create);
             }
+            if (_api is not null && page.Equals("Plant & material catalog", StringComparison.OrdinalIgnoreCase))
+            {
+                var label = _catalogResource switch
+                {
+                    "Materials" => "＋ New material",
+                    "Work types" => "＋ New work type",
+                    _ => "＋ New plant"
+                };
+                var create = CreatePrimaryButton(label);
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreateCatalogRecordAsync();
+                actions.Controls.Add(create);
+            }
+            if (_api is not null && page.Equals("Suppliers", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New supplier");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreateSupplierAsync();
+                actions.Controls.Add(create);
+            }
+            if (_api is not null && page.Equals("Inventory", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New stock item");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreateStockItemAsync();
+                actions.Controls.Add(create);
+            }
+            if (_api is not null && page.Equals("Procurement", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New purchase order");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreatePurchaseOrderAsync();
+                actions.Controls.Add(create);
+            }
         }
         header.Controls.Add(actions, 1, 0);
         return header;
@@ -481,6 +515,38 @@ public partial class Form1 : KryptonForm
         using var details = new EstimateDetailsDialog(_api, createDialog.CreatedEstimateId);
         details.ShowDialog(this);
         await ShowPageAsync("Estimates");
+    }
+
+    private async Task CreateCatalogRecordAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreateCatalogRecordDialog(_api, _catalogResource);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Plant & material catalog");
+    }
+
+    private async Task CreateSupplierAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreateSupplierDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Suppliers");
+    }
+
+    private async Task CreateStockItemAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreateStockItemDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Inventory");
+    }
+
+    private async Task CreatePurchaseOrderAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreatePurchaseOrderDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Procurement");
     }
 
     private async Task OpenConnectionDialogAsync()
