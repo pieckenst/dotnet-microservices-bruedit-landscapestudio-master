@@ -678,8 +678,14 @@ public partial class Form1 : KryptonForm
                 var hasSelection = GetSelectedGridRecordId().HasValue;
                 if (_editEmployeeButton is not null && !_editEmployeeButton.IsDisposed)
                     _editEmployeeButton.Enabled = hasSelection;
+                var statusColumn = _currentGrid?.Columns.Cast<DataGridViewColumn>()
+                    .FirstOrDefault(column => column.Name.Equals("Status", StringComparison.OrdinalIgnoreCase));
+                var employeeStatus = _currentGrid?.SelectedRows.Count > 0 && statusColumn is not null
+                    ? _currentGrid.SelectedRows[0].Cells[statusColumn.Index].Value?.ToString()
+                    : null;
+                var terminated = employeeStatus is "Terminated" or "3";
                 if (_changeEmployeeStatusButton is not null && !_changeEmployeeStatusButton.IsDisposed)
-                    _changeEmployeeStatusButton.Enabled = hasSelection;
+                    _changeEmployeeStatusButton.Enabled = hasSelection && !terminated;
             };
             grid.CellDoubleClick += async (_, args) =>
             {
@@ -974,6 +980,7 @@ public partial class Form1 : KryptonForm
         if (_currentGrid?.SelectedRows.Count > 0 && statusColumn is not null)
             status = _currentGrid.SelectedRows[0].Cells[statusColumn.Index].Value?.ToString() ?? "Active";
 
+        status = status switch { "0" => "Active", "1" => "OnLeave", "2" => "Inactive", "3" => "Terminated", _ => status };
         using var dialog = new ChangeEmployeeStatusDialog(_api, id.Value, status);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Organization");
