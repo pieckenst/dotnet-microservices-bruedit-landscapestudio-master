@@ -2,6 +2,7 @@ using Catalog.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Shared.Common.Common;
 
+using Shared.Common.Outbox;
 namespace Catalog.Infrastructure.Persistence;
 
 public sealed class CatalogContext : DbContext
@@ -16,6 +17,7 @@ public sealed class CatalogContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.AddIntegrationOutbox();
 
         ConfigureEntity<MeasurementUnit>(modelBuilder);
         ConfigureEntity<Plant>(modelBuilder);
