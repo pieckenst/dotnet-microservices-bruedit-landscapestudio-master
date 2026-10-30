@@ -109,9 +109,17 @@ public sealed class ProjectsController(LandscapeApiClient api, ILogger<ProjectsC
         try
         {
             await api.SendAsync<LandscapeProjectDto>(HttpMethod.Put, $"/Projects/{id:D}",
-                new UpdateProjectRequest(id, model.ProjectNumber.Trim(), model.Name.Trim(),
-                    model.ClientId, model.LandPlotId, model.Description.Trim(),
-                    model.PlannedStartDate, model.PlannedEndDate),
+                new
+                {
+                    id,
+                    projectNumber = model.ProjectNumber.Trim(),
+                    name = model.Name.Trim(),
+                    clientId = model.ClientId,
+                    landPlotId = model.LandPlotId,
+                    description = model.Description.Trim(),
+                    plannedStartDate = model.PlannedStartDate,
+                    plannedEndDate = model.PlannedEndDate
+                },
                 cancellationToken: cancellationToken);
             TempData["Success"] = $"Project {model.ProjectNumber.Trim()} was updated.";
             return RedirectToAction(nameof(Index));
