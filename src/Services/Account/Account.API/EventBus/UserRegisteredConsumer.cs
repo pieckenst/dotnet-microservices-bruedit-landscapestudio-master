@@ -30,7 +30,35 @@ public sealed class UserRegisteredConsumer(
         if (preferences is null)
             await context.AccountPreferences.AddAsync(new AccountPreference(evt.UserId), message.CancellationToken);
 
-        await context.SaveChangesAsync(message.CancellationToken);
+        try
+        {
+            await context.SaveChangesAsync(message.CancellationToken);
+        }
+        catch (DbUpdateException exception)
+        {
+            // UserId is the primary key for both profile and preferences. Two deliveries
+            // can race after both observed a missing row; if the competing transaction
+            // committed both records, this delivery is already satisfied and is safe to ack.
+            context.ChangeTracker.Clear();
+            var profileExists = await context.AccountProfiles.AsNoTracking()
+                .AnyAsync(item => item.UserId == evt.UserId, message.CancellationToken);
+            var preferencesExist = await context.AccountPreferences.AsNoTracking()
+                .AnyAsync(item => item.UserId == evt.UserId, message.CancellationToken);
+
+            if (!profileExists || !preferencesExist)
+            {
+                logger.LogError(exception,
+                    "User registration event {EventId} could not ensure Account defaults for {UserId}.",
+                    evt.Id, evt.UserId);
+                throw;
+            }
+
+            logger.LogInformation(
+                "Acknowledging duplicate user registration event {EventId}; Account defaults already exist for {UserId}.",
+                evt.Id, evt.UserId);
+            return;
+        }
+
         logger.LogInformation("Ensured default Account profile for registered identity {UserId}", evt.UserId);
     }
 }
