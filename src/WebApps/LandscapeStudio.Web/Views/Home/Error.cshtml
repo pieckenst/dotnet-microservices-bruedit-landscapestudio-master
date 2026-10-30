@@ -1,0 +1,5 @@
+@model ErrorViewModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+<div class="standalone-empty"><span class="empty-illustration">!</span><h1>That didn’t go as planned.</h1><p>An unexpected error interrupted this request. No business action should be treated as successful unless the service confirms it.</p>@if (Model.ShowRequestId) { <p class="subtle">Request reference: <code>@Model.RequestId</code></p> }<a class="button button-primary" asp-controller="Home" asp-action="Index">Back to overview</a></div>

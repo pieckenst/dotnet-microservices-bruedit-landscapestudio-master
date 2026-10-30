@@ -8,7 +8,7 @@ namespace EventBus.Messages.Events
     /// </summary>
     public class EmployeeAssignedEvent : IntegrationBaseEvent
     {
-        public Guid EmployeeId { get; set; }
+        public Guid? EmployeeId { get; set; }
         public Guid ProjectId { get; set; }
         public Guid? BrigadeId { get; set; }
         public string EmployeeFullName { get; set; } = string.Empty;

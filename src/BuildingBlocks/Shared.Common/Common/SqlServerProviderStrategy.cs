@@ -10,8 +10,7 @@ namespace Shared.Common.Common
     {
         public string ProviderName => "SqlServer";
 
-        public DbContextOptionsBuilder<T> Configure<T>(DbContextOptionsBuilder<T> builder, string connectionString)
-            where T : DbContext
+        public DbContextOptionsBuilder Configure(DbContextOptionsBuilder builder, string connectionString)
         {
             return builder.UseSqlServer(connectionString);
         }

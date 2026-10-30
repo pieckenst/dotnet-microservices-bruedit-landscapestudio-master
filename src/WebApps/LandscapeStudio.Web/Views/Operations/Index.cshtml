@@ -1,0 +1,97 @@
+@model OperationListViewModel
+@{
+    ViewData["Title"] = Model.Title;
+    ViewData["Section"] = Model.Title;
+    var resources = new[] {
+        ("clients", "Clients"), ("land-plots", "Land plots"),
+        ("plants", "Plant catalog"), ("materials", "Materials"), ("work-types", "Work types"),
+        ("suppliers", "Suppliers"), ("stock-items", "Inventory"), ("employees", "Employees"), ("positions", "Positions"), ("purchase-orders", "Purchase orders"),
+        ("deliveries", "Deliveries")
+    };
+    var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees", "positions" }
+        .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
+    var canEdit = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees", "positions" }
+        .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
+    var canArchive = Model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ||
+        Model.Resource.Equals("land-plots", StringComparison.OrdinalIgnoreCase);
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS</span><h1>@Model.Title <span>workspace.</span></h1><p>Live records returned by the connected service. Changes are validated and persisted by the service that owns each record.</p></div>
+    @if (canCreate)
+    {
+        <a class="button button-primary" asp-action="Create" asp-route-resource="@Model.Resource">＋ New record</a>
+    }
+</div>
+<div class="resource-tabs">
+    @foreach (var resource in resources)
+    {
+        <a class="@(string.Equals(Model.Resource, resource.Item1, StringComparison.OrdinalIgnoreCase) ? "active" : "")" asp-action="Index" asp-route-resource="@resource.Item1">@resource.Item2</a>
+    }
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-error" role="alert"><strong>Service request failed.</strong> @Model.Error</div>
+}
+<section class="surface-card">
+    <div class="section-heading section-heading-table"><div><span class="mini-kicker">CONNECTED SERVICE DATA</span><h2>@Model.Title</h2><p>@Model.Items.Count.ToString("N0") record(s) returned by the current request.</p></div><span class="gateway-status"><span class="status-dot"></span>Gateway</span></div>
+    @if (Model.Items.Count > 0 && Model.Columns.Count > 0)
+    {
+        <div class="table-wrap"><table><thead><tr>@foreach (var column in Model.Columns) { <th>@column</th> }@if (canEdit) { <th>Actions</th> }</tr></thead><tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                @foreach (var column in Model.Columns) { <td>@(item.Values.TryGetValue(column, out var value) ? value : "—")</td> }
+                @if (canEdit)
+                {
+                    var idText = item.Values.TryGetValue("Id", out var idValue) ? idValue : string.Empty;
+                    var isArchived = item.Values.TryGetValue("Is Archived", out var archivedText) && bool.TryParse(archivedText, out var archived) && archived;
+                    <td class="table-actions">
+                        @if (Guid.TryParse(idText, out var id))
+                        {
+                            <a class="text-link" asp-action="Edit" asp-route-resource="@Model.Resource" asp-route-id="@id">Edit</a>
+                            @if (Model.Resource.Equals("employees", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var employeeStatus = item.Values.TryGetValue("Status", out var currentStatus) ? currentStatus : "Active";
+                                employeeStatus = employeeStatus switch { "0" => "Active", "1" => "OnLeave", "2" => "Inactive", "3" => "Terminated", _ => employeeStatus };
+                                @if (employeeStatus == "Terminated")
+                                {
+                                    <span class="status-pill">Terminated</span>
+                                }
+                                else
+                                {
+                                    <form asp-action="ChangeEmployeeStatus" method="post" class="inline-action employee-status-form">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@id" />
+                                        <select name="status" aria-label="Employee status">
+                                            <option value="Active" selected="@(employeeStatus == "Active" ? "selected" : null)">Active</option>
+                                            <option value="OnLeave" selected="@(employeeStatus == "OnLeave" ? "selected" : null)">On leave</option>
+                                            <option value="Inactive" selected="@(employeeStatus == "Inactive" ? "selected" : null)">Inactive</option>
+                                        </select>
+                                        <button class="text-link" type="submit">Save status</button>
+                                    </form>
+                                }
+                            }
+                            @if (canArchive && !isArchived)
+                            {
+                                <form asp-action="Archive" method="post" class="inline-action" onsubmit="return confirm('Archive this record? Existing projects keep their historical reference.');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="resource" value="@Model.Resource" />
+                                    <input type="hidden" name="id" value="@id" />
+                                    <button class="text-link text-link-danger" type="submit">Archive</button>
+                                </form>
+                            }
+                        }
+                    </td>
+                }
+            </tr>
+        }
+        </tbody></table></div>
+        <div class="table-footer"><span>Displaying the latest records returned by the service.</span></div>
+    }
+    else if (string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="empty-state"><span class="empty-illustration">⌕</span><h3>No records yet</h3><p>The service returned an empty result. Create a record to start using this workspace.</p>
+            @if (canCreate) { <a class="button button-secondary" asp-action="Create" asp-route-resource="@Model.Resource">Create the first record</a> }
+        </div>
+    }
+</section>

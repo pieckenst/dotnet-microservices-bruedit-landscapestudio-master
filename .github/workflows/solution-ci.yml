@@ -1,0 +1,125 @@
+name: Solution integration CI
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - ".github/workflows/**"
+  push:
+    branches:
+      - main
+      - master
+      - codex/landscape-phase-1-hardening
+    paths:
+      - "src/**"
+      - ".github/workflows/**"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore solution
+        run: dotnet restore src/SOLUTION.BRU.TPPO.sln -p:EnableWindowsTargeting=true
+      - name: Build solution
+        run: dotnet build src/SOLUTION.BRU.TPPO.sln --configuration Release --no-restore -p:EnableWindowsTargeting=true
+      - name: Run solution tests
+        run: dotnet test src/SOLUTION.BRU.TPPO.sln --configuration Release --no-build --no-restore -p:EnableWindowsTargeting=true --logger "console;verbosity=normal"
+      - name: Validate base Docker Compose
+        run: docker compose -f src/docker-compose.yml config --quiet
+      - name: Validate local Docker Compose overrides
+        run: docker compose -f src/docker-compose.yml -f src/docker-compose.override.yml config --quiet
+      - name: Start the core service stack
+        env:
+          IDENTITY_ADMIN_USERNAME: ci-admin
+          IDENTITY_ADMIN_PASSWORD: Ci-Only-Password-2026!
+        run: docker compose -f src/docker-compose.yml up -d --build --wait --wait-timeout 300 landscapestudio.web
+      - name: Smoke-test service health and gateway routes
+        env:
+          IDENTITY_ADMIN_USERNAME: ci-admin
+          IDENTITY_ADMIN_PASSWORD: Ci-Only-Password-2026!
+        shell: bash
+        run: |
+          set -euo pipefail
+          compose=(docker compose -f src/docker-compose.yml)
+          for url in \
+            http://localhost:8000/health \
+            http://localhost:8001/health \
+            http://localhost:8003/health \
+            http://localhost:8004/health \
+            http://localhost:8005/health \
+            http://localhost:8006/health \
+            http://localhost:8008/health
+          do
+            ready=false
+            for attempt in $(seq 1 30); do
+              if curl --silent --show-error --fail "$url" >/dev/null; then
+                echo "Healthy: $url"
+                ready=true
+                break
+              fi
+              sleep 3
+            done
+            if [ "$ready" != true ]; then
+              echo "Service did not become healthy: $url"
+              "${compose[@]}" ps
+              "${compose[@]}" logs --tail=120
+              exit 1
+            fi
+          done
+
+          login_payload="$(python3 - <<'PY'
+          import json, os
+          print(json.dumps({"userName": os.environ["IDENTITY_ADMIN_USERNAME"], "password": os.environ["IDENTITY_ADMIN_PASSWORD"]}))
+          PY
+          )"
+          login_response=""
+          for attempt in $(seq 1 20); do
+            if login_response="$(curl --silent --show-error --fail \
+              -H "Content-Type: application/json" \
+              -d "$login_payload" \
+              http://localhost:8010/Auth/login)"; then
+              break
+            fi
+            sleep 3
+          done
+          if [ -z "$login_response" ]; then
+            echo "Gateway login route did not become available."
+            "${compose[@]}" logs --tail=120 identity.api ocelotapigateway
+            exit 1
+          fi
+          token="$(python3 -c 'import json,sys; print(json.load(sys.stdin)["accessToken"])' <<<"$login_response")"
+          if [ -z "$token" ]; then
+            echo "Identity login did not return an access token."
+            exit 1
+          fi
+
+          for path in \
+            /Accounts/me \
+            /Accounts/me/preferences \
+            /Projects?page=1\&pageSize=5 \
+            /Catalog/MeasurementUnits?page=1\&pageSize=5 \
+            /Employees?page=1\&pageSize=5 \
+            /Positions?page=1\&pageSize=5 \
+            /Brigades?page=1\&pageSize=5 \
+            /WorkAssignments?page=1\&pageSize=5 \
+            /Suppliers?page=1\&pageSize=5 \
+            /PurchaseOrders?page=1\&pageSize=5 \
+            /Analytics/Summary
+          do
+            echo "Gateway route: $path"
+            curl --silent --show-error --fail \
+              -H "Authorization: Bearer $token" \
+              "http://localhost:8010$path" >/dev/null
+          done
+      - name: Show service logs on integration failure
+        if: failure()
+        run: docker compose -f src/docker-compose.yml logs --tail=150
+      - name: Stop the integration stack
+        if: always()
+        run: docker compose -f src/docker-compose.yml down --volumes --remove-orphans

@@ -5,8 +5,8 @@ using System.Linq.Expressions;
 namespace Shared.Common.Persistence
 {
     /// <summary>
-    /// Generic repository implementation using DbContext generically (fixed from original
-    /// which hardcoded AccountContext/CustomerContext). Uses AsNoTracking on reads for performance.
+    /// Generic repository implementation using DbContext generically.
+    /// Read operations are no-tracking by default to avoid unnecessary EF change-tracker overhead.
     /// </summary>
     /// <typeparam name="T">Entity type that inherits from EntityBase.</typeparam>
     public class RepositoryBase<T> : IRepositoryBase<T> where T : EntityBase
@@ -18,14 +18,13 @@ namespace Shared.Common.Persistence
             _dbContext = dbContext ?? throw new ArgumentNullException(nameof(dbContext));
         }
 
-        public async Task<IReadOnlyList<T>> GetAllAsync()
-        {
-            return await _dbContext.Set<T>().ToListAsync();
-        }
+        public async Task<IReadOnlyList<T>> GetAllAsync() =>
+            await _dbContext.Set<T>().AsNoTracking().ToListAsync();
 
         public async Task<T?> GetAsync(Expression<Func<T, bool>> predicate)
         {
-            return await _dbContext.Set<T>().Where(predicate).FirstOrDefaultAsync();
+            ArgumentNullException.ThrowIfNull(predicate);
+            return await _dbContext.Set<T>().AsNoTracking().Where(predicate).FirstOrDefaultAsync();
         }
 
         public async Task<IReadOnlyList<T>> GetAsync(
@@ -36,14 +35,9 @@ namespace Shared.Common.Persistence
         {
             IQueryable<T> query = _dbContext.Set<T>();
             if (disableTracking) query = query.AsNoTracking();
-
             if (!string.IsNullOrWhiteSpace(includeString)) query = query.Include(includeString);
-
             if (predicate != null) query = query.Where(predicate);
-
-            if (orderBy != null)
-                return await orderBy(query).ToListAsync();
-            return await query.ToListAsync();
+            return orderBy is not null ? await orderBy(query).ToListAsync() : await query.ToListAsync();
         }
 
         public async Task<IReadOnlyList<T>> GetAsync(
@@ -54,23 +48,46 @@ namespace Shared.Common.Persistence
         {
             IQueryable<T> query = _dbContext.Set<T>();
             if (disableTracking) query = query.AsNoTracking();
-
-            if (includes != null) query = includes.Aggregate(query, (current, include) => current.Include(include));
-
-            if (predicate != null) query = query.Where(predicate);
-
-            if (orderBy != null)
-                return await orderBy(query).ToListAsync();
-            return await query.ToListAsync();
+            if (includes is not null)
+                query = includes.Aggregate(query, (current, include) => current.Include(include));
+            if (predicate is not null) query = query.Where(predicate);
+            return orderBy is not null ? await orderBy(query).ToListAsync() : await query.ToListAsync();
         }
 
-        public virtual async Task<T?> GetByIdAsync(Guid id)
+        public async Task<PagedResult<T>> GetPagedAsync(
+            int page,
+            int pageSize,
+            Expression<Func<T, bool>>? predicate = null,
+            Func<IQueryable<T>, IOrderedQueryable<T>>? orderBy = null,
+            List<Expression<Func<T, object>>>? includes = null)
         {
-            return await _dbContext.Set<T>().FindAsync(id);
+            if (page < 1)
+                throw new ArgumentOutOfRangeException(nameof(page), "Page must be at least 1.");
+            if (pageSize is < 1 or > 200)
+                throw new ArgumentOutOfRangeException(nameof(pageSize), "Page size must be between 1 and 200.");
+
+            IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
+            if (predicate is not null) query = query.Where(predicate);
+            var totalCount = await query.CountAsync();
+
+            if (includes is { Count: > 0 })
+            {
+                foreach (var include in includes)
+                    query = query.Include(include);
+                query = query.AsSplitQuery();
+            }
+
+            var orderedQuery = orderBy is not null ? orderBy(query) : query.OrderBy(entity => entity.Id);
+            var items = await orderedQuery.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+            return new PagedResult<T>(items, page, pageSize, totalCount);
         }
+
+        public virtual async Task<T?> GetByIdAsync(Guid id) =>
+            await _dbContext.Set<T>().AsNoTracking().FirstOrDefaultAsync(entity => entity.Id == id);
 
         public async Task<T> AddAsync(T entity)
         {
+            ArgumentNullException.ThrowIfNull(entity);
             await _dbContext.Set<T>().AddAsync(entity);
             await _dbContext.SaveChangesAsync();
             return entity;
@@ -78,12 +95,31 @@ namespace Shared.Common.Persistence
 
         public async Task UpdateAsync(T entity)
         {
-            _dbContext.Entry(entity).State = EntityState.Modified;
+            ArgumentNullException.ThrowIfNull(entity);
+
+            // Query handlers commonly use no-tracking reads. A caller may nevertheless
+            // already have the same key tracked in this DbContext (for example, after a
+            // create earlier in the request or when a parent aggregate was loaded).
+            // Attaching a second instance would throw; merge its scalar values into the
+            // tracked instance instead and let EF persist a single entity identity.
+            var tracked = _dbContext.Set<T>().Local
+                .FirstOrDefault(existing => existing.Id == entity.Id);
+
+            if (tracked is not null && !ReferenceEquals(tracked, entity))
+            {
+                _dbContext.Entry(tracked).CurrentValues.SetValues(entity);
+            }
+            else if (tracked is null)
+            {
+                _dbContext.Entry(entity).State = EntityState.Modified;
+            }
+
             await _dbContext.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(T entity)
         {
+            ArgumentNullException.ThrowIfNull(entity);
             _dbContext.Set<T>().Remove(entity);
             await _dbContext.SaveChangesAsync();
         }

@@ -1,0 +1,44 @@
+@model ProjectsIndexViewModel
+@{
+    ViewData["Title"] = "Projects";
+    ViewData["Section"] = "Projects";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> PROJECT WORKSPACE</span><h1>Projects <span>at a glance.</span></h1><p>Project records loaded from the authenticated Project API.</p></div>
+    <a class="button button-primary" asp-action="Create">＋ New project</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-error" role="alert"><strong>Unable to load projects.</strong> @Model.Error</div>
+}
+<div class="workspace-toolbar">
+    <div><span class="toolbar-count">@Model.TotalCount.ToString("N0")</span><span class="toolbar-label">project records</span></div>
+    <span class="gateway-status"><span class="status-dot"></span>Live API data</span>
+</div>
+<section class="surface-card">
+    @if (Model.Items.Count > 0)
+    {
+        <div class="table-wrap"><table><thead><tr><th>Project</th><th>Project number</th><th>Status</th><th>Planned start</th><th>Planned end</th><th>Created</th><th></th></tr></thead><tbody>
+        @foreach (var project in Model.Items)
+        {
+            <tr>
+                <td><div class="entity-cell"><span class="entity-icon entity-icon-project">▦</span><span><strong>@project.Name</strong><small>@project.Description</small></span></div></td>
+                <td class="mono">@project.ProjectNumber</td>
+                <td><span class="status-pill">@project.Status.ToString()</span></td>
+                <td>@(project.PlannedStartDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                <td>@(project.PlannedEndDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                <td>@project.CreatedDate.ToString("dd MMM yyyy")</td>
+                <td><a class="text-link" asp-action="Edit" asp-route-id="@project.Id">Edit <span>→</span></a></td>
+            </tr>
+        }
+        </tbody></table></div>
+        <div class="table-footer"><span>Page @Model.Page of @(Math.Max(Model.TotalPages, 1))</span><div class="pagination">
+            @if (Model.Page > 1) { <a class="button button-quiet button-small" asp-action="Index" asp-route-page="@(Model.Page - 1)">← Previous</a> }
+            @if (Model.Page < Model.TotalPages) { <a class="button button-secondary button-small" asp-action="Index" asp-route-page="@(Model.Page + 1)">Next →</a> }
+        </div></div>
+    }
+    else if (string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="empty-state"><span class="empty-illustration">▦</span><h3>Your project list is clear</h3><p>There are no project records in this result set yet. Add your first project to start organizing client work.</p><a class="button button-primary" asp-action="Create">Create your first project</a></div>
+    }
+</section>

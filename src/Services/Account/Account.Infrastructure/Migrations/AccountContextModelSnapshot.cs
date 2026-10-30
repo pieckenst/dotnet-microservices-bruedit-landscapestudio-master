@@ -22,28 +22,90 @@ namespace Account.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Account.Domain.Entities.Account", b =>
+            modelBuilder.Entity("Shared.Common.Outbox.IntegrationOutboxMessage", b =>
                 {
-                    b.Property<Guid>("Id")
-                        .HasColumnType("uuid")
-                        .HasDefaultValueSql("gen_random_uuid()");
-
-                    b.Property<decimal>("Balance")
-                        .HasColumnType("numeric");
-
-                    b.Property<DateTime>("CreatedDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<Guid>("CustomerId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("LastModifiedDate")
-                        .HasColumnType("timestamp with time zone");
-
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<DateTime>("CreatedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("DeadLetteredAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("LeaseExpiresAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<string>("LastError").HasMaxLength(2000).HasColumnType("character varying(2000)");
+                    b.Property<string>("MessageType").IsRequired().HasMaxLength(512).HasColumnType("character varying(512)");
+                    b.Property<int>("AttemptCount").HasColumnType("integer");
+                    b.Property<DateTime>("NextAttemptAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<string>("Payload").IsRequired().HasColumnType("text");
+                    b.Property<DateTime?>("PublishedAtUtc").HasColumnType("timestamp with time zone");
+                    b.Property<long>("Version").IsConcurrencyToken().HasColumnType("bigint");
                     b.HasKey("Id");
+                    b.HasIndex("PublishedAtUtc", "DeadLetteredAtUtc", "NextAttemptAtUtc", "LeaseExpiresAtUtc")
+                        .HasDatabaseName("IX_integration_outbox_dispatch");
+                    b.ToTable("integration_outbox");
+                });
 
-                    b.ToTable("Accounts");
+            modelBuilder.Entity("Account.Domain.Entities.AccountProfile", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<string>("CompanyName").HasMaxLength(160).HasColumnType("character varying(160)");
+                    b.Property<DateTime>("CreatedDate").HasColumnType("timestamp with time zone").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<string>("DisplayName").IsRequired().HasMaxLength(120).HasColumnType("character varying(120)");
+                    b.Property<string>("Email").HasMaxLength(254).HasColumnType("character varying(254)");
+                    b.Property<string>("FirstName").HasMaxLength(80).HasColumnType("character varying(80)");
+                    b.Property<string>("LastName").HasMaxLength(80).HasColumnType("character varying(80)");
+                    b.Property<DateTime?>("LastModifiedDate").HasColumnType("timestamp with time zone");
+                    b.Property<string>("PhoneNumber").HasMaxLength(40).HasColumnType("character varying(40)");
+                    b.HasKey("Id");
+                    b.HasIndex("Email");
+                    b.ToTable("AccountProfiles");
+                });
+
+            modelBuilder.Entity("Account.Domain.Entities.AccountPreference", b =>
+                {
+                    b.Property<Guid>("Id").HasColumnType("uuid");
+                    b.Property<DateTime>("CreatedDate").HasColumnType("timestamp with time zone").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<bool>("EmailNotificationsEnabled").ValueGeneratedOnAdd().HasColumnType("boolean").HasDefaultValue(true);
+                    b.Property<DateTime?>("LastModifiedDate").HasColumnType("timestamp with time zone");
+                    b.Property<string>("Language").IsRequired().ValueGeneratedOnAdd().HasMaxLength(8).HasColumnType("character varying(8)").HasDefaultValue("en");
+                    b.Property<bool>("SmsNotificationsEnabled").ValueGeneratedOnAdd().HasColumnType("boolean").HasDefaultValue(false);
+                    b.Property<string>("Theme").IsRequired().ValueGeneratedOnAdd().HasMaxLength(16).HasColumnType("character varying(16)").HasDefaultValue("system");
+                    b.Property<string>("TimeZone").IsRequired().ValueGeneratedOnAdd().HasMaxLength(80).HasColumnType("character varying(80)").HasDefaultValue("UTC");
+                    b.HasKey("Id");
+                    b.ToTable("AccountPreferences");
+                });
+
+            modelBuilder.Entity("Account.Domain.Entities.AccountAddress", b =>
+                {
+                    b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid").HasDefaultValueSql("gen_random_uuid()");
+                    b.Property<string>("City").IsRequired().HasMaxLength(100).HasColumnType("character varying(100)");
+                    b.Property<string>("Country").IsRequired().HasMaxLength(2).HasColumnType("character varying(2)");
+                    b.Property<DateTime>("CreatedDate").HasColumnType("timestamp with time zone").HasDefaultValueSql("CURRENT_TIMESTAMP");
+                    b.Property<bool>("IsDefault").ValueGeneratedOnAdd().HasColumnType("boolean").HasDefaultValue(false);
+                    b.Property<string>("Label").IsRequired().HasMaxLength(80).HasColumnType("character varying(80)");
+                    b.Property<string>("Line1").IsRequired().HasMaxLength(160).HasColumnType("character varying(160)");
+                    b.Property<string>("Line2").HasMaxLength(160).HasColumnType("character varying(160)");
+                    b.Property<DateTime?>("LastModifiedDate").HasColumnType("timestamp with time zone");
+                    b.Property<string>("PostalCode").HasMaxLength(24).HasColumnType("character varying(24)");
+                    b.Property<string>("Region").HasMaxLength(100).HasColumnType("character varying(100)");
+                    b.Property<Guid>("UserId").HasColumnType("uuid");
+                    b.HasKey("Id");
+                    b.HasIndex("UserId", "IsDefault");
+                    b.ToTable("AccountAddresses");
+                });
+
+            modelBuilder.Entity("Account.Domain.Entities.AccountPreference", b =>
+                {
+                    b.HasOne("Account.Domain.Entities.AccountProfile", null)
+                        .WithOne()
+                        .HasForeignKey("Account.Domain.Entities.AccountPreference", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Account.Domain.Entities.AccountAddress", b =>
+                {
+                    b.HasOne("Account.Domain.Entities.AccountProfile", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }
