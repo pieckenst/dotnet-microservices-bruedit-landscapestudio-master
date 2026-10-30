@@ -1,5 +1,7 @@
 using EventBus.Messages.Events;
-using MassTransit;
+using Organization.Domain.Entities;
+using Shared.Common.Persistence;
+using Shared.ServiceKit.Outbox;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,8 +16,8 @@ namespace Organization.API.Controllers;
 [Authorize]
 public sealed class WorkAssignmentsController(
     IMediator mediator,
-    IPublishEndpoint publishEndpoint,
-    ILogger<WorkAssignmentsController> logger) : ControllerBase
+    IRepositoryBase<Employee> employees,
+    IIntegrationOutbox outbox) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "organization.read")]
@@ -31,24 +33,21 @@ public sealed class WorkAssignmentsController(
         var assignment = await mediator.Send(command, cancellationToken);
         if (assignment.EmployeeId.HasValue)
         {
-            try
+            var employee = await employees.GetByIdAsync(assignment.EmployeeId.Value);
+            if (employee is null)
+                throw new InvalidOperationException("The employee for the new assignment could not be loaded.");
+
+            outbox.Enqueue(new EmployeeAssignedEvent
             {
-                await publishEndpoint.Publish(new EmployeeAssignedEvent
-                {
-                    EmployeeId = assignment.EmployeeId.Value,
-                    EmployeeFullName = string.Empty,
-                    ProjectId = assignment.ProjectId,
-                    BrigadeId = assignment.BrigadeId ?? Guid.Empty,
-                    AssignmentRole = assignment.Title,
-                    IsResponsible = false,
-                    AssignedDate = DateTime.SpecifyKind(
-                        assignment.StartDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
-                }, cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Work assignment {AssignmentId} was saved but its analytics event could not be published.", assignment.Id);
-            }
+                EmployeeId = employee.Id,
+                EmployeeFullName = employee.FullName,
+                ProjectId = assignment.ProjectId,
+                BrigadeId = assignment.BrigadeId ?? Guid.Empty,
+                AssignmentRole = assignment.Title,
+                IsResponsible = false,
+                AssignedDate = DateTime.SpecifyKind(
+                    assignment.StartDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
+            });
         }
 
         return CreatedAtAction(nameof(Get), new { projectId = assignment.ProjectId }, assignment);
