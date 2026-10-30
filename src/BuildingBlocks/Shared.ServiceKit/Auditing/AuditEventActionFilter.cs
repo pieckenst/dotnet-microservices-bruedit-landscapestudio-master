@@ -1,20 +1,21 @@
 using EventBus.Messages.Events;
-using MassTransit;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Shared.ServiceKit.Outbox;
 using System.Security.Claims;
 
 namespace Shared.ServiceKit.Auditing;
 
 /// <summary>
-/// Emits a compact audit event after successful state-changing controller actions.
-/// Request bodies and query values are deliberately not recorded.
+/// Enqueues a compact audit event after a successful state-changing controller action.
+/// The outbox row is saved by OutboxTransactionMiddleware in the same transaction as
+/// the business data. Request bodies, query values, and credentials are never recorded.
 /// </summary>
 public sealed class AuditEventActionFilter(
-    IPublishEndpoint publishEndpoint,
+    IIntegrationOutbox outbox,
     IConfiguration configuration,
     ILogger<AuditEventActionFilter> logger) : IAsyncActionFilter
 {
@@ -24,8 +25,9 @@ public sealed class AuditEventActionFilter(
         var http = context.HttpContext;
         var method = http.Request.Method;
         var actionStatus = (executed.Result as IStatusCodeActionResult)?.StatusCode ?? http.Response.StatusCode;
-        if (method is "GET" or "HEAD" or "OPTIONS" || executed.Exception is not null ||
-            executed.ExceptionHandled || actionStatus is < 200 or >= 300)
+        if (method is "GET" or "HEAD" or "OPTIONS" or "TRACE" ||
+            executed.Exception is not null || executed.ExceptionHandled ||
+            actionStatus is < 200 or >= 300)
             return;
 
         var routeValues = context.ActionDescriptor.RouteValues;
@@ -40,31 +42,34 @@ public sealed class AuditEventActionFilter(
         var correlationId = http.Request.Headers["X-Correlation-ID"].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(correlationId)) correlationId = http.TraceIdentifier;
 
+        var auditEvent = new AuditEvent
+        {
+            SourceService = configuration["Audit:SourceService"] ??
+                configuration["ServiceName"] ?? controller,
+            Action = $"{controller}.{action}",
+            EntityType = controller,
+            EntityId = resourceId,
+            ActorId = actorId,
+            CorrelationId = correlationId,
+            Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["httpMethod"] = method,
+                ["statusCode"] = actionStatus.ToString(System.Globalization.CultureInfo.InvariantCulture)
+            }
+        };
+
+        // Enqueue failures are allowed to fail the request. Returning success while the
+        // audit row was not staged would silently violate the transaction/outbox guarantee.
         try
         {
-            await publishEndpoint.Publish(new AuditEvent
-            {
-                SourceService = configuration["Audit:SourceService"] ??
-                    configuration["ServiceName"] ?? controller,
-                Action = $"{controller}.{action}",
-                EntityType = controller,
-                EntityId = resourceId,
-                ActorId = actorId,
-                CorrelationId = correlationId,
-                Metadata = new Dictionary<string, string>(StringComparer.Ordinal)
-                {
-                    ["httpMethod"] = method,
-                    ["statusCode"] = actionStatus.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                }
-            }, http.RequestAborted);
+            outbox.Enqueue(auditEvent);
         }
         catch (Exception exception)
         {
-            // Do not turn a committed business operation into a misleading 500 response.
-            // The log entry makes event-bus failures visible for operations monitoring.
             logger.LogError(exception,
-                "Could not publish audit event for {Service} {Action} ({CorrelationId})",
-                configuration["Audit:SourceService"] ?? controller, action, correlationId);
+                "Could not stage audit event for {Service} {Action} ({CorrelationId})",
+                auditEvent.SourceService, action, correlationId);
+            throw;
         }
     }
 
