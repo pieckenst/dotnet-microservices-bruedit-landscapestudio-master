@@ -100,7 +100,8 @@ public sealed class AuditEventRepository(IAuditEventContext context) : IAuditEve
                 inserted += batch.Length;
             }
             catch (MongoBulkWriteException<AuditRecord> exception)
-                when (exception.WriteErrors.Count > 0 &&
+                when (exception.WriteConcernError is null &&
+                      exception.WriteErrors.Count > 0 &&
                       exception.WriteErrors.All(error => error.Category == ServerErrorCategory.DuplicateKey))
             {
                 inserted += batch.Length - exception.WriteErrors.Count;
