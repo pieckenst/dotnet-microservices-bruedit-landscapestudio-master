@@ -89,4 +89,27 @@ public sealed class AuditAnalyticsContractTests
         Assert.DoesNotContain("metadata", csv, StringComparison.OrdinalIgnoreCase);
     }
 
+    [Fact]
+    public void Pipe_Export_Escapes_Delimiters_And_Line_Breaks()
+    {
+        var record = new AuditRecord
+        {
+            Id = Guid.NewGuid(),
+            OccurredAtUtc = new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc),
+            SourceService = "Project|Archive",
+            Action = "Project\\nCreated",
+            EntityType = "Project",
+            EntityId = "id\\\\part",
+            ActorId = "=formula"
+        };
+
+        var output = AuditCsvExporter.ExportPipe([record]);
+
+        Assert.Contains("Project\\\\|Archive", output);
+        Assert.Contains("Project\\\\nCreated", output);
+        Assert.Contains("id\\\\\\\\part", output);
+        Assert.Contains("'=formula", output);
+        Assert.Equal(2, output.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Length);
+    }
+
 }
