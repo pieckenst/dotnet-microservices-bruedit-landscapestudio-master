@@ -69,10 +69,15 @@ namespace Shared.Common.Persistence
             IQueryable<T> query = _dbContext.Set<T>().AsNoTracking();
             if (predicate is not null) query = query.Where(predicate);
             var totalCount = await query.CountAsync();
-            var orderedQuery = orderBy is not null ? orderBy(query) : query.OrderBy(entity => entity.Id);
-            if (includes is not null)
-                orderedQuery = includes.Aggregate(orderedQuery, (current, include) => (IOrderedQueryable<T>)current.Include(include));
 
+            if (includes is { Count: > 0 })
+            {
+                foreach (var include in includes)
+                    query = query.Include(include);
+                query = query.AsSplitQuery();
+            }
+
+            var orderedQuery = orderBy is not null ? orderBy(query) : query.OrderBy(entity => entity.Id);
             var items = await orderedQuery.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
             return new PagedResult<T>(items, page, pageSize, totalCount);
         }
