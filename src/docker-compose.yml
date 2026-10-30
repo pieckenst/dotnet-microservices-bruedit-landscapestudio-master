@@ -256,6 +256,7 @@ services:
       dockerfile: Services/Project/Project.API/Dockerfile
     environment:
       EventBusSettings__HostAddress: amqp://guest:guest@rabbitmq:5672
+      Catalog__BaseUrl: http://catalog.api:8080/
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_HTTP_PORTS: "8080"
       Database__Provider: PostgreSQL
@@ -267,6 +268,8 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
+      catalog.api:
+        condition: service_started
       projectdb:
         condition: service_healthy
     ports:
