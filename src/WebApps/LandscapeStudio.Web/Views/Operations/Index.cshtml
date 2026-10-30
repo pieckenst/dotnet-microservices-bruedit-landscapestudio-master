@@ -5,10 +5,10 @@
     var resources = new[] {
         ("clients", "Clients"), ("land-plots", "Land plots"),
         ("plants", "Plant catalog"), ("materials", "Materials"), ("work-types", "Work types"),
-        ("suppliers", "Suppliers"), ("stock-items", "Inventory"), ("employees", "Employees"), ("purchase-orders", "Purchase orders"),
+        ("suppliers", "Suppliers"), ("stock-items", "Inventory"), ("employees", "Employees"), ("positions", "Positions"), ("purchase-orders", "Purchase orders"),
         ("deliveries", "Deliveries")
     };
-    var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees" }
+    var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees", "positions" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
     var canEdit = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
