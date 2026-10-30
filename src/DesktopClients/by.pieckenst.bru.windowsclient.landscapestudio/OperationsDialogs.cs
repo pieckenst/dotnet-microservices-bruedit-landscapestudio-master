@@ -738,7 +738,8 @@ internal sealed class PurchaseOrderManagementDialog : OperationDialogBase
             }
 
             SaveButton.Enabled = true;
-            _cancelOrder.Enabled = _status is 0 or 1 or 2;
+            if (_cancelOrder is not null)
+                _cancelOrder.Enabled = _status is 0 or 1 or 2;
             SaveButton.Values.Text = _status switch
             {
                 0 => "Submit order  →",
