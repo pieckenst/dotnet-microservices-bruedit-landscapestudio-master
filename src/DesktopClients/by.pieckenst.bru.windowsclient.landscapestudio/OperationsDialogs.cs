@@ -470,32 +470,29 @@ internal sealed class CreateCatalogRecordDialog : OperationDialogBase
 
         if (_resource.Equals("Materials", StringComparison.OrdinalIgnoreCase))
         {
-            var payload = new
+            await SaveCatalogPayloadAsync(new
             {
                 name = _name.Text.Trim(), sku = _sku.Text.Trim().ToUpperInvariant(),
                 description = _description.Text.Trim(), measurementUnitId = unit.Id,
                 unitPrice = _price.Value, isActive = _active.Checked
-            };
-            await SaveCatalogPayloadAsync(payload);
+            });
         }
         else if (_resource.Equals("Work types", StringComparison.OrdinalIgnoreCase))
         {
-            var payload = new
+            await SaveCatalogPayloadAsync(new
             {
                 name = _name.Text.Trim(), description = _description.Text.Trim(),
                 measurementUnitId = unit.Id, basePrice = _price.Value, isActive = _active.Checked
-            };
-            await SaveCatalogPayloadAsync(payload);
+            });
         }
         else
         {
-            var payload = new
+            await SaveCatalogPayloadAsync(new
             {
                 name = _name.Text.Trim(), latinName = Clean(_latinName.Text),
                 description = _description.Text.Trim(), measurementUnitId = unit.Id,
                 unitPrice = _price.Value, isActive = _active.Checked
-            };
-            await SaveCatalogPayloadAsync(payload);
+            });
         }
     }
 
