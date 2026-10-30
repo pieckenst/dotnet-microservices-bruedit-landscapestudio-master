@@ -25,26 +25,17 @@ public sealed class HttpProjectAssignmentLookup(
     public async Task<string?> GetProjectTaskStatusAsync(Guid projectId, Guid taskId, CancellationToken cancellationToken)
     {
         if (projectId == Guid.Empty || taskId == Guid.Empty) return null;
-        var path = $"/api/v1/project-tasks?projectId={projectId:D}&page=1&pageSize=200";
-        using var response = await SendAsync(path, cancellationToken);
+        using var response = await SendAsync($"/api/v1/project-tasks/{taskId:D}", cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound) return null;
-        await EnsureSuccessAsync(response, "Project task list", taskId, cancellationToken);
+        await EnsureSuccessAsync(response, "Project task", taskId, cancellationToken);
         using var document = await JsonDocument.ParseAsync(
             await response.Content.ReadAsStreamAsync(cancellationToken), cancellationToken: cancellationToken);
 
-        if (!TryGetProperty(document.RootElement, "items", out var items) || items.ValueKind != JsonValueKind.Array)
-            throw new InvalidOperationException("Project API returned an invalid task-list response.");
+        if (!Guid.TryParse(ReadString(document.RootElement, "projectId"), out var returnedProjectId) ||
+            returnedProjectId != projectId)
+            return null;
 
-        foreach (var task in items.EnumerateArray())
-        {
-            if (!Guid.TryParse(ReadString(task, "id"), out var returnedId) || returnedId != taskId)
-                continue;
-            if (!Guid.TryParse(ReadString(task, "projectId"), out var returnedProjectId) || returnedProjectId != projectId)
-                return null;
-            return ReadString(task, "status");
-        }
-
-        return null;
+        return ReadString(document.RootElement, "status");
     }
 
     private async Task<HttpResponseMessage> SendAsync(string path, CancellationToken cancellationToken)
