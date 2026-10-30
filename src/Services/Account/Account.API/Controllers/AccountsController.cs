@@ -176,7 +176,11 @@ public sealed class AccountsController(IMediator mediator, IPublishEndpoint publ
             var errors = validation.Errors
                 .GroupBy(error => error.PropertyName)
                 .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).Distinct().ToArray());
-            return ValidationProblem(errors, title: title);
+            return BadRequest(new ValidationProblemDetails(errors)
+            {
+                Title = title,
+                Status = StatusCodes.Status400BadRequest
+            });
         }
 
         return BadRequest(new ProblemDetails

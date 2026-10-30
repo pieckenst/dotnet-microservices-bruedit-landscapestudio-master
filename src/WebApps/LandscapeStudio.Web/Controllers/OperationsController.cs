@@ -83,10 +83,12 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(OperationFormViewModel model, CancellationToken cancellationToken)
     {
-        if (!CreateEndpoints.TryGetValue(model.Resource ?? string.Empty, out var endpoint))
+        var resource = model.Resource;
+        if (string.IsNullOrWhiteSpace(resource) || !CreateEndpoints.TryGetValue(resource, out var endpoint))
             return NotFound();
 
-        model.Title = Resources[model.Resource].Title;
+        model.Resource = resource;
+        model.Title = Resources[resource].Title;
         ValidateForResource(model);
         if (!ModelState.IsValid)
         {
