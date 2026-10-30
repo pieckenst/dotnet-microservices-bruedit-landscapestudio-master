@@ -18,10 +18,18 @@
 <section class="surface-card">
     @if (Model.Items.Count > 0)
     {
-        <div class="table-wrap"><table><thead><tr><th>Project</th><th>Project number</th><th>Status</th><th>Planned start</th><th>Planned end</th><th>Created</th></tr></thead><tbody>
+        <div class="table-wrap"><table><thead><tr><th>Project</th><th>Project number</th><th>Status</th><th>Planned start</th><th>Planned end</th><th>Created</th><th></th></tr></thead><tbody>
         @foreach (var project in Model.Items)
         {
-            <tr><td><div class="entity-cell"><span class="entity-icon entity-icon-project">▦</span><span><strong>@project.Name</strong><small>@project.Description</small></span></div></td><td class="mono">@project.ProjectNumber</td><td><span class="status-pill">@project.Status.ToString()</span></td><td>@(project.PlannedStartDate?.ToString("dd MMM yyyy") ?? "—")</td><td>@(project.PlannedEndDate?.ToString("dd MMM yyyy") ?? "—")</td><td>@project.CreatedDate.ToString("dd MMM yyyy")</td></tr>
+            <tr>
+                <td><div class="entity-cell"><span class="entity-icon entity-icon-project">▦</span><span><strong>@project.Name</strong><small>@project.Description</small></span></div></td>
+                <td class="mono">@project.ProjectNumber</td>
+                <td><span class="status-pill">@project.Status.ToString()</span></td>
+                <td>@(project.PlannedStartDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                <td>@(project.PlannedEndDate?.ToString("dd MMM yyyy") ?? "—")</td>
+                <td>@project.CreatedDate.ToString("dd MMM yyyy")</td>
+                <td><a class="text-link" asp-action="Edit" asp-route-id="@project.Id">Edit <span>→</span></a></td>
+            </tr>
         }
         </tbody></table></div>
         <div class="table-footer"><span>Page @Model.Page of @(Math.Max(Model.TotalPages, 1))</span><div class="pagination">

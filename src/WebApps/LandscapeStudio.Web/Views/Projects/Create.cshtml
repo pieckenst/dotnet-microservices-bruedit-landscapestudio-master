@@ -1,13 +1,15 @@
 @model CreateProjectViewModel
 @{
-    ViewData["Title"] = "New project";
-    ViewData["Section"] = "Projects / New";
+    var editId = ViewData["EditId"] is Guid value ? value : Guid.Empty;
+    var isEdit = editId != Guid.Empty;
+    ViewData["Title"] = isEdit ? "Edit project" : "New project";
+    ViewData["Section"] = isEdit ? "Projects / Edit" : "Projects / New";
 }
 <div class="page-heading page-heading-compact">
-    <div><span class="eyebrow"><span class="eyebrow-line"></span> CREATE A RECORD</span><h1>Start a <span>new project.</span></h1><p>Choose an existing client and land plot. The service validates the references before saving.</p></div>
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> @(isEdit ? "PROJECT RECORD" : "CREATE A RECORD")</span><h1>@(isEdit ? "Update this" : "Start a") <span>project.</span></h1><p>Choose an existing client and land plot. The service validates the references before saving.</p></div>
     <a class="button button-quiet" asp-action="Index">← Back to projects</a>
 </div>
-<form asp-action="Create" method="post" class="form-workspace">
+<form asp-action="@(isEdit ? "Edit" : "Create")" asp-route-id="@(isEdit ? editId : (Guid?)null)" method="post" class="form-workspace">
     @Html.AntiForgeryToken()
     <div asp-validation-summary="All" class="validation-summary"></div>
     <section class="surface-card form-section">
@@ -21,7 +23,7 @@
     <section class="surface-card form-section">
         <div class="form-section-heading"><span class="form-step">02</span><div><h2>Client and site</h2><p>These references must already exist in the Project service.</p></div></div>
         <div class="form-grid">
-            <div class="field"><label asp-for="ClientId">Client <span class="required">*</span></label><select asp-for="ClientId"><option value="">Select a client</option>@foreach (var client in Model.Clients) { <option value="@client.Id" selected="@(Model.ClientId == client.Id ? "selected" : null)">@client.DisplayName</option> }</select><span asp-validation-for="ClientId" class="field-error"></span>@if (Model.Clients.Count == 0) { <small>No active clients were returned. Create a client through the Project API before proceeding.</small> }</div>
+            <div class="field"><label asp-for="ClientId">Client <span class="required">*</span></label><select asp-for="ClientId"><option value="">Select a client</option>@foreach (var client in Model.Clients) { <option value="@client.Id" selected="@(Model.ClientId == client.Id ? "selected" : null)">@client.DisplayName</option> }</select><span asp-validation-for="ClientId" class="field-error"></span>@if (Model.Clients.Count == 0) { <small>No active clients were returned. Create a client through the Operations workspace before proceeding.</small> }</div>
             <div class="field"><label asp-for="LandPlotId">Land plot <span class="required">*</span></label><select asp-for="LandPlotId"><option value="">Select a land plot</option>@foreach (var plot in Model.LandPlots) { <option value="@plot.Id" selected="@(Model.LandPlotId == plot.Id ? "selected" : null)">@plot.Name — @plot.Address</option> }</select><span asp-validation-for="LandPlotId" class="field-error"></span>@if (Model.LandPlots.Count == 0) { <small>No active land plots were returned. Add a land plot first.</small> }</div>
         </div>
     </section>
@@ -32,5 +34,5 @@
             <div class="field"><label asp-for="PlannedEndDate">Planned end</label><input asp-for="PlannedEndDate" type="date" /><span asp-validation-for="PlannedEndDate" class="field-error"></span></div>
         </div>
     </section>
-    <div class="form-actions"><a class="button button-quiet" asp-action="Index">Cancel</a><button class="button button-primary" type="submit">Create project <span aria-hidden="true">→</span></button></div>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index">Cancel</a><button class="button button-primary" type="submit">@(isEdit ? "Save project changes" : "Create project") <span aria-hidden="true">→</span></button></div>
 </form>
