@@ -1514,3 +1514,115 @@ internal sealed class ChangeEmployeeStatusDialog : OperationDialogBase
         public override string ToString() => Label;
     }
 }
+
+internal sealed class CreatePositionDialog : OperationDialogBase
+{
+    private readonly Guid? _positionId;
+    private readonly TextBox _code = new() { MaxLength = 32 };
+    private readonly TextBox _title = new() { MaxLength = 120 };
+    private readonly TextBox _description = new() { MaxLength = 1000, Multiline = true, ScrollBars = ScrollBars.Vertical };
+    private readonly NumericUpDown _rank = new() { Minimum = 1, Maximum = 1000, Value = 1, DecimalPlaces = 0 };
+    private readonly CheckBox _isActive = new() { Checked = true };
+
+    public CreatePositionDialog(DesktopApiClient api, Guid? positionId = null)
+        : base(api, positionId.HasValue ? "Edit position" : "New position",
+            "Positions define organizational roles and ranking; employee records reference an active position.", 650)
+    {
+        _positionId = positionId;
+        AddField("Position code *", _code);
+        AddField("Title *", _title);
+        AddField("Rank *", _rank);
+        AddField("Description", _description, height: 100);
+        AddCheckBox("Active and available for new employee assignments", _isActive);
+        SaveButton.Values.Text = positionId.HasValue ? "Save changes  →" : "Create position  →";
+        Shown += async (_, _) =>
+        {
+            if (_positionId.HasValue) await LoadPositionAsync();
+        };
+    }
+
+    private async Task LoadPositionAsync()
+    {
+        SaveButton.Enabled = false;
+        SetInfo("Loading position…");
+        try
+        {
+            var item = await Api.GetAsync($"/Positions/{_positionId:D}");
+            _code.Text = CreateEstimateDialog.ReadString(item, "code") ?? string.Empty;
+            _title.Text = CreateEstimateDialog.ReadString(item, "title") ?? string.Empty;
+            _description.Text = CreateEstimateDialog.ReadString(item, "description") ?? string.Empty;
+            if (int.TryParse(CreateEstimateDialog.ReadString(item, "rank"), out var rank))
+                _rank.Value = Math.Clamp(rank, (int)_rank.Minimum, (int)_rank.Maximum);
+            _isActive.Checked = CreateEstimateDialog.ReadBoolean(item, "isActive");
+            SetInfo("Position loaded.");
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError($"Could not load position: {exception.Message}");
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
+    }
+
+    protected override async Task SaveAsync()
+    {
+        var code = _code.Text.Trim().ToUpperInvariant();
+        var title = _title.Text.Trim();
+        if (string.IsNullOrWhiteSpace(code) || code.Length > 32 ||
+            !System.Text.RegularExpressions.Regex.IsMatch(code, "^[A-Z0-9._-]+$") ||
+            string.IsNullOrWhiteSpace(title))
+        {
+            SetError("Enter a valid position code and title.");
+            return;
+        }
+
+        var payload = new
+        {
+            code,
+            title,
+            description = _description.Text.Trim(),
+            rank = (int)_rank.Value,
+            isActive = _isActive.Checked
+        };
+        SaveButton.Enabled = false;
+        try
+        {
+            if (_positionId.HasValue)
+                await Api.PutAsync($"/Positions/{_positionId:D}", new
+                {
+                    id = _positionId.Value,
+                    payload.code,
+                    payload.title,
+                    payload.description,
+                    payload.rank,
+                    payload.isActive
+                });
+            else
+            {
+                var created = await Api.PostAsync("/Positions", new
+                {
+                    payload.code, payload.title, payload.description, payload.rank
+                });
+                if (!Guid.TryParse(CreateEstimateDialog.ReadString(created, "id"), out var id) || id == Guid.Empty)
+                    throw new DesktopApiException(HttpStatusCode.OK, "Organization did not return the created position id.");
+            }
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception)
+        {
+            SetError(exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException ? "The request timed out." : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
+    }
+}
