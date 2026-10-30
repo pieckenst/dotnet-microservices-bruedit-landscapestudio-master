@@ -18,8 +18,7 @@ namespace Account.API.Controllers;
 [Route("api/v1/accounts")]
 public sealed class AccountsController(
     IMediator mediator,
-    IIntegrationOutbox outbox,
-    ILogger<AccountsController> logger) : ControllerBase
+    IIntegrationOutbox outbox) : ControllerBase
 {
     [HttpGet("me")]
     [ProducesResponseType(typeof(AccountProfileDto), StatusCodes.Status200OK)]

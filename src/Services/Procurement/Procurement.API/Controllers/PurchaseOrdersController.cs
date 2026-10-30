@@ -7,6 +7,7 @@ using Procurement.Application.DTOs;
 using Procurement.Application.Features.PurchaseOrders;
 using Procurement.Application.Features.Suppliers;
 using Procurement.Domain.Enums;
+using Shared.Common.Persistence;
 
 namespace Procurement.API.Controllers;
 
