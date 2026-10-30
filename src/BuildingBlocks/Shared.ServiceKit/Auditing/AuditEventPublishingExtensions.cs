@@ -24,7 +24,6 @@ public static class AuditEventPublishingExtensions
         configuration["Audit:SourceService"] = sourceService;
         services.AddScoped<AuditEventActionFilter>();
         services.AddScoped<IIntegrationOutbox, EfIntegrationOutbox<TDbContext>>();
-        services.AddHostedService<IntegrationOutboxDispatcher<TDbContext>>();
 
         services.AddMassTransit(registration =>
         {
@@ -37,6 +36,14 @@ public static class AuditEventPublishingExtensions
                 configureBus?.Invoke(context, bus);
             });
         });
+        services.Configure<MassTransitHostOptions>(options =>
+        {
+            options.WaitUntilStarted = true;
+            options.StartTimeout = TimeSpan.FromSeconds(30);
+            options.StopTimeout = TimeSpan.FromMinutes(1);
+        });
+        // Register after MassTransit so the broker connection is initialized before dispatch starts.
+        services.AddHostedService<IntegrationOutboxDispatcher<TDbContext>>();
 
         return services.AddControllers(options => options.Filters.AddService<AuditEventActionFilter>());
     }
