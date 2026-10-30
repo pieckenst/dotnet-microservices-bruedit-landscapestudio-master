@@ -36,6 +36,10 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
         exception switch
         {
             ForbiddenException => (403, "Forbidden", "You do not have permission to perform this action.", null),
+            UnauthorizedAccessException => (403, "Catalog access denied", "The caller needs catalog.read permission to reference Catalog records.", null),
+            HttpRequestException => (503, "Catalog unavailable", "The Catalog service could not complete the lookup. Retry after the dependency is healthy.", null),
+            TaskCanceledException when !context.RequestAborted.IsCancellationRequested =>
+                (504, "Catalog lookup timed out", "The Catalog service did not respond within the configured timeout.", null),
             NotFoundException => (404, "Resource not found", exception.Message, null),
             KeyNotFoundException => (404, "Resource not found", exception.Message, null),
             FluentValidation.ValidationException validation => (400, "Validation failed", "One or more fields are invalid.",
