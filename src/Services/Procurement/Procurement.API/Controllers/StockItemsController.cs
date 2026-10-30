@@ -38,6 +38,16 @@ public sealed class StockItemsController(IMediator mediator) : ControllerBase
         return CreatedAtAction(nameof(GetById), new { id = item.Id }, item);
     }
 
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "procurement.write")]
+    public async Task<ActionResult<StockItemDto>> Update(
+        Guid id, [FromBody] UpdateStockItemRequest request, CancellationToken cancellationToken)
+    {
+        var item = await mediator.Send(new UpdateStockItemCommand(id, request.Sku, request.Description,
+            request.UnitSymbol, request.StorageLocation, request.ReorderLevel), cancellationToken);
+        return item is null ? NotFound() : Ok(item);
+    }
+
     [HttpPost("{id:guid}/movements")]
     [Authorize(Policy = "procurement.write")]
     public async Task<ActionResult<StockMovementDto>> RecordMovement(
@@ -58,5 +68,7 @@ public sealed class StockItemsController(IMediator mediator) : ControllerBase
 
 public sealed record CreateStockItemRequest(Guid? CatalogItemId, string Sku, string Description,
     string UnitSymbol, string StorageLocation, decimal ReorderLevel);
+public sealed record UpdateStockItemRequest(string Sku, string Description, string UnitSymbol,
+    string StorageLocation, decimal ReorderLevel);
 public sealed record RecordStockMovementRequest(StockMovementType MovementType, decimal Quantity,
     string SourceDocument, Guid? ProjectId = null, string? Notes = null);

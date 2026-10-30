@@ -13,6 +13,8 @@ public sealed record GetStockItemsQuery(int Page = 1, int PageSize = 50, bool Be
 public sealed record GetStockItemByIdQuery(Guid Id) : IRequest<StockItemDto?>;
 public sealed record CreateStockItemCommand(Guid? CatalogItemId, string Sku, string Description,
     string UnitSymbol, string StorageLocation, decimal ReorderLevel) : IRequest<StockItemDto>;
+public sealed record UpdateStockItemCommand(Guid Id, string Sku, string Description,
+    string UnitSymbol, string StorageLocation, decimal ReorderLevel) : IRequest<StockItemDto?>;
 public sealed record RecordStockMovementCommand(Guid StockItemId, StockMovementType MovementType,
     decimal Quantity, string SourceDocument, Guid? ProjectId = null, string? Notes = null) : IRequest<StockMovementDto>;
 public sealed record GetStockMovementsQuery(Guid StockItemId, int Page = 1, int PageSize = 50)
@@ -38,6 +40,19 @@ public sealed class CreateStockItemCommandValidator : AbstractValidator<CreateSt
         RuleFor(x => x.ReorderLevel).InclusiveBetween(0, 1_000_000_000m);
     }
 }
+public sealed class UpdateStockItemCommandValidator : AbstractValidator<UpdateStockItemCommand>
+{
+    public UpdateStockItemCommandValidator()
+    {
+        RuleFor(x => x.Id).NotEmpty();
+        RuleFor(x => x.Sku).NotEmpty().MaximumLength(48);
+        RuleFor(x => x.Description).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.UnitSymbol).NotEmpty().MaximumLength(24);
+        RuleFor(x => x.StorageLocation).NotEmpty().MaximumLength(100);
+        RuleFor(x => x.ReorderLevel).InclusiveBetween(0, 1_000_000_000m);
+    }
+}
+
 public sealed class RecordStockMovementCommandValidator : AbstractValidator<RecordStockMovementCommand>
 {
     public RecordStockMovementCommandValidator()
@@ -107,6 +122,30 @@ public sealed class CreateStockItemCommandHandler(IRepositoryBase<StockItem> sto
             request.UnitSymbol, request.StorageLocation, request.ReorderLevel);
         await stockItems.AddAsync(entity);
         return StockMapping.ToDto(entity);
+    }
+}
+
+public sealed class UpdateStockItemCommandHandler(IRepositoryBase<StockItem> stockItems)
+    : IRequestHandler<UpdateStockItemCommand, StockItemDto?>
+{
+    public async Task<StockItemDto?> Handle(UpdateStockItemCommand request, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var item = await stockItems.GetByIdAsync(request.Id);
+        if (item is null) return null;
+
+        var normalizedSku = request.Sku.Trim().ToUpperInvariant();
+        var duplicate = await stockItems.GetAsync(existing =>
+            existing.Id != item.Id && existing.Sku == normalizedSku);
+        if (duplicate is not null)
+            throw new InvalidOperationException("A stock item with that SKU already exists.");
+
+        // CatalogItemId and QuantityOnHand are intentionally immutable through this form.
+        // Catalog owns product identity; inventory quantities change only through movements.
+        item.Update(request.Sku, request.Description, request.UnitSymbol,
+            request.StorageLocation, request.ReorderLevel);
+        await stockItems.UpdateAsync(item);
+        return StockMapping.ToDto(item);
     }
 }
 

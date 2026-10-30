@@ -41,6 +41,61 @@ public sealed class ProcurementApplicationTests
     }
 
     [Fact]
+    public async Task StockItemUpdateChangesMetadataWithoutChangingCatalogLinkOrOnHandQuantity()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ProcurementContext>().UseSqlite(connection).Options;
+        await using var context = new ProcurementContext(options);
+        await context.Database.EnsureCreatedAsync();
+
+        var catalogItemId = Guid.NewGuid();
+        var stock = new StockItem(Guid.NewGuid(), catalogItemId, "SKU-001", "Birch tree",
+            "pcs", "Warehouse A", 2m);
+        context.StockItems.Add(stock);
+        await context.SaveChangesAsync();
+
+        var stockRepository = new RepositoryBase<StockItem>(context);
+        var movementRepository = new RepositoryBase<StockMovement>(context);
+        var unitOfWork = new EfCoreProcurementUnitOfWork(context);
+        var movementHandler = new RecordStockMovementCommandHandler(stockRepository, movementRepository, unitOfWork);
+        await movementHandler.Handle(new RecordStockMovementCommand(
+            stock.Id, StockMovementType.Receipt, 15m, "PO-001"), CancellationToken.None);
+
+        var updateHandler = new UpdateStockItemCommandHandler(stockRepository);
+        var updated = await updateHandler.Handle(new UpdateStockItemCommand(
+            stock.Id, "sku-002", "Silver birch", "pcs", "Warehouse B / Rack 04", 5m), CancellationToken.None);
+
+        Assert.NotNull(updated);
+        Assert.Equal("SKU-002", updated.Sku);
+        Assert.Equal("Silver birch", updated.Description);
+        Assert.Equal("Warehouse B / Rack 04", updated.StorageLocation);
+        Assert.Equal(catalogItemId, updated.CatalogItemId);
+        Assert.Equal(15m, updated.QuantityOnHand);
+        Assert.Equal(5m, updated.ReorderLevel);
+    }
+
+    [Fact]
+    public async Task StockItemUpdateRejectsDuplicateSku()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+        var options = new DbContextOptionsBuilder<ProcurementContext>().UseSqlite(connection).Options;
+        await using var context = new ProcurementContext(options);
+        await context.Database.EnsureCreatedAsync();
+        var first = new StockItem(Guid.NewGuid(), null, "SKU-001", "First item", "pcs", "A", 0m);
+        var second = new StockItem(Guid.NewGuid(), null, "SKU-002", "Second item", "pcs", "B", 0m);
+        context.StockItems.AddRange(first, second);
+        await context.SaveChangesAsync();
+
+        var handler = new UpdateStockItemCommandHandler(new RepositoryBase<StockItem>(context));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => handler.Handle(
+            new UpdateStockItemCommand(first.Id, "sku-002", "Renamed item", "pcs", "A", 0m),
+            CancellationToken.None));
+    }
+
+    [Fact]
     public async Task StockMovementAndQuantityAreCommittedTogetherAndInvalidConsumptionRollsBack()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");
