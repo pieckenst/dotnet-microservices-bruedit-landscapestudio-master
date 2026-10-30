@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Serilog;
 using Shared.ServiceKit.Auditing;
+using Shared.ServiceKit.Outbox;
 using System.Security.Claims;
 using System.Text;
 
@@ -31,7 +32,7 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyText)
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddCatalogApplication(builder.Configuration);
 builder.Services.AddCatalogInfrastructure(builder.Configuration);
-builder.Services.AddMutationAuditEvents(builder.Configuration, "Catalog");
+builder.Services.AddMutationAuditEvents<CatalogContext>(builder.Configuration, "Catalog");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -110,6 +111,7 @@ app.UseMiddleware<Catalog.API.Middleware.ExceptionHandlingMiddleware>();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<OutboxTransactionMiddleware<CatalogContext>>();
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
