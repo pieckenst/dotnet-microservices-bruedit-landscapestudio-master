@@ -99,6 +99,14 @@ internal sealed class DesktopApiClient : IDisposable
             throw new DesktopApiException(response.StatusCode, await ReadErrorAsync(response, cancellationToken));
     }
 
+    public async Task PatchAsync(string path, CancellationToken cancellationToken = default)
+    {
+        using var request = CreateRequest(HttpMethod.Patch, path);
+        using var response = await _http.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            throw new DesktopApiException(response.StatusCode, await ReadErrorAsync(response, cancellationToken));
+    }
+
     private HttpRequestMessage CreateRequest<T>(HttpMethod method, string path, T? payload)
     {
         var request = new HttpRequestMessage(method, path);
