@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Project.Application;
+using Project.Application.Contracts;
+using Project.API.Services;
 using Project.Infrastructure;
 using Project.Infrastructure.Persistence;
 using Serilog;
@@ -33,6 +35,16 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyText)
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddProjectApplication(builder.Configuration);
 builder.Services.AddProjectInfrastructure(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<ICatalogItemLookup, HttpCatalogItemLookup>((services, client) =>
+{
+    var catalogBaseUrl = services.GetRequiredService<IConfiguration>()["Catalog:BaseUrl"]
+        ?? "http://localhost:8002/";
+    if (!catalogBaseUrl.EndsWith("/", StringComparison.Ordinal))
+        catalogBaseUrl += "/";
+    client.BaseAddress = new Uri(catalogBaseUrl, UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(8);
+});
 builder.Services.AddMutationAuditEvents<ProjectContext>(builder.Configuration, "Project");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
