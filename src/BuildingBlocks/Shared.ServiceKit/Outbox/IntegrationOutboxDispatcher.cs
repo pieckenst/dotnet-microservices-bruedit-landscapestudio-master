@@ -89,21 +89,18 @@ public sealed class IntegrationOutboxDispatcher<TContext>(
             return true;
         }
 
+        object message;
+        Type messageType;
         try
         {
-            if (!MessageTypes.TryGetValue(record.MessageType, out var messageType))
+            if (!MessageTypes.TryGetValue(record.MessageType, out messageType!))
                 throw new InvalidOperationException($"Outbox message type '{record.MessageType}' is not registered.");
 
-            var message = JsonSerializer.Deserialize(record.Payload, messageType, JsonOptions)
+            message = JsonSerializer.Deserialize(record.Payload, messageType, JsonOptions)
                 ?? throw new InvalidOperationException($"Outbox payload for '{record.MessageType}' was empty.");
 
             var publisher = scope.ServiceProvider.GetRequiredService<IPublishEndpoint>();
             await publisher.Publish(message, messageType, cancellationToken);
-
-            record.MarkPublished(DateTime.UtcNow);
-            await context.SaveChangesAsync(cancellationToken);
-            logger.LogDebug("Published integration outbox message {MessageId} ({MessageType}).",
-                record.Id, record.MessageType);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -126,6 +123,30 @@ public sealed class IntegrationOutboxDispatcher<TContext>(
                     "Integration outbox message {MessageId} ({MessageType}) failed on attempt {Attempt}; retry scheduled.",
                     record.Id, record.MessageType, record.AttemptCount);
             }
+
+            return true;
+        }
+
+        // Broker acceptance and marking the row published are two separate systems. If
+        // this database write fails, do not call RegisterFailure: the lease has already
+        // been cleared in memory and RabbitMQ may already have accepted the message.
+        // The persisted lease will expire and cause an at-least-once redelivery instead.
+        try
+        {
+            record.MarkPublished(DateTime.UtcNow);
+            await context.SaveChangesAsync(cancellationToken);
+            logger.LogDebug("Published integration outbox message {MessageId} ({MessageType}).",
+                record.Id, record.MessageType);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception,
+                "Message {MessageId} ({MessageType}) was accepted by the broker, but its published marker could not be saved. The lease will expire and the message may be delivered again.",
+                record.Id, record.MessageType);
         }
 
         return true;
