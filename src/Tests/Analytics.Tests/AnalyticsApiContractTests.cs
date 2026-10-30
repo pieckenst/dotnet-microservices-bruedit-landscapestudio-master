@@ -113,6 +113,14 @@ public sealed class AnalyticsApiContractTests
             AuditEventQuery query, int maximumRows, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<AuditRecord>>([]);
 
+        public Task<IReadOnlyList<AuditRecord>> GetSnapshotAsync(
+            int maximumRows, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<AuditRecord>>([]);
+
+        public Task<int> ImportMissingAsync(
+            IReadOnlyCollection<AuditRecord> records, CancellationToken cancellationToken = default) =>
+            Task.FromResult(records.Count);
+
         public Task<IReadOnlyList<(string Name, long Count)>> CountByServiceAsync(
             DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default) =>
             Task.FromResult(ByService);
