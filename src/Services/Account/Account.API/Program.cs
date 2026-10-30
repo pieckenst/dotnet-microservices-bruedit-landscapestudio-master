@@ -58,7 +58,16 @@ builder.Services.AddMutationAuditEvents<AccountContext>(
     configureConsumers: registration => registration.AddConsumer<UserRegisteredConsumer>(),
     configureBus: (context, bus) =>
         bus.ReceiveEndpoint(EventBusConstants.UserRegisteredQueue, endpoint =>
-            endpoint.ConfigureConsumer<UserRegisteredConsumer>(context)));
+        {
+            // A concurrent duplicate delivery can race on the profile's UserId primary key.
+            // Retry the whole idempotent consumer after the winning transaction commits.
+            endpoint.UseMessageRetry(retry => retry.Intervals(
+                TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(500),
+                TimeSpan.FromSeconds(2),
+                TimeSpan.FromSeconds(5)));
+            endpoint.ConfigureConsumer<UserRegisteredConsumer>(context);
+        }));
 builder.Services.Configure<MassTransitHostOptions>(options =>
 {
     options.WaitUntilStarted = true;
