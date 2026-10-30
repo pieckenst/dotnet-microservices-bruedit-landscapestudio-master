@@ -110,7 +110,21 @@
             <div class="form-section-heading"><span class="form-step">01</span><div><h2>Stock item</h2><p>Define the stock-keeping record. A catalog link is optional.</p></div></div>
             <div class="form-grid">
                 <div class="field"><label asp-for="Sku">SKU <span class="required">*</span></label><input asp-for="Sku" maxlength="48" placeholder="STK-0001" /><span asp-validation-for="Sku" class="field-error"></span></div>
-                <div class="field"><label asp-for="CatalogItemId">Catalog item ID</label><input asp-for="CatalogItemId" placeholder="Optional catalog GUID" /><span asp-validation-for="CatalogItemId" class="field-error"></span><small>Link a plant or material by its catalog record ID.</small></div>
+                <div class="field">
+                    @if (isEdit)
+                    {
+                        <label asp-for="CatalogItemId">Catalog item link</label>
+                        <input value="@(Model.CatalogItemId?.ToString("D") ?? "Not linked")" readonly />
+                        <small>The owning Catalog reference is immutable here. Inventory quantities and product identity are changed through their dedicated workflows.</small>
+                    }
+                    else
+                    {
+                        <label asp-for="CatalogItemId">Catalog item ID</label>
+                        <input asp-for="CatalogItemId" placeholder="Optional catalog GUID" />
+                        <span asp-validation-for="CatalogItemId" class="field-error"></span>
+                        <small>Link a plant or material by its catalog record ID.</small>
+                    }
+                </div>
                 <div class="field field-full"><label asp-for="Description">Description <span class="required">*</span></label><input asp-for="Description" maxlength="200" /><span asp-validation-for="Description" class="field-error"></span></div>
                 <div class="field"><label asp-for="UnitSymbol">Unit symbol <span class="required">*</span></label><input asp-for="UnitSymbol" maxlength="24" placeholder="pcs, m, kg" /><span asp-validation-for="UnitSymbol" class="field-error"></span></div>
                 <div class="field"><label asp-for="StorageLocation">Storage location <span class="required">*</span></label><input asp-for="StorageLocation" maxlength="100" placeholder="Warehouse A / Rack 02" /><span asp-validation-for="StorageLocation" class="field-error"></span></div>

@@ -41,7 +41,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["plants"] = "/Catalog/Plants",
             ["materials"] = "/Catalog/Materials",
             ["work-types"] = "/Catalog/WorkTypes",
-            ["suppliers"] = "/Suppliers"
+            ["suppliers"] = "/Suppliers",
+            ["stock-items"] = "/StockItems"
         };
 
     public async Task<IActionResult> Index(string resource = "plants", CancellationToken cancellationToken = default)
@@ -164,7 +165,11 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 ContactName = ReadString(item, "contactName") ?? string.Empty,
                 TaxIdentifier = ReadString(item, "taxIdentifier"),
                 PaymentTermDays = (int)ReadDecimal(item, "paymentTermDays"),
-                CurrencyCode = ReadString(item, "currencyCode") ?? "BYN"
+                CurrencyCode = ReadString(item, "currencyCode") ?? "BYN",
+                CatalogItemId = ReadNullableGuid(item, "catalogItemId"),
+                UnitSymbol = ReadString(item, "unitSymbol") ?? string.Empty,
+                StorageLocation = ReadString(item, "storageLocation") ?? string.Empty,
+                ReorderLevel = ReadDecimal(item, "reorderLevel")
             };
             await LoadLookupsAsync(model, cancellationToken);
             ViewData["EditId"] = id;
@@ -285,6 +290,14 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 contactName = model.ContactName.Trim(), email = Clean(model.Email), phone = Clean(model.Phone),
                 taxIdentifier = Clean(model.TaxIdentifier), address = model.Address.Trim(),
                 paymentTermDays = model.PaymentTermDays, currencyCode = model.CurrencyCode.Trim().ToUpperInvariant()
+            },
+            "stock-items" => new
+            {
+                sku = model.Sku.Trim().ToUpperInvariant(),
+                description = model.Description.Trim(),
+                unitSymbol = model.UnitSymbol.Trim(),
+                storageLocation = model.StorageLocation.Trim(),
+                reorderLevel = model.ReorderLevel
             },
             _ => throw new InvalidOperationException($"Editing '{model.Resource}' is not supported.")
         };
@@ -414,6 +427,9 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         value.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined)
             ? value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString()
             : null;
+
+    private static Guid? ReadNullableGuid(JsonElement source, string property) =>
+        Guid.TryParse(ReadString(source, property), out var value) && value != Guid.Empty ? value : null;
 
     private static Guid ReadGuid(JsonElement source, string property) =>
         Guid.TryParse(ReadString(source, property), out var value) ? value : Guid.Empty;
