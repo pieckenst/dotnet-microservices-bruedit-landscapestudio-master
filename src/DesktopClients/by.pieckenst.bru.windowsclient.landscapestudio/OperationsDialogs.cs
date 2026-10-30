@@ -539,11 +539,12 @@ internal sealed class CreateStockItemDialog : OperationDialogBase
                 "Create the inventory item before recording its first movement.", 640)
     {
         _recordId = recordId;
+        _catalogId.ReadOnly = recordId.HasValue;
         AddField("Stock-keeping unit (SKU) *", _sku);
         AddField("Description *", _description);
         AddField("Unit symbol *", _unit);
         AddField("Storage location *", _location);
-        AddField("Catalog item ID (read-only)", _catalogId);
+        AddField(recordId.HasValue ? "Catalog item link (read-only)" : "Catalog item ID (optional)", _catalogId);
         AddField("Reorder level", _reorder);
         SaveButton.Values.Text = recordId.HasValue ? "Save changes  →" : "Create stock item  →";
         Shown += async (_, _) =>
