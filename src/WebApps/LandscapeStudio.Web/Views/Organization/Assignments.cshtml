@@ -24,7 +24,26 @@
                 <td><strong>@item.Title</strong></td>
                 <td>@item.StartDate.ToString("dd MMM yyyy")</td>
                 <td>@(item.EndDate?.ToString("dd MMM yyyy") ?? "—")</td>
-                <td><span class="status-pill">@item.Status</span></td>
+                <td>
+                    @if (item.Status is "Completed" or "Cancelled")
+                    {
+                        <span class="status-pill">@item.Status</span>
+                    }
+                    else
+                    {
+                        <form asp-action="ChangeAssignmentStatus" method="post" class="inline-action employee-status-form">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <select name="status" aria-label="Assignment status">
+                                <option value="Planned" selected="@(item.Status == "Planned" ? "selected" : null)">Planned</option>
+                                <option value="Active" selected="@(item.Status == "Active" ? "selected" : null)">Active</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Cancelled">Cancelled</option>
+                            </select>
+                            <button class="text-link" type="submit">Save</button>
+                        </form>
+                    }
+                </td>
                 <td>@(string.IsNullOrWhiteSpace(item.Notes) ? "—" : item.Notes)</td>
             </tr>
         }
