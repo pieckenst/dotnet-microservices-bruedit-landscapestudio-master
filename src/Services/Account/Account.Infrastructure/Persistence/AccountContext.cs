@@ -2,6 +2,7 @@ using Account.Domain.Common;
 using Account.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
+using Shared.Common.Outbox;
 namespace Account.Infrastructure.Persistence;
 
 public sealed class AccountContext(DbContextOptions<AccountContext> options) : DbContext(options)
@@ -13,6 +14,7 @@ public sealed class AccountContext(DbContextOptions<AccountContext> options) : D
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.AddIntegrationOutbox();
 
         modelBuilder.Entity<AccountProfile>(entity =>
         {
