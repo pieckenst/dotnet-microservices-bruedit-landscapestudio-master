@@ -1458,3 +1458,59 @@ internal sealed class CreateEmployeeDialog : OperationDialogBase
         public override string ToString() => Label;
     }
 }
+
+internal sealed class ChangeEmployeeStatusDialog : OperationDialogBase
+{
+    private readonly Guid _employeeId;
+    private readonly ComboBox _status = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+
+    public ChangeEmployeeStatusDialog(DesktopApiClient api, Guid employeeId, string currentStatus)
+        : base("Change employee status",
+            "The Organization service validates employment status transitions.", 420)
+    {
+        if (employeeId == Guid.Empty) throw new ArgumentException("Employee id is required.", nameof(employeeId));
+        _employeeId = employeeId;
+        _status.Items.AddRange(new object[]
+        {
+            new StatusOption("Active", "Active"),
+            new StatusOption("On leave", "OnLeave"),
+            new StatusOption("Inactive", "Inactive"),
+            new StatusOption("Terminated", "Terminated")
+        });
+        _status.SelectedItem = _status.Items.OfType<StatusOption>()
+            .FirstOrDefault(option => option.Value.Equals(currentStatus, StringComparison.OrdinalIgnoreCase))
+            ?? _status.Items[0];
+        AddField("Employment status", _status);
+        SaveButton.Values.Text = "Save status  →";
+    }
+
+    protected override async Task SaveAsync()
+    {
+        if (_status.SelectedItem is not StatusOption selected) return;
+        SaveButton.Enabled = false;
+        SetInfo("Updating employee status…");
+        try
+        {
+            await Api.PatchAsync($"/Employees/{_employeeId:D}/status?status={Uri.EscapeDataString(selected.Value)}");
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception)
+        {
+            SetError(exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException ? "The request timed out." : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
+    }
+
+    private sealed record StatusOption(string Label, string Value)
+    {
+        public override string ToString() => Label;
+    }
+}
