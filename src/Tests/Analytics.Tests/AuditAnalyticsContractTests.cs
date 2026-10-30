@@ -61,4 +61,32 @@ public sealed class AuditAnalyticsContractTests
         Assert.Equal(1, query.Page);
         Assert.Equal(50, query.PageSize);
     }
+    [Fact]
+    public void Query_Rejects_Page_Offsets_That_Cannot_Be_Represented_By_Mongo_Skip()
+    {
+        var query = new AuditEventQuery { Page = 1_000_001, PageSize = 200 };
+
+        Assert.Equal("Page cannot exceed 1,000,000.", query.Validate());
+    }
+
+    [Theory]
+    [InlineData(0, 50)]
+    [InlineData(1, 0)]
+    [InlineData(1, 201)]
+    public void Query_Rejects_Invalid_Paging_Bounds(int page, int pageSize)
+    {
+        var query = new AuditEventQuery { Page = page, PageSize = pageSize };
+
+        Assert.NotNull(query.Validate());
+    }
+
+    [Fact]
+    public void Csv_Uses_Stable_Headers_And_Excludes_Metadata()
+    {
+        var csv = AuditCsvExporter.Export(Array.Empty<AuditRecord>());
+
+        Assert.StartsWith("\"event_id\",\"occurred_at_utc\",\"source_service\"", csv);
+        Assert.DoesNotContain("metadata", csv, StringComparison.OrdinalIgnoreCase);
+    }
+
 }
