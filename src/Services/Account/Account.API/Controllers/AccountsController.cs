@@ -16,7 +16,10 @@ namespace Account.API.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/accounts")]
-public sealed class AccountsController(IMediator mediator, IPublishEndpoint publishEndpoint) : ControllerBase
+public sealed class AccountsController(
+    IMediator mediator,
+    IPublishEndpoint publishEndpoint,
+    ILogger<AccountsController> logger) : ControllerBase
 {
     [HttpGet("me")]
     [ProducesResponseType(typeof(AccountProfileDto), StatusCodes.Status200OK)]
@@ -44,14 +47,24 @@ public sealed class AccountsController(IMediator mediator, IPublishEndpoint publ
                 userId.Value, request.DisplayName, request.FirstName, request.LastName,
                 request.Email, request.PhoneNumber, request.CompanyName), cancellationToken);
 
-            // Persist the profile before publishing the integration event. A transport failure
-            // is not presented as a successful update and is logged by the host's exception pipeline.
-            await publishEndpoint.Publish(new ProfileUpdatedEvent
+            // The profile write is already committed by the Application handler. A RabbitMQ
+            // outage must not turn that committed write into an HTTP 500 that invites blind retries.
+            // Until this service has a transactional outbox, make the delivery gap explicit in logs.
+            try
             {
-                UserId = profile.Id,
-                UpdatedFields = "profile",
-                UpdatedAt = DateTime.UtcNow
-            }, cancellationToken);
+                await publishEndpoint.Publish(new ProfileUpdatedEvent
+                {
+                    UserId = profile.Id,
+                    UpdatedFields = "profile",
+                    UpdatedAt = DateTime.UtcNow
+                }, cancellationToken);
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception,
+                    "Profile {UserId} was saved but its Analytics event could not be published.",
+                    profile.Id);
+            }
 
             return Ok(AccountProfileDto.From(profile));
         }
