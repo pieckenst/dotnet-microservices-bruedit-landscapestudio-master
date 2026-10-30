@@ -34,6 +34,7 @@ public partial class Form1 : KryptonForm
     private KryptonButton? _editSupplierButton;
     private KryptonButton? _editEmployeeButton;
     private KryptonButton? _changeEmployeeStatusButton;
+    private KryptonButton? _editPositionButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -115,7 +116,7 @@ public partial class Form1 : KryptonForm
         {
             ("WORKSPACE", new[] { "Overview", "Projects", "Estimates", "Customers", "Land plots" }),
             ("OPERATIONS", new[] { "Plant & material catalog", "Procurement", "Inventory", "Suppliers" }),
-            ("ADMINISTRATION", new[] { "Organization", "Settings" })
+            ("ADMINISTRATION", new[] { "Organization", "Positions", "Settings" })
         };
         foreach (var group in groups)
         {
@@ -352,6 +353,20 @@ public partial class Form1 : KryptonForm
                 movement.Click += async (_, _) => await RecordStockMovementAsync();
                 actions.Controls.Add(movement);
             }
+            if (_api is not null && page.Equals("Positions", StringComparison.OrdinalIgnoreCase))
+            {
+                var create = CreatePrimaryButton("＋ New position");
+                create.Margin = new Padding(8, 0, 0, 0);
+                create.Click += async (_, _) => await CreatePositionAsync();
+                actions.Controls.Add(create);
+
+                var edit = CreateSecondaryButton("Edit selected");
+                edit.Margin = new Padding(8, 0, 0, 0);
+                edit.Enabled = false;
+                edit.Click += async (_, _) => await EditPositionAsync();
+                _editPositionButton = edit;
+                actions.Controls.Add(edit);
+            }
             if (_api is not null && page.Equals("Organization", StringComparison.OrdinalIgnoreCase))
             {
                 var create = CreatePrimaryButton("＋ New employee");
@@ -403,7 +418,8 @@ public partial class Form1 : KryptonForm
         "Procurement" => "Purchase orders and supplier deliveries from Procurement.",
         "Inventory" => "Stock levels and inventory records from Procurement.",
         "Suppliers" => "Supplier records and contact channels from Procurement.",
-        "Organization" => "Organization and workforce records from the connected service.",
+        "Organization" => "Employee records and their Identity account links from Organization.",
+        "Positions" => "Manage organizational roles and ranking used by employee records.",
         "Settings" => "Configure the gateway connection and authenticate with Identity.",
         _ => "Live service-backed data from Landscape Studio."
     };
@@ -655,6 +671,19 @@ public partial class Form1 : KryptonForm
                     await EditEmployeeAsync();
             };
         }
+        if (page.Equals("Positions", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                if (_editPositionButton is not null && !_editPositionButton.IsDisposed)
+                    _editPositionButton.Enabled = GetSelectedGridRecordId().HasValue;
+            };
+            grid.CellDoubleClick += async (_, args) =>
+            {
+                if (args.RowIndex >= 0)
+                    await EditPositionAsync();
+            };
+        }
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -696,6 +725,7 @@ public partial class Form1 : KryptonForm
         "Inventory" => "/StockItems?page=1&pageSize=100",
         "Suppliers" => "/Suppliers?page=1&pageSize=100&includeInactive=true",
         "Organization" => "/Employees?page=1&pageSize=100",
+        "Positions" => "/Positions?page=1&pageSize=100&includeInactive=true",
         _ => null
     };
 
@@ -808,6 +838,30 @@ public partial class Form1 : KryptonForm
         using var dialog = new CreateCatalogRecordDialog(_api, _catalogResource, id.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Plant & material catalog");
+    }
+
+    private async Task CreatePositionAsync()
+    {
+        if (_api is null) return;
+        using var dialog = new CreatePositionDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Positions");
+    }
+
+    private async Task EditPositionAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select a position in the Positions table first.",
+                "No position selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new CreatePositionDialog(_api, id.Value);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Positions");
     }
 
     private async Task CreateEmployeeAsync()
