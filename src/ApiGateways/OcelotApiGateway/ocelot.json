@@ -16,6 +16,27 @@
       "Priority": 100
     },
     {
+      "DownstreamPathTemplate": "/api/v1/analytics/state",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Analytics/State",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/analytics/summary",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
