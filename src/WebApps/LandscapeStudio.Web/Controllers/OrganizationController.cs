@@ -19,15 +19,21 @@ public sealed class OrganizationController(
             var brigadesTask = api.GetAsync<JsonElement>("/Brigades?page=1&pageSize=200", cancellationToken);
             await Task.WhenAll(assignmentsTask, projectsTask, employeesTask, brigadesTask);
 
-            var projectNames = ReadItems(projectsTask.Result).ToDictionary(
-                item => ReadGuid(item, "id"),
-                item => $"{ReadString(item, "projectNumber")} — {ReadString(item, "name")}");
-            var employeeNames = ReadItems(employeesTask.Result).ToDictionary(
-                item => ReadGuid(item, "id"),
-                item => $"{ReadString(item, "employeeNumber")} — {ReadString(item, "fullName")}");
-            var brigadeNames = ReadItems(brigadesTask.Result).ToDictionary(
-                item => ReadGuid(item, "id"),
-                item => ReadString(item, "name"));
+            var projectNames = ReadItems(projectsTask.Result)
+                .Where(item => ReadGuid(item, "id") != Guid.Empty)
+                .ToDictionary(
+                    item => ReadGuid(item, "id"),
+                    item => $"{ReadString(item, "projectNumber")} — {ReadString(item, "name")}");
+            var employeeNames = ReadItems(employeesTask.Result)
+                .Where(item => ReadGuid(item, "id") != Guid.Empty)
+                .ToDictionary(
+                    item => ReadGuid(item, "id"),
+                    item => $"{ReadString(item, "employeeNumber")} — {ReadString(item, "fullName")}");
+            var brigadeNames = ReadItems(brigadesTask.Result)
+                .Where(item => ReadGuid(item, "id") != Guid.Empty)
+                .ToDictionary(
+                    item => ReadGuid(item, "id"),
+                    item => ReadString(item, "name"));
 
             var rows = ReadItems(assignmentsTask.Result)
                 .Select(item =>
@@ -55,7 +61,7 @@ public sealed class OrganizationController(
                 .ThenBy(item => item.Title, StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-            return View(rows is null ? new WorkAssignmentListViewModel() : new WorkAssignmentListViewModel { Items = rows });
+            return View(new WorkAssignmentListViewModel { Items = rows });
         }
         catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException or JsonException)
         {
@@ -140,6 +146,7 @@ public sealed class OrganizationController(
 
     private async Task LoadLookupsAsync(WorkAssignmentFormViewModel model, CancellationToken cancellationToken)
     {
+        model.LookupError = null;
         try
         {
             var projectsTask = api.GetAsync<JsonElement>("/Projects?page=1&pageSize=200", cancellationToken);
