@@ -39,7 +39,7 @@ public sealed class AnalyticsExceptionHandlingMiddleware(
                 Title = "An unexpected server error occurred."
             };
             problem.Extensions["traceId"] = context.TraceIdentifier;
-            await context.Response.WriteAsJsonAsync(problem, cancellationToken: context.RequestAborted);
+            await context.Response.WriteAsJsonAsync(problem, "application/problem+json", cancellationToken: context.RequestAborted);
         }
     }
 }
