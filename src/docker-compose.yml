@@ -108,6 +108,7 @@ services:
       Jwt__Issuer: LandscapeStudio.Identity
       Jwt__Audience: LandscapeStudio.Clients
       Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
+      Project__BaseUrl: http://project.api:8080/
     depends_on:
       rabbitmq:
         condition: service_healthy
