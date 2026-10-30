@@ -227,6 +227,7 @@ internal sealed class EstimateDetailsDialog : KryptonForm
     private readonly NumericUpDown _cost = new() { Width = 105, DecimalPlaces = 2, Minimum = 0, Maximum = 1000000000M, Increment = 1M };
     private readonly CheckBox _hasCost = new() { Text = "Cost known", AutoSize = true, Checked = false };
     private readonly KryptonButton _add = new() { Width = 125, Height = 36, ButtonStyle = ButtonStyle.Standalone };
+    private readonly KryptonButton _remove = new() { Width = 105, Height = 36, ButtonStyle = ButtonStyle.LowProfile };
     private readonly KryptonButton _submit = new() { Width = 155, Height = 36, ButtonStyle = ButtonStyle.Standalone };
     private readonly KryptonButton _approve = new() { Width = 115, Height = 36, ButtonStyle = ButtonStyle.Standalone };
     private readonly KryptonButton _reject = new() { Width = 100, Height = 36, ButtonStyle = ButtonStyle.Standalone };
@@ -279,6 +280,11 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         _add.Values.Text = "Add line item";
         CreateEstimateDialog.SetPrimaryStyle(_add);
         _add.Click += async (_, _) => await AddLineItemAsync();
+        _remove.Values.Text = "Remove line";
+        _remove.StateCommon.Content.ShortText.Color1 = Color.FromArgb(153, 62, 56);
+        _remove.Enabled = false;
+        _remove.Click += async (_, _) => await RemoveLineItemAsync();
+        _grid.SelectionChanged += (_, _) => UpdateRemoveButton();
         _submit.Values.Text = "Submit for approval";
         CreateEstimateDialog.SetPrimaryStyle(_submit);
         _submit.Click += async (_, _) => await TransitionAsync("submit");
@@ -309,6 +315,7 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         row.Controls.Add(_cost);
         row.Controls.Add(_hasCost);
         row.Controls.Add(_add);
+        row.Controls.Add(_remove);
         panel.Controls.Add(row, 0, 1);
         panel.Controls.Add(_status, 0, 2);
         return panel;
@@ -519,6 +526,52 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         }
     }
 
+    private void UpdateRemoveButton() =>
+        _remove.Enabled = !_busy && _state == "Draft" && _grid.SelectedRows.Count > 0;
+
+    private async Task RemoveLineItemAsync()
+    {
+        if (_state != "Draft" || _grid.SelectedRows.Count == 0)
+            return;
+
+        var idColumn = _grid.Columns.Cast<DataGridViewColumn>()
+            .FirstOrDefault(column => column.Name.Equals("id", StringComparison.OrdinalIgnoreCase));
+        var rawId = idColumn is null
+            ? null
+            : _grid.SelectedRows[0].Cells[idColumn.Index].Value?.ToString();
+
+        if (!Guid.TryParse(rawId, out var lineItemId) || lineItemId == Guid.Empty)
+        {
+            _status.ForeColor = Color.Firebrick;
+            _status.Text = "The selected row does not contain a valid estimate line-item id.";
+            return;
+        }
+
+        var confirmed = MessageBox.Show(this,
+            "Remove the selected line item from this draft estimate?",
+            "Confirm line removal", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+        if (confirmed != DialogResult.Yes)
+            return;
+
+        SetBusy(true);
+        try
+        {
+            await _api.DeleteAsync($"Estimates/{_estimateId:D}/line-items/{lineItemId:D}");
+            _status.ForeColor = Color.FromArgb(75, 115, 83);
+            _status.Text = "Line item removed.";
+            await RefreshEstimateAsync();
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            _status.ForeColor = Color.Firebrick;
+            _status.Text = exception.Message;
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
     private async Task TransitionAsync(string action)
     {
         if (action == "submit" && _state != "Draft" ||
@@ -551,6 +604,7 @@ internal sealed class EstimateDetailsDialog : KryptonForm
     {
         _busy = busy;
         _add.Enabled = !busy && _state == "Draft";
+        _remove.Enabled = !busy && _state == "Draft" && _grid.SelectedRows.Count > 0;
         _itemType.Enabled = _catalogItem.Enabled = _description.Enabled = _unit.Enabled = !busy && _state == "Draft";
         _quantity.Enabled = _price.Enabled = _cost.Enabled = _hasCost.Enabled = !busy && _state == "Draft";
         _submit.Enabled = !busy && _state == "Draft" && _grid.Rows.Count > 0;
