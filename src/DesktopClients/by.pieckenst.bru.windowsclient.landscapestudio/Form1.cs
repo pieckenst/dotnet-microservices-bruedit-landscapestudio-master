@@ -27,6 +27,8 @@ public partial class Form1 : KryptonForm
     private readonly Dictionary<string, Label> _metricValues = new(StringComparer.OrdinalIgnoreCase);
     private readonly KryptonButton _connectButton = new() { Width = 136, Height = 38, ButtonStyle = ButtonStyle.Standalone };
     private KryptonButton? _editProjectButton;
+    private KryptonButton? _editReferenceButton;
+    private KryptonButton? _archiveReferenceButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -106,7 +108,7 @@ public partial class Form1 : KryptonForm
 
         var groups = new[]
         {
-            ("WORKSPACE", new[] { "Overview", "Projects", "Estimates", "Customers" }),
+            ("WORKSPACE", new[] { "Overview", "Projects", "Estimates", "Customers", "Land plots" }),
             ("OPERATIONS", new[] { "Plant & material catalog", "Procurement", "Inventory", "Suppliers" }),
             ("ADMINISTRATION", new[] { "Organization", "Settings" })
         };
@@ -183,6 +185,8 @@ public partial class Form1 : KryptonForm
         layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
         _editProjectButton = null;
+        _editReferenceButton = null;
+        _archiveReferenceButton = null;
         var header = BuildPageHeader(page);
         layout.Controls.Add(header, 0, 0);
         var body = new Panel { Dock = DockStyle.Fill, BackColor = Canvas, Padding = Padding.Empty };
@@ -246,6 +250,31 @@ public partial class Form1 : KryptonForm
                 edit.Click += async (_, _) => await EditProjectAsync();
                 _editProjectButton = edit;
                 actions.Controls.Add(edit);
+            }
+            if (_api is not null &&
+                (page.Equals("Customers", StringComparison.OrdinalIgnoreCase) ||
+                 page.Equals("Land plots", StringComparison.OrdinalIgnoreCase)))
+            {
+                var createLabel = page.Equals("Customers", StringComparison.OrdinalIgnoreCase)
+                    ? "＋ New client" : "＋ New land plot";
+                var createReference = CreatePrimaryButton(createLabel);
+                createReference.Margin = new Padding(8, 0, 0, 0);
+                createReference.Click += async (_, _) => await CreateReferenceRecordAsync();
+                actions.Controls.Add(createReference);
+
+                var editReference = CreateSecondaryButton("Edit selected");
+                editReference.Margin = new Padding(8, 0, 0, 0);
+                editReference.Enabled = false;
+                editReference.Click += async (_, _) => await EditReferenceRecordAsync();
+                _editReferenceButton = editReference;
+                actions.Controls.Add(editReference);
+
+                var archiveReference = CreateSecondaryButton("Archive selected");
+                archiveReference.Margin = new Padding(8, 0, 0, 0);
+                archiveReference.Enabled = false;
+                archiveReference.Click += async (_, _) => await ArchiveReferenceRecordAsync();
+                _archiveReferenceButton = archiveReference;
+                actions.Controls.Add(archiveReference);
             }
             if (_api is not null && page.Equals("Estimates", StringComparison.OrdinalIgnoreCase))
             {
@@ -313,6 +342,7 @@ public partial class Form1 : KryptonForm
         "Projects" => "Plan and manage landscaping projects using live Project API records.",
         "Estimates" => "Review estimates returned by the configured project service.",
         "Customers" => "Maintain client records owned by the Project service.",
+        "Land plots" => "Maintain project sites and their address, area and soil details.",
         "Plant & material catalog" => "Browse the plant, material and work-type catalogs.",
         "Procurement" => "Purchase orders and supplier deliveries from Procurement.",
         "Inventory" => "Stock levels and inventory records from Procurement.",
@@ -497,6 +527,23 @@ public partial class Form1 : KryptonForm
                     await EditProjectAsync();
             };
         }
+        if (page.Equals("Customers", StringComparison.OrdinalIgnoreCase) ||
+            page.Equals("Land plots", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                var selected = GetSelectedGridRecordId().HasValue;
+                if (_editReferenceButton is not null && !_editReferenceButton.IsDisposed)
+                    _editReferenceButton.Enabled = selected;
+                if (_archiveReferenceButton is not null && !_archiveReferenceButton.IsDisposed)
+                    _archiveReferenceButton.Enabled = selected;
+            };
+            grid.CellDoubleClick += async (_, args) =>
+            {
+                if (args.RowIndex >= 0)
+                    await EditReferenceRecordAsync();
+            };
+        }
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -527,6 +574,7 @@ public partial class Form1 : KryptonForm
             ? $"/Estimates?projectId={estimateProjectId:D}&page=1&pageSize=100"
             : null,
         "Customers" => "/Clients?page=1&pageSize=100",
+        "Land plots" => "/LandPlots?page=1&pageSize=100",
         "Plant & material catalog" => _catalogResource switch
         {
             "Materials" => "/Catalog/Materials?page=1&pageSize=100",
@@ -562,6 +610,59 @@ public partial class Form1 : KryptonForm
         using var dialog = new CreateProjectDialog(_api, projectId.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Projects");
+    }
+
+    private async Task CreateReferenceRecordAsync()
+    {
+        if (_api is null) return;
+        var resource = _activePage.Equals("Customers", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
+        using var dialog = new CreateReferenceRecordDialog(_api, resource);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync(_activePage);
+    }
+
+    private async Task EditReferenceRecordAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select a record in the table first.",
+                "No record selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var resource = _activePage.Equals("Customers", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
+        using var dialog = new CreateReferenceRecordDialog(_api, resource, id.Value);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync(_activePage);
+    }
+
+    private async Task ArchiveReferenceRecordAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue) return;
+
+        var resource = _activePage.Equals("Customers", StringComparison.OrdinalIgnoreCase) ? "Clients" : "LandPlots";
+        var label = GetSelectedGridValue(resource == "Clients" ? "displayName" : "name") ?? id.Value.ToString("D");
+        if (MessageBox.Show(this, $"Archive {label}? Existing project history will retain its reference.",
+                "Archive record", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+            return;
+
+        try
+        {
+            var path = resource == "Clients"
+                ? $"/Clients/{id.Value:D}/archive"
+                : $"/LandPlots/{id.Value:D}/archive?archived=true";
+            await _api.PostAsync(path, new { });
+            await ShowPageAsync(_activePage);
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            MessageBox.Show(this, exception.Message, "Archive failed",
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private async Task CreateEstimateAsync()

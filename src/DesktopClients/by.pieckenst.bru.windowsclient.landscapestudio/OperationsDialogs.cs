@@ -180,6 +180,164 @@ internal abstract class OperationDialogBase : KryptonForm
     }
 }
 
+internal sealed class CreateReferenceRecordDialog : OperationDialogBase
+{
+    private readonly string _resource;
+    private readonly Guid? _recordId;
+    private readonly TextBox _name = new() { MaxLength = 160 };
+    private readonly TextBox _email = new() { MaxLength = 254 };
+    private readonly TextBox _phone = new() { MaxLength = 40 };
+    private readonly TextBox _address = new() { MaxLength = 500 };
+    private readonly NumericUpDown _area = new() { Minimum = 0.01m, Maximum = 1_000_000_000m, DecimalPlaces = 2, Increment = 1m, Value = 100m };
+    private readonly TextBox _soilType = new() { MaxLength = 100 };
+    private readonly TextBox _notes = new() { MaxLength = 2000, Multiline = true, ScrollBars = ScrollBars.Vertical };
+
+    public CreateReferenceRecordDialog(DesktopApiClient api, string resource, Guid? recordId = null)
+        : base(api,
+            recordId.HasValue ? (resource == "Clients" ? "Edit client" : "Edit land plot") :
+                (resource == "Clients" ? "New client" : "New land plot"),
+            resource == "Clients"
+                ? "Maintain client identity and contact details used by project records."
+                : "Maintain the project site address, area and site conditions.",
+            resource == "Clients" ? 560 : 700)
+    {
+        if (resource is not ("Clients" or "LandPlots"))
+            throw new ArgumentOutOfRangeException(nameof(resource), "Only Project-owned client and land-plot records are supported.");
+
+        _resource = resource;
+        _recordId = recordId;
+        if (resource == "Clients")
+        {
+            AddField("Display name *", _name);
+            AddField("Email", _email);
+            AddField("Phone", _phone);
+            AddField("Billing address", _address, height: 88);
+        }
+        else
+        {
+            AddField("Plot name *", _name);
+            AddField("Site address *", _address, height: 88);
+            AddField("Area (m²) *", _area);
+            AddField("Soil type", _soilType);
+            AddField("Site notes", _notes, height: 100);
+        }
+
+        SaveButton.Values.Text = recordId.HasValue ? "Save changes  →" : "Create record  →";
+        Shown += async (_, _) =>
+        {
+            if (_recordId.HasValue)
+                await LoadRecordAsync();
+        };
+    }
+
+    private async Task LoadRecordAsync()
+    {
+        SaveButton.Enabled = false;
+        SetInfo("Loading record…");
+        try
+        {
+            var item = await Api.GetAsync($"/{_resource}/{_recordId:D}");
+            _name.Text = CreateEstimateDialog.ReadString(item, _resource == "Clients" ? "displayName" : "name") ?? string.Empty;
+            if (_resource == "Clients")
+            {
+                _email.Text = CreateEstimateDialog.ReadString(item, "email") ?? string.Empty;
+                _phone.Text = CreateEstimateDialog.ReadString(item, "phone") ?? string.Empty;
+                _address.Text = CreateEstimateDialog.ReadString(item, "billingAddress") ?? string.Empty;
+            }
+            else
+            {
+                _address.Text = CreateEstimateDialog.ReadString(item, "address") ?? string.Empty;
+                if (TryReadDecimal(item, "areaSquareMetres", out var area))
+                    _area.Value = Math.Clamp(area, _area.Minimum, _area.Maximum);
+                _soilType.Text = CreateEstimateDialog.ReadString(item, "soilType") ?? string.Empty;
+                _notes.Text = CreateEstimateDialog.ReadString(item, "notes") ?? string.Empty;
+            }
+            SetInfo("Record loaded. Changes will be validated by the Project service.");
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError("Record could not be loaded: " + exception.Message);
+            return;
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
+    }
+
+    protected override async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_name.Text))
+        {
+            SetError(_resource == "Clients" ? "Client display name is required." : "Land plot name is required.");
+            return;
+        }
+        if (_resource == "LandPlots" && string.IsNullOrWhiteSpace(_address.Text))
+        {
+            SetError("A site address is required.");
+            return;
+        }
+
+        object payload = _resource == "Clients"
+            ? new
+            {
+                displayName = _name.Text.Trim(),
+                email = Clean(_email.Text),
+                phone = Clean(_phone.Text),
+                billingAddress = Clean(_address.Text)
+            }
+            : new
+            {
+                name = _name.Text.Trim(),
+                address = _address.Text.Trim(),
+                areaSquareMetres = _area.Value,
+                soilType = Clean(_soilType.Text),
+                notes = Clean(_notes.Text)
+            };
+
+        if (!_recordId.HasValue)
+        {
+            await SubmitAsync("/" + _resource, payload);
+            return;
+        }
+
+        SaveButton.Enabled = false;
+        SetInfo("Saving changes through the API gateway…");
+        try
+        {
+            await Api.PutAsync($"/{_resource}/{_recordId:D}", payload);
+            SetInfo("Changes saved.");
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception)
+        {
+            SetError(exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException
+                ? "The request timed out. Refresh the record before retrying."
+                : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
+    }
+
+    private static bool TryReadDecimal(JsonElement source, string property, out decimal value)
+    {
+        value = 0m;
+        return source.ValueKind == JsonValueKind.Object &&
+            source.TryGetProperty(property, out var raw) &&
+            raw.ValueKind == JsonValueKind.Number && raw.TryGetDecimal(out value);
+    }
+
+    private static string? Clean(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+}
+
 internal sealed class CreateCatalogRecordDialog : OperationDialogBase
 {
     private readonly string _resource;
