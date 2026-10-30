@@ -1,7 +1,7 @@
 using Account.API.Models;
 using Account.Application.Features.Profiles;
 using EventBus.Messages.Events;
-using MassTransit;
+using Shared.ServiceKit.Outbox;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -18,7 +18,7 @@ namespace Account.API.Controllers;
 [Route("api/v1/accounts")]
 public sealed class AccountsController(
     IMediator mediator,
-    IPublishEndpoint publishEndpoint,
+    IIntegrationOutbox outbox,
     ILogger<AccountsController> logger) : ControllerBase
 {
     [HttpGet("me")]
@@ -47,24 +47,12 @@ public sealed class AccountsController(
                 userId.Value, request.DisplayName, request.FirstName, request.LastName,
                 request.Email, request.PhoneNumber, request.CompanyName), cancellationToken);
 
-            // The profile write is already committed by the Application handler. A RabbitMQ
-            // outage must not turn that committed write into an HTTP 500 that invites blind retries.
-            // Until this service has a transactional outbox, make the delivery gap explicit in logs.
-            try
+            outbox.Enqueue(new ProfileUpdatedEvent
             {
-                await publishEndpoint.Publish(new ProfileUpdatedEvent
-                {
-                    UserId = profile.Id,
-                    UpdatedFields = "profile",
-                    UpdatedAt = DateTime.UtcNow
-                }, cancellationToken);
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception,
-                    "Profile {UserId} was saved but its Analytics event could not be published.",
-                    profile.Id);
-            }
+                UserId = profile.Id,
+                UpdatedFields = "profile",
+                UpdatedAt = DateTime.UtcNow
+            });
 
             return Ok(AccountProfileDto.From(profile));
         }
