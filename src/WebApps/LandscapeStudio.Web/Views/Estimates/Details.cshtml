@@ -26,10 +26,10 @@
         <div class="section-heading section-heading-table"><div><span class="mini-kicker">ESTIMATE CONTENT</span><h2>Line items</h2><p>Sell prices determine the total; optional cost values are used for cost reporting.</p></div></div>
         @if (estimate.LineItems.Count > 0)
         {
-            <div class="table-wrap"><table><thead><tr><th>Type</th><th>Description</th><th>Quantity</th><th>Unit</th><th>Unit price</th><th>Line total</th><th>Cost</th></tr></thead><tbody>
+            <div class="table-wrap"><table><thead><tr><th>Type</th><th>Description</th><th>Quantity</th><th>Unit</th><th>Unit price</th><th>Line total</th><th>Cost</th>@if (canEdit) { <th>Actions</th> }</tr></thead><tbody>
             @foreach (var line in estimate.LineItems)
             {
-                <tr><td><span class="status-pill">@EnumLabel(line.ItemType, new[] { "Work", "Material", "Plant", "Equipment", "Other" })</span></td><td>@line.Description</td><td>@line.Quantity.ToString("N3")</td><td>@line.UnitSymbol</td><td class="mono">@line.UnitPrice.ToString("N2")</td><td class="mono">@line.LineTotal.ToString("N2")</td><td class="mono">@(line.LineCost?.ToString("N2") ?? "—")</td></tr>
+                <tr><td><span class="status-pill">@EnumLabel(line.ItemType, new[] { "Work", "Material", "Plant", "Equipment", "Other" })</span></td><td>@line.Description</td><td>@line.Quantity.ToString("N3")</td><td>@line.UnitSymbol</td><td class="mono">@line.UnitPrice.ToString("N2")</td><td class="mono">@line.LineTotal.ToString("N2")</td><td class="mono">@(line.LineCost?.ToString("N2") ?? "—")</td>@if (canEdit) { <td><form asp-action="RemoveLineItem" asp-route-id="@estimate.Id" asp-route-lineItemId="@line.Id" method="post" onsubmit="return confirm('Remove this estimate line item?');">@Html.AntiForgeryToken()<button class="button button-quiet button-small" type="submit">Remove</button></form></td> }</tr>
             }
             </tbody></table></div>
         }
