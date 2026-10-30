@@ -1,0 +1,36 @@
+@model WorkAssignmentFormViewModel
+@{
+    ViewData["Title"] = "New work assignment";
+    ViewData["Section"] = "Organization / New assignment";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> ORGANIZATION / NEW ASSIGNMENT</span><h1>Schedule a <span>work assignment.</span></h1><p>Each assignment belongs to one project and exactly one employee or brigade.</p></div>
+    <a class="button button-quiet" asp-action="Assignments">← Back to assignments</a>
+</div>
+<form asp-action="CreateAssignment" method="post" class="form-workspace">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    @if (!string.IsNullOrWhiteSpace(Model.LookupError))
+    {
+        <div class="alert alert-error" role="alert">@Model.LookupError</div>
+    }
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">01</span><div><h2>Project and target</h2><p>Select the project, then choose either an employee or a brigade—not both.</p></div></div>
+        <div class="form-grid">
+            <div class="field field-full"><label asp-for="ProjectId">Project <span class="required">*</span></label><select asp-for="ProjectId"><option value="">Select a project</option>@foreach (var project in Model.Projects) { <option value="@project.Id">@project.ProjectNumber — @project.Name</option> }</select><span asp-validation-for="ProjectId" class="field-error"></span></div>
+            <div class="field"><label asp-for="EmployeeId">Employee</label><select asp-for="EmployeeId"><option value="">No employee selected</option>@foreach (var employee in Model.Employees) { <option value="@employee.Id">@employee.EmployeeNumber — @employee.FullName</option> }</select><span asp-validation-for="EmployeeId" class="field-error"></span></div>
+            <div class="field"><label asp-for="BrigadeId">Brigade</label><select asp-for="BrigadeId"><option value="">No brigade selected</option>@foreach (var brigade in Model.Brigades) { <option value="@brigade.Id">@brigade.Name</option> }</select><span asp-validation-for="BrigadeId" class="field-error"></span></div>
+            <div class="field field-full"><label asp-for="Title">Assignment title <span class="required">*</span></label><input asp-for="Title" maxlength="160" placeholder="Install irrigation system" /><span asp-validation-for="Title" class="field-error"></span></div>
+            <div class="field field-full"><label asp-for="ProjectTaskId">Project task ID (optional)</label><input asp-for="ProjectTaskId" placeholder="Optional task GUID" /><span asp-validation-for="ProjectTaskId" class="field-error"></span><small>Link a task when the assignment is scoped to a specific project task.</small></div>
+        </div>
+    </section>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">02</span><div><h2>Schedule and notes</h2><p>Set the planned start and optional end date.</p></div></div>
+        <div class="form-grid">
+            <div class="field"><label asp-for="StartDate">Start date <span class="required">*</span></label><input asp-for="StartDate" type="date" /><span asp-validation-for="StartDate" class="field-error"></span></div>
+            <div class="field"><label asp-for="EndDate">End date</label><input asp-for="EndDate" type="date" /><span asp-validation-for="EndDate" class="field-error"></span></div>
+            <div class="field field-full"><label asp-for="Notes">Notes</label><textarea asp-for="Notes" rows="3" maxlength="2000"></textarea><span asp-validation-for="Notes" class="field-error"></span></div>
+        </div>
+    </section>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Assignments">Cancel</a><button class="button button-primary" type="submit">Create assignment <span aria-hidden="true">→</span></button></div>
+</form>
