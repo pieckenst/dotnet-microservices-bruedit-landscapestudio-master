@@ -53,7 +53,7 @@ public sealed class OrganizationController(
                         ReadString(item, "title") ?? string.Empty,
                         ReadDate(item, "startDate") ?? DateOnly.MinValue,
                         ReadNullableDate(item, "endDate"),
-                        ReadEnum(item, "status"),
+                        ReadAssignmentStatus(item),
                         ReadString(item, "notes") ?? string.Empty);
                 })
                 .Where(item => item.Id != Guid.Empty)
@@ -226,6 +226,19 @@ public sealed class OrganizationController(
             items.ValueKind == JsonValueKind.Array)
             return items.EnumerateArray().ToArray();
         return Array.Empty<JsonElement>();
+    }
+
+    private static string ReadAssignmentStatus(JsonElement source)
+    {
+        var value = ReadEnum(source, "status");
+        return value switch
+        {
+            "0" => "Planned",
+            "1" => "Active",
+            "2" => "Completed",
+            "3" => "Cancelled",
+            _ => value
+        };
     }
 
     private static string ReadEnum(JsonElement source, string name)
