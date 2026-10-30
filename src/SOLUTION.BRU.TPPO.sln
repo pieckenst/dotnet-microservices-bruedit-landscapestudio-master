@@ -103,6 +103,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Organization.Tests", "Tests
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Procurement.API", "Services\\Procurement\\Procurement.API\\Procurement.API.csproj", "{F0E1D2C3-B4A5-4697-8123-456789ABCDEF}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Procurement.Application", "Services\\Procurement\\Procurement.Application\\Procurement.Application.csproj", "{F2E3D4C5-B6A7-4890-A234-6789ABCDEF01}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Procurement.Tests", "Tests\\Procurement.Tests\\Procurement.Tests.csproj", "{F1E2D3C4-B5A6-4798-9234-56789ABCDEF0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Analytics.Tests", "Tests\Analytics.Tests\Analytics.Tests.csproj", "{DDEE884A-C3F3-4F08-85F0-A43C0B2BC121}"
@@ -287,6 +289,10 @@ Global
 		{F1E2D3C4-B5A6-4798-9234-56789ABCDEF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F1E2D3C4-B5A6-4798-9234-56789ABCDEF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F1E2D3C4-B5A6-4798-9234-56789ABCDEF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F2E3D4C5-B6A7-4890-A234-6789ABCDEF01}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F2E3D4C5-B6A7-4890-A234-6789ABCDEF01}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F2E3D4C5-B6A7-4890-A234-6789ABCDEF01}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F2E3D4C5-B6A7-4890-A234-6789ABCDEF01}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{E7BD84EF-7CB0-49E3-90FB-B8F4B9AC2A10} = {C4DA1FD5-E6E7-44CE-A81B-1A1E8A345006}
