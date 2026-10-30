@@ -122,6 +122,30 @@ public sealed class EstimatesController(LandscapeApiClient api, ILogger<Estimate
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> RemoveLineItem(Guid id, Guid lineItemId, CancellationToken cancellationToken)
+    {
+        if (id == Guid.Empty || lineItemId == Guid.Empty) return BadRequest();
+
+        try
+        {
+            await api.DeleteAsync($"Estimates/{id:D}/line-items/{lineItemId:D}", cancellationToken);
+            TempData["Success"] = "Estimate line item removed.";
+        }
+        catch (ApiException exception)
+        {
+            TempData["Error"] = exception.Message;
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            logger.LogWarning(exception, "Removing estimate line item {LineItemId} from {EstimateId} failed.", lineItemId, id);
+            TempData["Error"] = "The Project service could not be reached.";
+        }
+
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public Task<IActionResult> Submit(Guid id, CancellationToken cancellationToken) =>
         RunTransitionAsync(id, "submit", "submitted", cancellationToken);
 
