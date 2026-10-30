@@ -63,12 +63,12 @@ public static class AuditCsvExporter
     private static string EscapePipe(string? value)
     {
         value ??= string.Empty;
-        if (value.Length > 0 && value[0] is '=' or '+' or '-' or '@' or '\\t' or '\\r')
+        if (value.Length > 0 && value[0] is '=' or '+' or '-' or '@' or '\t' or '\r')
             value = "'" + value;
-        return value.Replace("\\\\", "\\\\\\\\", StringComparison.Ordinal)
-            .Replace("|", "\\\\|", StringComparison.Ordinal)
-            .Replace("\\r", "\\\\r", StringComparison.Ordinal)
-            .Replace("\\n", "\\\\n", StringComparison.Ordinal);
+        return value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("|", "\\|", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal);
     }
 
     private static string Escape(string? value)
