@@ -19,6 +19,8 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
             var (status, title, detail, errors) = exception switch
             {
                 NotFoundException => (404, "Resource not found", exception.Message, (object?)null),
+                UnauthorizedAccessException => (403, "Forbidden", "The caller is not permitted to access the referenced Project data.", (object?)null),
+                HttpRequestException => (503, "Dependency unavailable", "The Project service could not validate the requested reference.", (object?)null),
                 KeyNotFoundException => (404, "Resource not found", exception.Message, (object?)null),
                 FluentValidation.ValidationException validation => (400, "Validation failed", "One or more fields are invalid.",
                     (object)validation.Errors.GroupBy(x => x.PropertyName).ToDictionary(g => g.Key, g => g.Select(x => x.ErrorMessage).ToArray())),
