@@ -1683,7 +1683,10 @@ internal sealed class CreateWorkAssignmentDialog : OperationDialogBase
             _project.Items.Clear();
             foreach (var item in CreateEstimateDialog.GetItems(projects).EnumerateArray())
             {
-                if (CreateEstimateDialog.ReadBoolean(item, "isArchived")) continue;
+                var projectStatus = CreateEstimateDialog.ReadString(item, "status");
+                if (!string.Equals(projectStatus, "Planned", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(projectStatus, "InProgress", StringComparison.OrdinalIgnoreCase) &&
+                    projectStatus is not ("1" or "2")) continue;
                 if (!Guid.TryParse(CreateEstimateDialog.ReadString(item, "id"), out var id) || id == Guid.Empty) continue;
                 var number = CreateEstimateDialog.ReadString(item, "projectNumber") ?? string.Empty;
                 var name = CreateEstimateDialog.ReadString(item, "name") ?? string.Empty;
