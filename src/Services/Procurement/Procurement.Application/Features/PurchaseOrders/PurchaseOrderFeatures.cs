@@ -19,7 +19,8 @@ public sealed record CreatePurchaseOrderCommand(string OrderNumber, Guid Supplie
 public sealed record SubmitPurchaseOrderCommand(Guid Id) : IRequest<PurchaseOrderDto?>;
 public sealed record ApprovePurchaseOrderCommand(Guid Id, DateOnly ApprovalDate) : IRequest<PurchaseOrderDto?>;
 public sealed record ReceivePurchaseOrderLineCommand(Guid Id, Guid LineId, decimal Quantity, DateOnly ReceivedDate)
-    : IRequest<PurchaseOrderDto?>;
+    : IRequest<ReceivePurchaseOrderLineResult?>;
+public sealed record ReceivePurchaseOrderLineResult(PurchaseOrderDto Order, Guid? StockMovementId, PurchaseOrderLineDto ReceivedLine);
 public sealed record CancelPurchaseOrderCommand(Guid Id) : IRequest<PurchaseOrderDto?>;
 
 public sealed class GetPurchaseOrdersQueryValidator : AbstractValidator<GetPurchaseOrdersQuery>
@@ -178,9 +179,9 @@ public sealed class ReceivePurchaseOrderLineCommandHandler(
     IRepositoryBase<StockItem> stockItems,
     IRepositoryBase<StockMovement> movements,
     IProcurementUnitOfWork unitOfWork)
-    : IRequestHandler<ReceivePurchaseOrderLineCommand, PurchaseOrderDto?>
+    : IRequestHandler<ReceivePurchaseOrderLineCommand, ReceivePurchaseOrderLineResult?>
 {
-    public Task<PurchaseOrderDto?> Handle(ReceivePurchaseOrderLineCommand request, CancellationToken cancellationToken) =>
+    public Task<ReceivePurchaseOrderLineResult?> Handle(ReceivePurchaseOrderLineCommand request, CancellationToken cancellationToken) =>
         unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
             var results = await orders.GetAsync(predicate: x => x.Id == request.Id,
@@ -202,16 +203,19 @@ public sealed class ReceivePurchaseOrderLineCommandHandler(
             }
 
             var received = order.ReceiveLine(request.LineId, request.Quantity, request.ReceivedDate);
+            Guid? movementId = null;
             if (stock is not null)
             {
                 stock.ApplyMovement(request.Quantity);
                 await stockItems.UpdateAsync(stock);
-                await movements.AddAsync(new StockMovement(Guid.NewGuid(), stock.Id, StockMovementType.Receipt,
+                movementId = Guid.NewGuid();
+                await movements.AddAsync(new StockMovement(movementId.Value, stock.Id, StockMovementType.Receipt,
                     request.Quantity, order.OrderNumber, order.ProjectId,
                     $"Receipt for purchase-order line {received.Id}"));
             }
             await orders.UpdateAsync(order);
-            return PurchaseOrderMapping.ToDto(order);
+            var mapped = PurchaseOrderMapping.ToDto(order);
+            return new ReceivePurchaseOrderLineResult(mapped, movementId, mapped.Lines.Single(line => line.Id == received.Id));
         }, cancellationToken);
 }
 
