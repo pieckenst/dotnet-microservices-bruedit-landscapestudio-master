@@ -459,6 +459,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 else if (model.Code.Trim().Length > 32 || !System.Text.RegularExpressions.Regex.IsMatch(model.Code.Trim(), "^[a-zA-Z0-9._-]+$"))
                     ModelState.AddModelError(nameof(model.Code), "Use up to 32 letters, numbers, dots, underscores or hyphens.");
                 if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Position title is required.");
+                else if (model.Name.Trim().Length > 120) ModelState.AddModelError(nameof(model.Name), "Position title cannot exceed 120 characters.");
                 if (model.PositionRank is < 1 or > 1000) ModelState.AddModelError(nameof(model.PositionRank), "Rank must be between 1 and 1000.");
                 if (model.Description?.Length > 1000) ModelState.AddModelError(nameof(model.Description), "Description cannot exceed 1000 characters.");
                 break;
