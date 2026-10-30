@@ -10,6 +10,7 @@
     var isCatalog = resource is "plants" or "materials" or "work-types";
     var isSupplier = resource == "suppliers";
     var isStock = resource == "stock-items";
+    var isEmployee = resource == "employees";
 }
 <div class="page-heading page-heading-compact">
     <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS / @(isEdit ? "EDIT RECORD" : "NEW RECORD")</span><h1>@(isEdit ? "Update" : "Add to") <span>@Model.Title.ToLowerInvariant().</span></h1><p>The request is validated by the owning service before it is saved.</p></div>
@@ -105,6 +106,22 @@
                 {
                     <div class="field field-checkbox"><label class="toggle-line"><input asp-for="IsActive" type="checkbox" /> Active and available for new purchase orders</label></div>
                 }
+            </div>
+        </section>
+    }
+    else if (isEmployee)
+    {
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">01</span><div><h2>Employee record</h2><p>Organization owns employment details; Identity credentials remain a separate service concern.</p></div></div>
+            <div class="form-grid">
+                <div class="field"><label asp-for="EmployeeNumber">Employee number <span class="required">*</span></label><input asp-for="EmployeeNumber" maxlength="32" placeholder="EMP-001" /><span asp-validation-for="EmployeeNumber" class="field-error"></span></div>
+                <div class="field"><label asp-for="PositionId">Position <span class="required">*</span></label><select asp-for="PositionId"><option value="">Select an active position</option>@foreach (var position in Model.Positions) { <option value="@position.Id">@position.Code — @position.Title</option> }</select><span asp-validation-for="PositionId" class="field-error"></span></div>
+                <div class="field"><label asp-for="FirstName">First name <span class="required">*</span></label><input asp-for="FirstName" maxlength="100" /><span asp-validation-for="FirstName" class="field-error"></span></div>
+                <div class="field"><label asp-for="LastName">Last name <span class="required">*</span></label><input asp-for="LastName" maxlength="100" /><span asp-validation-for="LastName" class="field-error"></span></div>
+                <div class="field"><label asp-for="HireDate">Hire date <span class="required">*</span></label><input asp-for="HireDate" type="date" /><span asp-validation-for="HireDate" class="field-error"></span></div>
+                <div class="field"><label asp-for="IdentityUserId">Linked Identity user ID</label><input asp-for="IdentityUserId" placeholder="Optional GUID" /><span asp-validation-for="IdentityUserId" class="field-error"></span><small>Link an existing Identity account when this employee needs system access.</small></div>
+                <div class="field"><label asp-for="Email">Work email</label><input asp-for="Email" type="email" maxlength="254" /><span asp-validation-for="Email" class="field-error"></span></div>
+                <div class="field"><label asp-for="Phone">Work phone</label><input asp-for="Phone" maxlength="40" /><span asp-validation-for="Phone" class="field-error"></span></div>
             </div>
         </section>
     }
