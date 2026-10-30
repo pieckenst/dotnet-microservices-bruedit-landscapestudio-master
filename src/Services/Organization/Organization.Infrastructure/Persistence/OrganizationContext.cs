@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Organization.Domain.Entities;
 using Shared.Common.Common;
 
+using Shared.Common.Outbox;
 namespace Organization.Infrastructure.Persistence;
 
 public sealed class OrganizationContext(DbContextOptions<OrganizationContext> options) : DbContext(options)
@@ -15,6 +16,7 @@ public sealed class OrganizationContext(DbContextOptions<OrganizationContext> op
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.AddIntegrationOutbox();
         ConfigureEntity<Position>(modelBuilder);
         ConfigureEntity<Employee>(modelBuilder);
         ConfigureEntity<Brigade>(modelBuilder);
