@@ -1268,3 +1268,193 @@ internal sealed class PurchaseOrderManagementDialog : OperationDialogBase
             $"{Description} · {Received:N3}/{Ordered:N3} {Unit} received";
     }
 }
+
+internal sealed class CreateEmployeeDialog : OperationDialogBase
+{
+    private readonly Guid? _employeeId;
+    private readonly TextBox _employeeNumber = new() { MaxLength = 32 };
+    private readonly TextBox _firstName = new() { MaxLength = 100 };
+    private readonly TextBox _lastName = new() { MaxLength = 100 };
+    private readonly ComboBox _position = new() { DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly DateTimePicker _hireDate = new()
+    {
+        Format = DateTimePickerFormat.Short,
+        MaxDate = DateTime.Today,
+        Value = DateTime.Today
+    };
+    private readonly TextBox _identityUserId = new() { MaxLength = 36 };
+    private readonly TextBox _email = new() { MaxLength = 254 };
+    private readonly TextBox _phone = new() { MaxLength = 40 };
+
+    public CreateEmployeeDialog(DesktopApiClient api, Guid? employeeId = null)
+        : base(employeeId.HasValue ? "Edit employee" : "New employee",
+            "Employment details are owned by Organization; login credentials remain in Identity.",
+            760)
+    {
+        _employeeId = employeeId;
+        AddField("Employee number *", _employeeNumber);
+        AddField("First name *", _firstName);
+        AddField("Last name *", _lastName);
+        AddField("Position *", _position);
+        AddField("Hire date *", _hireDate);
+        AddField("Linked Identity user id (optional)", _identityUserId);
+        AddField("Work email", _email);
+        AddField("Work phone", _phone);
+        SaveButton.Values.Text = employeeId.HasValue ? "Save changes  →" : "Create employee  →";
+        Shown += async (_, _) =>
+        {
+            await LoadPositionsAsync();
+            if (_employeeId.HasValue)
+                await LoadEmployeeAsync();
+        };
+    }
+
+    private async Task LoadPositionsAsync()
+    {
+        SaveButton.Enabled = false;
+        SetInfo("Loading active positions…");
+        try
+        {
+            var response = await Api.GetAsync("/Positions?page=1&pageSize=200");
+            var items = CreateEstimateDialog.GetItems(response);
+            _position.Items.Clear();
+            if (items.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    if (!CreateEstimateDialog.ReadBoolean(item, "isActive")) continue;
+                    if (!Guid.TryParse(CreateEstimateDialog.ReadString(item, "id"), out var id) || id == Guid.Empty) continue;
+                    var code = CreateEstimateDialog.ReadString(item, "code") ?? string.Empty;
+                    var title = CreateEstimateDialog.ReadString(item, "title") ?? string.Empty;
+                    if (string.IsNullOrWhiteSpace(title)) continue;
+                    _position.Items.Add(new PositionOption(id, $"{code} — {title}"));
+                }
+            }
+
+            if (_position.Items.Count == 0)
+            {
+                SetError("No active positions are available. Create a position before adding an employee.");
+                return;
+            }
+
+            _position.SelectedIndex = 0;
+            SetInfo($"Loaded {_position.Items.Count} active position(s).");
+            SaveButton.Enabled = true;
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError($"Could not load positions: {exception.Message}");
+        }
+    }
+
+    private async Task LoadEmployeeAsync()
+    {
+        SaveButton.Enabled = false;
+        SetInfo("Loading employee…");
+        try
+        {
+            var employee = await Api.GetAsync($"/Employees/{_employeeId:D}");
+            _employeeNumber.Text = CreateEstimateDialog.ReadString(employee, "employeeNumber") ?? string.Empty;
+            _firstName.Text = CreateEstimateDialog.ReadString(employee, "firstName") ?? string.Empty;
+            _lastName.Text = CreateEstimateDialog.ReadString(employee, "lastName") ?? string.Empty;
+            _identityUserId.Text = CreateEstimateDialog.ReadString(employee, "identityUserId") ?? string.Empty;
+            _email.Text = CreateEstimateDialog.ReadString(employee, "email") ?? string.Empty;
+            _phone.Text = CreateEstimateDialog.ReadString(employee, "phone") ?? string.Empty;
+
+            if (DateTime.TryParse(CreateEstimateDialog.ReadString(employee, "hireDate"),
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var hireDate))
+                _hireDate.Value = hireDate.Date > DateTime.Today ? DateTime.Today : hireDate.Date;
+
+            if (Guid.TryParse(CreateEstimateDialog.ReadString(employee, "positionId"), out var positionId))
+            {
+                var selected = _position.Items.OfType<PositionOption>().FirstOrDefault(x => x.Id == positionId);
+                if (selected is not null) _position.SelectedItem = selected;
+                else
+                {
+                    SetError("The employee's current position is inactive or unavailable. Select an active position before saving.");
+                    return;
+                }
+            }
+            SetInfo("Employee loaded. Changes will be validated by Organization.");
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError($"Could not load employee: {exception.Message}");
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = _position.Items.Count > 0;
+        }
+    }
+
+    protected override async Task SaveAsync()
+    {
+        var number = _employeeNumber.Text.Trim();
+        var firstName = _firstName.Text.Trim();
+        var lastName = _lastName.Text.Trim();
+        if (string.IsNullOrWhiteSpace(number) || string.IsNullOrWhiteSpace(firstName) ||
+            string.IsNullOrWhiteSpace(lastName) || _position.SelectedItem is not PositionOption position)
+        {
+            SetError("Employee number, first name, last name and an active position are required.");
+            return;
+        }
+
+        Guid? identityUserId = null;
+        if (!string.IsNullOrWhiteSpace(_identityUserId.Text))
+        {
+            if (!Guid.TryParse(_identityUserId.Text.Trim(), out var parsedId) || parsedId == Guid.Empty)
+            {
+                SetError("Identity user id must be a valid GUID or left blank.");
+                return;
+            }
+            identityUserId = parsedId;
+        }
+
+        var payload = new
+        {
+            employeeNumber = number.ToUpperInvariant(),
+            firstName,
+            lastName,
+            positionId = position.Id,
+            hireDate = DateOnly.FromDateTime(_hireDate.Value),
+            identityUserId,
+            email = string.IsNullOrWhiteSpace(_email.Text) ? null : _email.Text.Trim(),
+            phone = string.IsNullOrWhiteSpace(_phone.Text) ? null : _phone.Text.Trim()
+        };
+
+        SaveButton.Enabled = false;
+        try
+        {
+            if (_employeeId.HasValue)
+            {
+                await Api.PutAsync($"/Employees/{_employeeId:D}", payload);
+            }
+            else
+            {
+                var created = await Api.PostAsync("/Employees", payload);
+                if (!Guid.TryParse(CreateEstimateDialog.ReadString(created, "id"), out var id) || id == Guid.Empty)
+                    throw new DesktopApiException(HttpStatusCode.OK, "Organization did not return the created employee id.");
+            }
+
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception)
+        {
+            SetError(exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException ? "The request timed out. Refresh the employee list before retrying." : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = _position.Items.Count > 0;
+        }
+    }
+
+    private sealed record PositionOption(Guid Id, string Label)
+    {
+        public override string ToString() => Label;
+    }
+}
