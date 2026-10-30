@@ -41,7 +41,7 @@
         {
             <tr>
                 @foreach (var column in Model.Columns) { <td>@(item.Values.TryGetValue(column, out var value) ? value : "—")</td> }
-                @if (canManageReferences)
+                @if (canEdit)
                 {
                     var idText = item.Values.TryGetValue("Id", out var idValue) ? idValue : string.Empty;
                     var isArchived = item.Values.TryGetValue("Is Archived", out var archivedText) && bool.TryParse(archivedText, out var archived) && archived;
