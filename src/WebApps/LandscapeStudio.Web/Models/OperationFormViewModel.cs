@@ -7,6 +7,23 @@ public sealed class OperationFormViewModel
     public string Resource { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
 
+    [StringLength(32)]
+    public string EmployeeNumber { get; set; } = string.Empty;
+
+    [StringLength(100)]
+    public string FirstName { get; set; } = string.Empty;
+
+    [StringLength(100)]
+    public string LastName { get; set; } = string.Empty;
+
+    public Guid PositionId { get; set; }
+
+    public DateOnly HireDate { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
+
+    public Guid? IdentityUserId { get; set; }
+
+    public IReadOnlyList<PositionOption> Positions { get; set; } = Array.Empty<PositionOption>();
+
     [StringLength(160)]
     public string Name { get; set; } = string.Empty;
 
@@ -78,3 +95,5 @@ public sealed class OperationFormViewModel
 }
 
 public sealed record MeasurementUnitOption(Guid Id, string Name, string Symbol, bool IsActive);
+
+public sealed record PositionOption(Guid Id, string Code, string Title, string Description, int Rank, bool IsActive, DateTime CreatedDate);
