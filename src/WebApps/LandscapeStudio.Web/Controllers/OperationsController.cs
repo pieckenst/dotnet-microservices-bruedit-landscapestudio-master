@@ -17,6 +17,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["work-types"] = ("Work types", "/Catalog/WorkTypes?page=1&pageSize=100"),
             ["suppliers"] = ("Suppliers", "/Suppliers?page=1&pageSize=100&includeInactive=true"),
             ["stock-items"] = ("Inventory", "/StockItems?page=1&pageSize=100"),
+            ["employees"] = ("Employees", "/Employees?page=1&pageSize=100"),
             ["purchase-orders"] = ("Purchase orders", "/PurchaseOrders?page=1&pageSize=100"),
             ["deliveries"] = ("Supplier deliveries", "/Deliveries?page=1&pageSize=100")
         };
@@ -30,7 +31,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["materials"] = "/Catalog/Materials",
             ["work-types"] = "/Catalog/WorkTypes",
             ["suppliers"] = "/Suppliers",
-            ["stock-items"] = "/StockItems"
+            ["stock-items"] = "/StockItems",
+            ["employees"] = "/Employees"
         };
 
     private static readonly IReadOnlyDictionary<string, string> UpdateEndpoints =
@@ -42,7 +44,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["materials"] = "/Catalog/Materials",
             ["work-types"] = "/Catalog/WorkTypes",
             ["suppliers"] = "/Suppliers",
-            ["stock-items"] = "/StockItems"
+            ["stock-items"] = "/StockItems",
+            ["employees"] = "/Employees"
         };
 
     public async Task<IActionResult> Index(string resource = "plants", CancellationToken cancellationToken = default)
@@ -169,7 +172,16 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 CatalogItemId = ReadNullableGuid(item, "catalogItemId"),
                 UnitSymbol = ReadString(item, "unitSymbol") ?? string.Empty,
                 StorageLocation = ReadString(item, "storageLocation") ?? string.Empty,
-                ReorderLevel = ReadDecimal(item, "reorderLevel")
+                ReorderLevel = ReadDecimal(item, "reorderLevel"),
+                EmployeeNumber = ReadString(item, "employeeNumber") ?? string.Empty,
+                FirstName = ReadString(item, "firstName") ?? string.Empty,
+                LastName = ReadString(item, "lastName") ?? string.Empty,
+                PositionId = ReadGuid(item, "positionId"),
+                HireDate = DateOnly.TryParse(ReadString(item, "hireDate"),
+                    System.Globalization.CultureInfo.InvariantCulture,
+                    System.Globalization.DateTimeStyles.None, out var hireDate)
+                    ? hireDate : DateOnly.FromDateTime(DateTime.UtcNow),
+                IdentityUserId = ReadNullableGuid(item, "identityUserId")
             };
             await LoadLookupsAsync(model, cancellationToken);
             ViewData["EditId"] = id;
@@ -300,11 +312,41 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 storageLocation = model.StorageLocation.Trim(),
                 reorderLevel = model.ReorderLevel
             },
+            "employees" => new
+            {
+                employeeNumber = model.EmployeeNumber.Trim().ToUpperInvariant(),
+                firstName = model.FirstName.Trim(),
+                lastName = model.LastName.Trim(),
+                positionId = model.PositionId,
+                hireDate = model.HireDate,
+                identityUserId = model.IdentityUserId,
+                email = Clean(model.Email),
+                phone = Clean(model.Phone)
+            },
             _ => throw new InvalidOperationException($"Editing '{model.Resource}' is not supported.")
         };
 
     private async Task LoadLookupsAsync(OperationFormViewModel model, CancellationToken cancellationToken)
     {
+        if (model.Resource.Equals("employees", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var page = await api.GetAsync<ApiPage<PositionOption>>(
+                    "/Positions?page=1&pageSize=200", cancellationToken);
+                model.Positions = page.Items.Where(position => position.IsActive)
+                    .OrderBy(position => position.Rank).ThenBy(position => position.Title).ToArray();
+                if (model.Positions.Count == 0)
+                    model.LookupError = "No active positions exist. Create an active position before adding an employee.";
+            }
+            catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException or JsonException)
+            {
+                logger.LogWarning(exception, "Positions could not be loaded for employee management.");
+                model.LookupError = "Positions could not be loaded. Check the Organization service and your organization.read permission.";
+                model.Positions = Array.Empty<PositionOption>();
+            }
+            return;
+        }
         if (!IsCatalogItem(model.Resource)) return;
         try
         {
@@ -368,6 +410,18 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 if (Missing(model.UnitSymbol)) ModelState.AddModelError(nameof(model.UnitSymbol), "Unit symbol is required.");
                 if (Missing(model.StorageLocation)) ModelState.AddModelError(nameof(model.StorageLocation), "Storage location is required.");
                 break;
+            case "employees":
+                if (Missing(model.EmployeeNumber)) ModelState.AddModelError(nameof(model.EmployeeNumber), "Employee number is required.");
+                if (Missing(model.FirstName)) ModelState.AddModelError(nameof(model.FirstName), "First name is required.");
+                if (Missing(model.LastName)) ModelState.AddModelError(nameof(model.LastName), "Last name is required.");
+                if (model.PositionId == Guid.Empty) ModelState.AddModelError(nameof(model.PositionId), "Choose an active position.");
+                else if (!model.Positions.Any(position => position.Id == model.PositionId))
+                    ModelState.AddModelError(nameof(model.PositionId), "The selected position is not active or could not be loaded.");
+                if (model.HireDate > DateOnly.FromDateTime(DateTime.UtcNow))
+                    ModelState.AddModelError(nameof(model.HireDate), "Hire date cannot be in the future.");
+                if (model.IdentityUserId == Guid.Empty)
+                    ModelState.AddModelError(nameof(model.IdentityUserId), "Identity user ID must be a valid GUID or left blank.");
+                break;
         }
     }
 
@@ -418,6 +472,13 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 catalogItemId = model.CatalogItemId, sku = model.Sku.Trim().ToUpperInvariant(),
                 description = model.Description.Trim(), unitSymbol = model.UnitSymbol.Trim(),
                 storageLocation = model.StorageLocation.Trim(), reorderLevel = model.ReorderLevel
+            },
+            "employees" => new
+            {
+                employeeNumber = model.EmployeeNumber.Trim().ToUpperInvariant(),
+                firstName = model.FirstName.Trim(), lastName = model.LastName.Trim(),
+                positionId = model.PositionId, hireDate = model.HireDate,
+                identityUserId = model.IdentityUserId, email = Clean(model.Email), phone = Clean(model.Phone)
             },
             _ => throw new InvalidOperationException("The selected operation is not supported.")
         };
