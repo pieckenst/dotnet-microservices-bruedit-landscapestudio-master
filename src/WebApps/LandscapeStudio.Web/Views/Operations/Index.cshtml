@@ -10,7 +10,7 @@
     };
     var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees", "positions" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
-    var canEdit = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees" }
+    var canEdit = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees", "positions" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
     var canArchive = Model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ||
         Model.Resource.Equals("land-plots", StringComparison.OrdinalIgnoreCase);
