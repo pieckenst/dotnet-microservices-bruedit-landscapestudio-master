@@ -9,6 +9,7 @@ using Procurement.Infrastructure;
 using Procurement.Infrastructure.Persistence;
 using Serilog;
 using Shared.ServiceKit.Auditing;
+using Shared.ServiceKit.Outbox;
 using System.Security.Claims;
 using System.Text;
 
@@ -27,7 +28,7 @@ var signingKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(signingKeyText)
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddProcurementApplication(builder.Configuration);
 builder.Services.AddProcurementInfrastructure(builder.Configuration);
-builder.Services.AddMutationAuditEvents(builder.Configuration, "Procurement");
+builder.Services.AddMutationAuditEvents<ProcurementContext>(builder.Configuration, "Procurement");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -93,6 +94,7 @@ app.UseMiddleware<Procurement.API.Middleware.ExceptionHandlingMiddleware>();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<OutboxTransactionMiddleware<ProcurementContext>>();
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
