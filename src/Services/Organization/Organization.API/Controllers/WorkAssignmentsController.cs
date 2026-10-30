@@ -31,24 +31,28 @@ public sealed class WorkAssignmentsController(
     public async Task<ActionResult<WorkAssignmentDto>> Create(CreateWorkAssignmentCommand command, CancellationToken cancellationToken)
     {
         var assignment = await mediator.Send(command, cancellationToken);
+        Employee? employee = null;
         if (assignment.EmployeeId.HasValue)
         {
-            var employee = await employees.GetByIdAsync(assignment.EmployeeId.Value);
+            employee = await employees.GetByIdAsync(assignment.EmployeeId.Value);
             if (employee is null)
                 throw new InvalidOperationException("The employee for the new assignment could not be loaded.");
-
-            outbox.Enqueue(new EmployeeAssignedEvent
-            {
-                EmployeeId = employee.Id,
-                EmployeeFullName = employee.FullName,
-                ProjectId = assignment.ProjectId,
-                BrigadeId = assignment.BrigadeId,
-                AssignmentRole = assignment.Title,
-                IsResponsible = false,
-                AssignedDate = DateTime.SpecifyKind(
-                    assignment.StartDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
-            });
         }
+
+        // The same durable event contract represents either an individual employee
+        // assignment or a whole-brigade assignment. The analytics consumer stores only
+        // stable identifiers and deliberately drops employee names.
+        outbox.Enqueue(new EmployeeAssignedEvent
+        {
+            EmployeeId = assignment.EmployeeId,
+            EmployeeFullName = employee?.FullName ?? string.Empty,
+            ProjectId = assignment.ProjectId,
+            BrigadeId = assignment.BrigadeId,
+            AssignmentRole = assignment.Title,
+            IsResponsible = false,
+            AssignedDate = DateTime.SpecifyKind(
+                assignment.StartDate.ToDateTime(TimeOnly.MinValue), DateTimeKind.Utc)
+        });
 
         return CreatedAtAction(nameof(Get), new { projectId = assignment.ProjectId }, assignment);
     }
