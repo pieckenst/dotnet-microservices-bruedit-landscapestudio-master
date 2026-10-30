@@ -138,6 +138,14 @@ public sealed class AddEstimateLineItemCommandHandler(
         var estimate = await estimates.GetByIdWithItemsAsync(request.EstimateId, tracking: true, cancellationToken);
         if (estimate is null) return null;
 
+        // A linked Catalog record is the source of truth for descriptive and pricing data.
+        // The client may send stale form values (or manipulated prices); persist a snapshot
+        // from the owning Catalog service instead. Unit cost remains Project-owned because
+        // it represents the studio's actual/negotiated cost, not the Catalog sell price.
+        var description = request.Description;
+        var unitSymbol = request.UnitSymbol;
+        var unitPrice = request.UnitPrice;
+
         if (request.CatalogItemId.HasValue)
         {
             var catalogItem = await catalogItems.FindAsync(
@@ -149,18 +157,18 @@ public sealed class AddEstimateLineItemCommandHandler(
                 throw new FluentValidation.ValidationException("An inactive Catalog item cannot be added to an estimate.");
             if (!catalogItem.MeasurementUnitIsActive)
                 throw new FluentValidation.ValidationException("The Catalog item's measurement unit is inactive.");
-            if (!string.Equals(
-                    request.UnitSymbol.Trim(),
-                    catalogItem.MeasurementUnitSymbol,
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                throw new FluentValidation.ValidationException(
-                    $"The selected Catalog item uses '{catalogItem.MeasurementUnitSymbol}', not '{request.UnitSymbol.Trim()}'. Refresh the item and select its current measurement unit.");
-            }
+            if (string.IsNullOrWhiteSpace(catalogItem.Name) ||
+                string.IsNullOrWhiteSpace(catalogItem.MeasurementUnitSymbol))
+                throw new InvalidOperationException(
+                    $"Catalog item '{request.CatalogItemId.Value}' has incomplete descriptive or unit data.");
+
+            description = catalogItem.Name;
+            unitSymbol = catalogItem.MeasurementUnitSymbol;
+            unitPrice = catalogItem.ListUnitPrice;
         }
 
-        var item = new EstimateLineItem(Guid.NewGuid(), estimate.Id, request.ItemType, request.Description,
-            request.Quantity, request.UnitSymbol, request.UnitPrice, request.UnitCost, request.CatalogItemId);
+        var item = new EstimateLineItem(Guid.NewGuid(), estimate.Id, request.ItemType, description,
+            request.Quantity, unitSymbol, unitPrice, request.UnitCost, request.CatalogItemId);
         await estimates.AddLineItemAsync(estimate, item, cancellationToken);
         return GetEstimatesQueryHandler.Map(estimate);
     }
