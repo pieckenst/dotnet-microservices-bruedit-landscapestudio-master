@@ -217,6 +217,8 @@ internal sealed class EstimateDetailsDialog : KryptonForm
     private readonly Label _status = new() { Dock = DockStyle.Fill, ForeColor = Color.FromArgb(112, 127, 118), AutoSize = false };
     private readonly DataGridView _grid = CreateGrid();
     private readonly ComboBox _itemType = new() { Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
+    private readonly ComboBox _catalogItem = new() { Width = 240, DropDownStyle = ComboBoxStyle.DropDownList };
+    private bool _loadingCatalogItems;
     private readonly TextBox _description = new() { Width = 230, MaxLength = 500 };
     private readonly NumericUpDown _quantity = new() { Width = 86, DecimalPlaces = 3, Minimum = .001M, Maximum = 1000000000M, Value = 1, Increment = .5M };
     private readonly TextBox _unit = new() { Width = 64, MaxLength = 24, Text = "pcs" };
@@ -265,6 +267,10 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         _itemType.Items.Add(new ItemType(3, "Equipment"));
         _itemType.Items.Add(new ItemType(4, "Other"));
         _itemType.SelectedIndex = 1;
+        _catalogItem.Items.Add(new CatalogItemOption(null, 1, "Custom line — no Catalog reference", string.Empty, "pcs", 0m));
+        _catalogItem.SelectedIndex = 0;
+        _itemType.SelectedIndexChanged += async (_, _) => await LoadCatalogItemsAsync();
+        _catalogItem.SelectedIndexChanged += (_, _) => ApplyCatalogSelection();
         _add.Values.Text = "Add line item";
         CreateEstimateDialog.SetPrimaryStyle(_add);
         _add.Click += async (_, _) => await AddLineItemAsync();
@@ -276,7 +282,7 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         _approve.Click += async (_, _) => await TransitionAsync("approve");
         _reject.Values.Text = "Reject";
         _reject.Click += async (_, _) => await TransitionAsync("reject");
-        Shown += async (_, _) => await RefreshEstimateAsync();
+        Shown += async (_, _) => { await LoadCatalogItemsAsync(); await RefreshEstimateAsync(); };
     }
 
     private Control BuildLineEditor()
@@ -287,9 +293,10 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         panel.Controls.Add(new Label { Text = "Add line item (drafts only)", AutoSize = true, ForeColor = Color.FromArgb(33, 47, 40), Font = new Font("Segoe UI Semibold", 11f, FontStyle.Bold) }, 0, 0);
         var row = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoScroll = true, Margin = Padding.Empty };
-        _itemType.Font = _description.Font = _unit.Font = new Font("Segoe UI", 9f);
+        _itemType.Font = _catalogItem.Font = _description.Font = _unit.Font = new Font("Segoe UI", 9f);
         _quantity.Font = _price.Font = _cost.Font = new Font("Segoe UI", 9f);
         row.Controls.Add(_itemType);
+        row.Controls.Add(_catalogItem);
         row.Controls.Add(_description);
         row.Controls.Add(_quantity);
         row.Controls.Add(_unit);
@@ -350,6 +357,116 @@ internal sealed class EstimateDetailsDialog : KryptonForm
         }
     }
 
+    private async Task LoadCatalogItemsAsync()
+    {
+        if (_loadingCatalogItems || IsDisposed) return;
+        if (_itemType.SelectedItem is not ItemType itemType) return;
+
+        var resource = itemType.Value switch
+        {
+            0 => "work-types",
+            1 => "materials",
+            2 => "plants",
+            _ => null
+        };
+
+        _loadingCatalogItems = true;
+        _catalogItem.Enabled = false;
+        try
+        {
+            _catalogItem.BeginUpdate();
+            _catalogItem.Items.Clear();
+            _catalogItem.Items.Add(new CatalogItemOption(
+                null, itemType.Value, "Custom line — no Catalog reference", string.Empty, "pcs", 0m));
+            _catalogItem.SelectedIndex = 0;
+
+            if (resource is null)
+            {
+                _status.ForeColor = Color.FromArgb(112, 127, 118);
+                _status.Text = "Equipment and other lines are entered manually; they are not Catalog item types.";
+                return;
+            }
+
+            var unitsResponse = await _api.GetAsync("Catalog/MeasurementUnits?page=1&pageSize=200");
+            var units = CreateEstimateDialog.GetItems(unitsResponse);
+            var unitSymbols = new Dictionary<Guid, string>();
+            if (units.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var unit in units.EnumerateArray())
+                {
+                    if (!CreateEstimateDialog.ReadBoolean(unit, "isActive")) continue;
+                    if (!Guid.TryParse(CreateEstimateDialog.ReadString(unit, "id"), out var unitId) || unitId == Guid.Empty) continue;
+                    var symbol = CreateEstimateDialog.ReadString(unit, "symbol");
+                    if (!string.IsNullOrWhiteSpace(symbol)) unitSymbols[unitId] = symbol.Trim();
+                }
+            }
+
+            var response = await _api.GetAsync($"Catalog/{resource}?page=1&pageSize=200");
+            var items = CreateEstimateDialog.GetItems(response);
+            var loaded = 0;
+            if (items.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var item in items.EnumerateArray())
+                {
+                    if (!CreateEstimateDialog.ReadBoolean(item, "isActive")) continue;
+                    if (!Guid.TryParse(CreateEstimateDialog.ReadString(item, "id"), out var id) || id == Guid.Empty) continue;
+                    if (!Guid.TryParse(CreateEstimateDialog.ReadString(item, "measurementUnitId"), out var unitId) ||
+                        !unitSymbols.TryGetValue(unitId, out var symbol)) continue;
+
+                    var name = CreateEstimateDialog.ReadString(item, "name");
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    var description = CreateEstimateDialog.ReadString(item, "description") ?? name;
+                    var priceProperty = itemType.Value == 0 ? "basePrice" : "unitPrice";
+                    var unitPrice = ReadDecimal(item, priceProperty);
+                    _catalogItem.Items.Add(new CatalogItemOption(id, itemType.Value,
+                        name.Trim(), description.Trim(), symbol, unitPrice));
+                    loaded++;
+                }
+            }
+
+            _status.ForeColor = loaded > 0 ? Color.FromArgb(75, 115, 83) : Color.DarkGoldenrod;
+            _status.Text = loaded > 0
+                ? $"Loaded {loaded} active Catalog item(s). Select one to prefill the estimate line."
+                : "No active Catalog items with active measurement units are available. A custom line can still be added.";
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            _status.ForeColor = Color.DarkGoldenrod;
+            _status.Text = $"Catalog lookup unavailable; custom estimate lines remain available. {exception.Message}";
+            if (_catalogItem.Items.Count == 0)
+            {
+                _catalogItem.Items.Add(new CatalogItemOption(
+                    null, itemType.Value, "Custom line — no Catalog reference", string.Empty, "pcs", 0m));
+                _catalogItem.SelectedIndex = 0;
+            }
+        }
+        finally
+        {
+            if (_catalogItem.IsHandleCreated) _catalogItem.EndUpdate();
+            _catalogItem.Enabled = !IsDisposed;
+            _loadingCatalogItems = false;
+        }
+    }
+
+    private void ApplyCatalogSelection()
+    {
+        if (_catalogItem.SelectedItem is not CatalogItemOption selected || !selected.Id.HasValue)
+            return;
+
+        var matchingType = Enumerable.Range(0, _itemType.Items.Count)
+            .Select(index => _itemType.Items[index])
+            .OfType<ItemType>()
+            .FirstOrDefault(item => item.Value == selected.ItemType);
+        if (matchingType is not null)
+            _itemType.SelectedItem = matchingType;
+
+        _description.Text = selected.Description;
+        _unit.Text = selected.UnitSymbol;
+        _price.Value = Math.Clamp(decimal.Round(selected.UnitPrice, 2), _price.Minimum, _price.Maximum);
+        _status.ForeColor = Color.FromArgb(75, 115, 83);
+        _status.Text = $"Catalog item selected: {selected.Name}. You can adjust the estimate description and selling price.";
+    }
+
     private async Task AddLineItemAsync()
     {
         if (_state != "Draft")
@@ -374,7 +491,7 @@ internal sealed class EstimateDetailsDialog : KryptonForm
                 unitSymbol = _unit.Text.Trim(),
                 unitPrice = _price.Value,
                 unitCost = _hasCost.Checked ? _cost.Value : (decimal?)null,
-                catalogItemId = (Guid?)null
+                catalogItemId = (_catalogItem.SelectedItem as CatalogItemOption)?.Id
             };
             await _api.PostAsync($"Estimates/{_estimateId:D}/line-items", payload);
             _description.Clear();
@@ -425,6 +542,8 @@ internal sealed class EstimateDetailsDialog : KryptonForm
     {
         _busy = busy;
         _add.Enabled = !busy && _state == "Draft";
+        _itemType.Enabled = _catalogItem.Enabled = _description.Enabled = _unit.Enabled = !busy && _state == "Draft";
+        _quantity.Enabled = _price.Enabled = _cost.Enabled = _hasCost.Enabled = !busy && _state == "Draft";
         _submit.Enabled = !busy && _state == "Draft" && _grid.Rows.Count > 0;
         _approve.Enabled = _reject.Enabled = !busy && _state == "Submitted";
         UseWaitCursor = busy;
@@ -484,5 +603,11 @@ internal sealed class EstimateDetailsDialog : KryptonForm
     private sealed record ItemType(int Value, string Label)
     {
         public override string ToString() => Label;
+    }
+
+    private sealed record CatalogItemOption(
+        Guid? Id, int ItemType, string Name, string Description, string UnitSymbol, decimal UnitPrice)
+    {
+        public override string ToString() => Name;
     }
 }
