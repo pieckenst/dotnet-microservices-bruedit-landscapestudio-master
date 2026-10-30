@@ -131,7 +131,11 @@ public sealed class UpdateStockItemCommandHandler(IRepositoryBase<StockItem> sto
     public async Task<StockItemDto?> Handle(UpdateStockItemCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        var item = await stockItems.GetByIdAsync(request.Id);
+        var matches = await stockItems.GetAsync(
+            predicate: item => item.Id == request.Id,
+            includes: new(),
+            disableTracking: false);
+        var item = matches.FirstOrDefault();
         if (item is null) return null;
 
         var normalizedSku = request.Sku.Trim().ToUpperInvariant();
