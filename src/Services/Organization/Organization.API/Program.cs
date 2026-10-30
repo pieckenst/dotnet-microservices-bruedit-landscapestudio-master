@@ -6,6 +6,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Organization.Application;
+using Organization.Application.Contracts;
+using Organization.API.Services;
 using Organization.Infrastructure;
 using Organization.Infrastructure.Persistence;
 using Serilog;
@@ -31,6 +33,13 @@ var audience = builder.Configuration["Jwt:Audience"] ?? "LandscapeStudio.Clients
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddOrganizationApplication(builder.Configuration);
 builder.Services.AddOrganizationInfrastructure(builder.Configuration);
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<IProjectAssignmentLookup, HttpProjectAssignmentLookup>(client =>
+{
+    var projectBaseUrl = builder.Configuration["Project:BaseUrl"] ?? "http://localhost:8002/";
+    client.BaseAddress = new Uri(projectBaseUrl, UriKind.Absolute);
+    client.Timeout = TimeSpan.FromSeconds(5);
+});
 builder.Services.AddMutationAuditEvents<OrganizationContext>(builder.Configuration, "Organization");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
