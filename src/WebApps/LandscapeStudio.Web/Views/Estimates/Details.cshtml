@@ -45,13 +45,41 @@
             <form asp-action="AddLineItem" asp-route-id="@estimate.Id" method="post" class="form-stack">
                 @Html.AntiForgeryToken()
                 <input type="hidden" name="EstimateId" value="@estimate.Id" />
+                @if (!string.IsNullOrWhiteSpace(Model.CatalogError))
+                {
+                    <div class="alert alert-warning" role="status">@Model.CatalogError</div>
+                }
                 <div class="form-grid">
-                    <div class="field"><label for="ItemType">Line type</label><select id="ItemType" name="ItemType"><option value="0">Work</option><option value="1" selected>Material</option><option value="2">Plant</option><option value="3">Equipment</option><option value="4">Other</option></select></div>
-                    <div class="field"><label for="Description">Description <span class="required">*</span></label><input id="Description" name="Description" required maxlength="500" /></div>
-                    <div class="field"><label for="Quantity">Quantity <span class="required">*</span></label><input id="Quantity" name="Quantity" type="number" step="0.001" min="0.001" max="1000000000" value="1" required /></div>
-                    <div class="field"><label for="UnitSymbol">Unit <span class="required">*</span></label><input id="UnitSymbol" name="UnitSymbol" value="pcs" maxlength="24" required /></div>
-                    <div class="field"><label for="UnitPrice">Unit sell price <span class="required">*</span></label><input id="UnitPrice" name="UnitPrice" type="number" step="0.01" min="0" value="0" required /></div>
-                    <div class="field"><label for="UnitCost">Unit cost (optional)</label><input id="UnitCost" name="UnitCost" type="number" step="0.01" min="0" placeholder="Leave blank if unknown" /></div>
+                    <div class="field field-full">
+                        <label for="CatalogItemId">Catalog source (optional)</label>
+                        <select id="CatalogItemId" name="CatalogItemId">
+                            <option value="">Custom estimate line — no Catalog link</option>
+                            @foreach (var option in Model.CatalogItems)
+                            {
+                                <option value="@option.Id"
+                                        data-item-type="@option.ItemType"
+                                        data-description="@option.Description"
+                                        data-unit="@option.UnitSymbol"
+                                        data-price="@option.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                        selected="@(Model.NewLineItem.CatalogItemId == option.Id ? "selected" : null)">
+                                    @option.Name · @EnumLabel(System.Text.Json.JsonDocument.Parse(option.ItemType.ToString()).RootElement, new[] { "Work", "Material", "Plant" }) · @option.UnitSymbol
+                                </option>
+                            }
+                        </select>
+                        <small>Selecting a Catalog item fills the line type, description, unit and default sell price. The estimate retains a snapshot of its own price and text.</small>
+                    </div>
+                    <div class="field"><label for="ItemType">Line type</label><select id="ItemType" name="ItemType">
+                        <option value="0" selected="@(Model.NewLineItem.ItemType == 0 ? "selected" : null)">Work</option>
+                        <option value="1" selected="@(Model.NewLineItem.ItemType == 1 ? "selected" : null)">Material</option>
+                        <option value="2" selected="@(Model.NewLineItem.ItemType == 2 ? "selected" : null)">Plant</option>
+                        <option value="3" selected="@(Model.NewLineItem.ItemType == 3 ? "selected" : null)">Equipment</option>
+                        <option value="4" selected="@(Model.NewLineItem.ItemType == 4 ? "selected" : null)">Other</option>
+                    </select></div>
+                    <div class="field"><label for="Description">Description <span class="required">*</span></label><input id="Description" name="Description" required maxlength="500" value="@Model.NewLineItem.Description" /></div>
+                    <div class="field"><label for="Quantity">Quantity <span class="required">*</span></label><input id="Quantity" name="Quantity" type="number" step="0.001" min="0.001" max="1000000000" value="@Model.NewLineItem.Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></div>
+                    <div class="field"><label for="UnitSymbol">Unit <span class="required">*</span></label><input id="UnitSymbol" name="UnitSymbol" value="@Model.NewLineItem.UnitSymbol" maxlength="24" required /></div>
+                    <div class="field"><label for="UnitPrice">Unit sell price <span class="required">*</span></label><input id="UnitPrice" name="UnitPrice" type="number" step="0.01" min="0" value="@Model.NewLineItem.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" required /></div>
+                    <div class="field"><label for="UnitCost">Unit cost (optional)</label><input id="UnitCost" name="UnitCost" type="number" step="0.01" min="0" value="@(Model.NewLineItem.UnitCost?.ToString(System.Globalization.CultureInfo.InvariantCulture))" placeholder="Leave blank if unknown" /></div>
                 </div>
                 <div class="form-actions form-actions-start"><button class="button button-primary" type="submit">Add line item <span aria-hidden="true">→</span></button></div>
             </form>
@@ -74,6 +102,27 @@
             </div>
         </section>
     }
+}
+@section Scripts {
+    <script>
+        (() => {
+            const catalog = document.getElementById("CatalogItemId");
+            const type = document.getElementById("ItemType");
+            const description = document.getElementById("Description");
+            const unit = document.getElementById("UnitSymbol");
+            const price = document.getElementById("UnitPrice");
+            if (!catalog || !type || !description || !unit || !price) return;
+
+            catalog.addEventListener("change", () => {
+                const option = catalog.selectedOptions[0];
+                if (!option || !option.value) return;
+                type.value = option.dataset.itemType ?? type.value;
+                description.value = option.dataset.description ?? description.value;
+                unit.value = option.dataset.unit ?? unit.value;
+                price.value = option.dataset.price ?? price.value;
+            });
+        })();
+    </script>
 }
 @functions {
     private static string EnumLabel(System.Text.Json.JsonElement value, string[] names)
