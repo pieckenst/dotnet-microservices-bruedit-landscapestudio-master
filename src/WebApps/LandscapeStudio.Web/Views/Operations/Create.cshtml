@@ -101,6 +101,10 @@
             <div class="form-grid">
                 <div class="field"><label asp-for="PaymentTermDays">Payment terms (days)</label><input asp-for="PaymentTermDays" type="number" min="0" max="365" /><span asp-validation-for="PaymentTermDays" class="field-error"></span></div>
                 <div class="field"><label asp-for="CurrencyCode">Currency code</label><input asp-for="CurrencyCode" maxlength="3" minlength="3" placeholder="BYN" /><span asp-validation-for="CurrencyCode" class="field-error"></span></div>
+                @if (isEdit)
+                {
+                    <div class="field field-checkbox"><label class="toggle-line"><input asp-for="IsActive" type="checkbox" /> Active and available for new purchase orders</label></div>
+                }
             </div>
         </section>
     }

@@ -289,7 +289,8 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
                 code = model.Code.Trim().ToUpperInvariant(), name = model.Name.Trim(),
                 contactName = model.ContactName.Trim(), email = Clean(model.Email), phone = Clean(model.Phone),
                 taxIdentifier = Clean(model.TaxIdentifier), address = model.Address.Trim(),
-                paymentTermDays = model.PaymentTermDays, currencyCode = model.CurrencyCode.Trim().ToUpperInvariant()
+                paymentTermDays = model.PaymentTermDays, currencyCode = model.CurrencyCode.Trim().ToUpperInvariant(),
+                isActive = model.IsActive
             },
             "stock-items" => new
             {
