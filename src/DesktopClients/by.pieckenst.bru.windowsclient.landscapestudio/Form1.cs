@@ -35,6 +35,7 @@ public partial class Form1 : KryptonForm
     private KryptonButton? _editEmployeeButton;
     private KryptonButton? _changeEmployeeStatusButton;
     private KryptonButton? _editPositionButton;
+    private KryptonButton? _changeAssignmentStatusButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -359,6 +360,13 @@ public partial class Form1 : KryptonForm
                 create.Margin = new Padding(8, 0, 0, 0);
                 create.Click += async (_, _) => await CreateWorkAssignmentAsync();
                 actions.Controls.Add(create);
+
+                var changeStatus = CreateSecondaryButton("Change status");
+                changeStatus.Margin = new Padding(8, 0, 0, 0);
+                changeStatus.Enabled = false;
+                changeStatus.Click += async (_, _) => await ChangeAssignmentStatusAsync();
+                _changeAssignmentStatusButton = changeStatus;
+                actions.Controls.Add(changeStatus);
             }
             if (_api is not null && page.Equals("Positions", StringComparison.OrdinalIgnoreCase))
             {
@@ -692,6 +700,21 @@ public partial class Form1 : KryptonForm
                     await EditPositionAsync();
             };
         }
+        if (page.Equals("Work assignments", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                var selected = GetSelectedGridRecordId().HasValue;
+                var statusColumn = grid.Columns.Cast<DataGridViewColumn>()
+                    .FirstOrDefault(column => column.Name.Equals("Status", StringComparison.OrdinalIgnoreCase));
+                var status = grid.SelectedRows.Count > 0 && statusColumn is not null
+                    ? grid.SelectedRows[0].Cells[statusColumn.Index].Value?.ToString()
+                    : null;
+                var terminal = status is "Completed" or "Cancelled";
+                if (_changeAssignmentStatusButton is not null && !_changeAssignmentStatusButton.IsDisposed)
+                    _changeAssignmentStatusButton.Enabled = selected && !terminal;
+            };
+        }
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -847,6 +870,34 @@ public partial class Form1 : KryptonForm
         using var dialog = new CreateCatalogRecordDialog(_api, _catalogResource, id.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Plant & material catalog");
+    }
+
+    private async Task ChangeAssignmentStatusAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select a work assignment in the table first.",
+                "No assignment selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        var statusColumn = _currentGrid?.Columns.Cast<DataGridViewColumn>()
+            .FirstOrDefault(column => column.Name.Equals("Status", StringComparison.OrdinalIgnoreCase));
+        var currentStatus = _currentGrid?.SelectedRows.Count > 0 && statusColumn is not null
+            ? _currentGrid.SelectedRows[0].Cells[statusColumn.Index].Value?.ToString() ?? "Planned"
+            : "Planned";
+        if (currentStatus is "Completed" or "Cancelled")
+        {
+            MessageBox.Show(this, "Completed and cancelled assignments are terminal.",
+                "Status cannot be changed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new ChangeAssignmentStatusDialog(_api, id.Value, currentStatus);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Work assignments");
     }
 
     private async Task CreateWorkAssignmentAsync()
