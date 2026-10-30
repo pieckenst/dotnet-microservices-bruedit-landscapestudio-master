@@ -127,7 +127,9 @@ public sealed class UpdateEstimateCommandHandler(IEstimateRepository estimates)
         return GetEstimatesQueryHandler.Map(estimate);
     }
 }
-public sealed class AddEstimateLineItemCommandHandler(IEstimateRepository estimates)
+public sealed class AddEstimateLineItemCommandHandler(
+    IEstimateRepository estimates,
+    ICatalogItemLookup catalogItems)
     : IRequestHandler<AddEstimateLineItemCommand, EstimateDto?>
 {
     public async Task<EstimateDto?> Handle(AddEstimateLineItemCommand request, CancellationToken cancellationToken)
@@ -135,6 +137,28 @@ public sealed class AddEstimateLineItemCommandHandler(IEstimateRepository estima
         cancellationToken.ThrowIfCancellationRequested();
         var estimate = await estimates.GetByIdWithItemsAsync(request.EstimateId, tracking: true, cancellationToken);
         if (estimate is null) return null;
+
+        if (request.CatalogItemId.HasValue)
+        {
+            var catalogItem = await catalogItems.FindAsync(
+                request.CatalogItemId.Value, request.ItemType, cancellationToken);
+
+            if (catalogItem is null)
+                throw new NotFoundException("Catalog item", request.CatalogItemId.Value);
+            if (!catalogItem.IsActive)
+                throw new FluentValidation.ValidationException("An inactive Catalog item cannot be added to an estimate.");
+            if (!catalogItem.MeasurementUnitIsActive)
+                throw new FluentValidation.ValidationException("The Catalog item's measurement unit is inactive.");
+            if (!string.Equals(
+                    request.UnitSymbol.Trim(),
+                    catalogItem.MeasurementUnitSymbol,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                throw new FluentValidation.ValidationException(
+                    $"The selected Catalog item uses '{catalogItem.MeasurementUnitSymbol}', not '{request.UnitSymbol.Trim()}'. Refresh the item and select its current measurement unit.");
+            }
+        }
+
         var item = new EstimateLineItem(Guid.NewGuid(), estimate.Id, request.ItemType, request.Description,
             request.Quantity, request.UnitSymbol, request.UnitPrice, request.UnitCost, request.CatalogItemId);
         await estimates.AddLineItemAsync(estimate, item, cancellationToken);
