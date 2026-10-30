@@ -12,6 +12,7 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Shared.ServiceKit.Auditing;
 using Shared.ServiceKit.Outbox;
+using Shared.Common.Outbox;
 using System.Security.Claims;
 using System.Text;
 
@@ -79,6 +80,7 @@ await using (var scope = app.Services.CreateAsyncScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<IdentityContext>();
     await context.Database.EnsureCreatedAsync();
+    await context.Database.EnsureIntegrationOutboxSchemaAsync();
     await IdentityContextSeed.SeedAsync(
         context,
         scope.ServiceProvider.GetRequiredService<Microsoft.AspNetCore.Identity.IPasswordHasher<UserCredential>>(),
