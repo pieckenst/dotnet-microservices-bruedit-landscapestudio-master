@@ -33,13 +33,15 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["stock-items"] = "/StockItems"
         };
 
-    // Edit/archive routes are deliberately limited to Project-owned reference data
-    // until the other owning services expose the complete update lifecycle.
     private static readonly IReadOnlyDictionary<string, string> UpdateEndpoints =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["clients"] = "/Clients",
-            ["land-plots"] = "/LandPlots"
+            ["land-plots"] = "/LandPlots",
+            ["plants"] = "/Catalog/Plants",
+            ["materials"] = "/Catalog/Materials",
+            ["work-types"] = "/Catalog/WorkTypes",
+            ["suppliers"] = "/Suppliers"
         };
 
     public async Task<IActionResult> Index(string resource = "plants", CancellationToken cancellationToken = default)
@@ -144,15 +146,27 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             {
                 Resource = resource,
                 Title = Resources[resource].Title,
-                IsActive = true,
+                IsActive = ReadBoolean(item, "isActive", defaultValue: true),
                 Name = ReadString(item, resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ? "displayName" : "name") ?? string.Empty,
                 Email = ReadString(item, "email"),
                 Phone = ReadString(item, "phone"),
                 Address = ReadString(item, resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ? "billingAddress" : "address") ?? string.Empty,
                 AreaSquareMetres = ReadDecimal(item, "areaSquareMetres"),
                 SoilType = ReadString(item, "soilType"),
-                Notes = ReadString(item, "notes")
+                Notes = ReadString(item, "notes"),
+                LatinName = ReadString(item, "latinName"),
+                Sku = ReadString(item, "sku") ?? string.Empty,
+                Description = ReadString(item, "description") ?? string.Empty,
+                MeasurementUnitId = ReadGuid(item, "measurementUnitId"),
+                UnitPrice = ReadDecimal(item, "unitPrice"),
+                BasePrice = ReadDecimal(item, "basePrice"),
+                Code = ReadString(item, "code") ?? string.Empty,
+                ContactName = ReadString(item, "contactName") ?? string.Empty,
+                TaxIdentifier = ReadString(item, "taxIdentifier"),
+                PaymentTermDays = (int)ReadDecimal(item, "paymentTermDays"),
+                CurrencyCode = ReadString(item, "currencyCode") ?? "BYN"
             };
+            await LoadLookupsAsync(model, cancellationToken);
             ViewData["EditId"] = id;
             return View("Create", model);
         }
@@ -207,7 +221,9 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Archive(string resource, Guid id, CancellationToken cancellationToken)
     {
-        if (id == Guid.Empty || string.IsNullOrWhiteSpace(resource) || !UpdateEndpoints.ContainsKey(resource))
+        if (id == Guid.Empty || string.IsNullOrWhiteSpace(resource) ||
+            !(resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ||
+              resource.Equals("land-plots", StringComparison.OrdinalIgnoreCase)))
             return NotFound();
 
         var endpoint = UpdateEndpoints[resource];
@@ -229,30 +245,45 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         return RedirectToAction(nameof(Index), new { resource });
     }
 
-    private static object BuildUpdatePayload(OperationFormViewModel model, Guid id)
-    {
-        if (model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase))
+    private static object BuildUpdatePayload(OperationFormViewModel model, Guid id) =>
+        model.Resource.ToLowerInvariant() switch
         {
-            return new
+            "clients" => new
             {
-                id,
-                displayName = model.Name.Trim(),
-                email = Clean(model.Email),
-                phone = Clean(model.Phone),
-                billingAddress = Clean(model.Address)
-            };
-        }
-
-        return new
-        {
-            id,
-            name = model.Name.Trim(),
-            address = model.Address.Trim(),
-            areaSquareMetres = model.AreaSquareMetres,
-            soilType = Clean(model.SoilType),
-            notes = Clean(model.Notes)
+                id, displayName = model.Name.Trim(), email = Clean(model.Email),
+                phone = Clean(model.Phone), billingAddress = Clean(model.Address)
+            },
+            "land-plots" => new
+            {
+                id, name = model.Name.Trim(), address = model.Address.Trim(),
+                areaSquareMetres = model.AreaSquareMetres, soilType = Clean(model.SoilType), notes = Clean(model.Notes)
+            },
+            "plants" => new
+            {
+                id, name = model.Name.Trim(), latinName = Clean(model.LatinName),
+                description = model.Description ?? string.Empty, measurementUnitId = model.MeasurementUnitId,
+                unitPrice = model.UnitPrice, isActive = model.IsActive
+            },
+            "materials" => new
+            {
+                id, name = model.Name.Trim(), sku = model.Sku.Trim().ToUpperInvariant(),
+                description = model.Description ?? string.Empty, measurementUnitId = model.MeasurementUnitId,
+                unitPrice = model.UnitPrice, isActive = model.IsActive
+            },
+            "work-types" => new
+            {
+                id, name = model.Name.Trim(), description = model.Description ?? string.Empty,
+                measurementUnitId = model.MeasurementUnitId, basePrice = model.BasePrice, isActive = model.IsActive
+            },
+            "suppliers" => new
+            {
+                code = model.Code.Trim().ToUpperInvariant(), name = model.Name.Trim(),
+                contactName = model.ContactName.Trim(), email = Clean(model.Email), phone = Clean(model.Phone),
+                taxIdentifier = Clean(model.TaxIdentifier), address = model.Address.Trim(),
+                paymentTermDays = model.PaymentTermDays, currencyCode = model.CurrencyCode.Trim().ToUpperInvariant()
+            },
+            _ => throw new InvalidOperationException($"Editing '{model.Resource}' is not supported.")
         };
-    }
 
     private async Task LoadLookupsAsync(OperationFormViewModel model, CancellationToken cancellationToken)
     {
@@ -379,6 +410,15 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         value.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined)
             ? value.ValueKind == JsonValueKind.String ? value.GetString() : value.ToString()
             : null;
+
+    private static Guid ReadGuid(JsonElement source, string property) =>
+        Guid.TryParse(ReadString(source, property), out var value) ? value : Guid.Empty;
+
+    private static bool ReadBoolean(JsonElement source, string property, bool defaultValue = false) =>
+        source.ValueKind == JsonValueKind.Object &&
+        source.TryGetProperty(property, out var value) && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+            ? value.GetBoolean()
+            : defaultValue;
 
     private static decimal ReadDecimal(JsonElement source, string property) =>
         decimal.TryParse(ReadString(source, property),
