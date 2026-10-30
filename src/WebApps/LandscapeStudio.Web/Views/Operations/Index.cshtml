@@ -7,9 +7,15 @@
         ("suppliers", "Suppliers"), ("stock-items", "Inventory"), ("purchase-orders", "Purchase orders"),
         ("deliveries", "Deliveries")
     };
+    var canCreate = new[] { "plants", "materials", "work-types", "suppliers", "stock-items" }
+        .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
 }
 <div class="page-heading page-heading-compact">
-    <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS</span><h1>@Model.Title <span>workspace.</span></h1><p>This table is populated from the configured gateway; unavailable data is shown as an error, never fabricated as sample records.</p></div>
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS</span><h1>@Model.Title <span>workspace.</span></h1><p>Live records returned by the connected service. Changes are validated and persisted by the service that owns each record.</p></div>
+    @if (canCreate)
+    {
+        <a class="button button-primary" asp-action="Create" asp-route-resource="@Model.Resource">＋ New record</a>
+    }
 </div>
 <div class="resource-tabs">
     @foreach (var resource in resources)
@@ -31,10 +37,12 @@
             <tr>@foreach (var column in Model.Columns) { <td>@(item.Values.TryGetValue(column, out var value) ? value : "—")</td> }</tr>
         }
         </tbody></table></div>
-        <div class="table-footer"><span>Displaying records returned by the API.</span></div>
+        <div class="table-footer"><span>Displaying the latest records returned by the service.</span></div>
     }
     else if (string.IsNullOrWhiteSpace(Model.Error))
     {
-        <div class="empty-state"><span class="empty-illustration">⌕</span><h3>No records returned</h3><p>The service returned no rows for this request. New entries and editing workflows will be added alongside each endpoint's validated contract.</p></div>
+        <div class="empty-state"><span class="empty-illustration">⌕</span><h3>No records yet</h3><p>The service returned an empty result. Create a record to start using this workspace.</p>
+            @if (canCreate) { <a class="button button-secondary" asp-action="Create" asp-route-resource="@Model.Resource">Create the first record</a> }
+        </div>
     }
 </section>

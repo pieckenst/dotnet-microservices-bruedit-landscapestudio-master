@@ -1,0 +1,93 @@
+@model OperationFormViewModel
+@{
+    ViewData["Title"] = "New " + Model.Title;
+    ViewData["Section"] = Model.Title + " / New";
+    var resource = Model.Resource.ToLowerInvariant();
+    var isCatalog = resource is "plants" or "materials" or "work-types";
+    var isSupplier = resource == "suppliers";
+    var isStock = resource == "stock-items";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS / NEW RECORD</span><h1>Add to <span>@Model.Title.ToLowerInvariant().</span></h1><p>The request is validated by the owning service before it is saved.</p></div>
+    <a class="button button-quiet" asp-action="Index" asp-route-resource="@Model.Resource">← Back to @Model.Title.ToLowerInvariant()</a>
+</div>
+<form asp-action="Create" method="post" class="form-workspace">
+    @Html.AntiForgeryToken()
+    <input asp-for="Resource" type="hidden" />
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    @if (!string.IsNullOrWhiteSpace(Model.LookupError))
+    {
+        <div class="alert alert-error" role="alert">@Model.LookupError</div>
+    }
+    @if (isCatalog)
+    {
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">01</span><div><h2>Catalog details</h2><p>Product identity, unit of measurement and pricing.</p></div></div>
+            <div class="form-grid">
+                <div class="field"><label asp-for="Name">Name <span class="required">*</span></label><input asp-for="Name" maxlength="160" placeholder="Enter a clear display name" /><span asp-validation-for="Name" class="field-error"></span></div>
+                @if (resource == "plants")
+                {
+                    <div class="field"><label asp-for="LatinName">Latin name</label><input asp-for="LatinName" maxlength="200" placeholder="Botanical name (optional)" /><span asp-validation-for="LatinName" class="field-error"></span></div>
+                }
+                @if (resource == "materials")
+                {
+                    <div class="field"><label asp-for="Sku">SKU <span class="required">*</span></label><input asp-for="Sku" maxlength="64" placeholder="MAT-0001" /><span asp-validation-for="Sku" class="field-error"></span></div>
+                }
+                <div class="field field-full"><label asp-for="Description">Description</label><textarea asp-for="Description" rows="3" maxlength="4000" placeholder="Specification, grade, size or other useful details"></textarea><span asp-validation-for="Description" class="field-error"></span></div>
+                <div class="field"><label asp-for="MeasurementUnitId">Measurement unit <span class="required">*</span></label><select asp-for="MeasurementUnitId"><option value="">Select a unit</option>@foreach (var unit in Model.MeasurementUnits) { <option value="@unit.Id">@unit.Name (@unit.Symbol)</option> }</select><span asp-validation-for="MeasurementUnitId" class="field-error"></span></div>
+                <div class="field">
+                    @if (resource == "work-types")
+                    {
+                        <label asp-for="BasePrice">Base price</label>
+                        <input asp-for="BasePrice" type="number" min="0" max="1000000000" step="0.01" />
+                        <span asp-validation-for="BasePrice" class="field-error"></span>
+                    }
+                    else
+                    {
+                        <label asp-for="UnitPrice">Unit price</label>
+                        <input asp-for="UnitPrice" type="number" min="0" max="1000000000" step="0.01" />
+                        <span asp-validation-for="UnitPrice" class="field-error"></span>
+                    }
+                </div>
+                <div class="field field-checkbox"><label class="toggle-line"><input asp-for="IsActive" type="checkbox" /> Active and available for new estimates</label></div>
+            </div>
+        </section>
+    }
+    else if (isSupplier)
+    {
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">01</span><div><h2>Supplier identity</h2><p>Supplier code, legal name and primary contact.</p></div></div>
+            <div class="form-grid">
+                <div class="field"><label asp-for="Code">Supplier code <span class="required">*</span></label><input asp-for="Code" maxlength="32" placeholder="SUP-001" /><span asp-validation-for="Code" class="field-error"></span></div>
+                <div class="field"><label asp-for="Name">Supplier name <span class="required">*</span></label><input asp-for="Name" maxlength="200" /><span asp-validation-for="Name" class="field-error"></span></div>
+                <div class="field"><label asp-for="ContactName">Contact person <span class="required">*</span></label><input asp-for="ContactName" maxlength="120" /><span asp-validation-for="ContactName" class="field-error"></span></div>
+                <div class="field"><label asp-for="Email">Email</label><input asp-for="Email" type="email" maxlength="254" /><span asp-validation-for="Email" class="field-error"></span></div>
+                <div class="field"><label asp-for="Phone">Phone</label><input asp-for="Phone" maxlength="40" /><span asp-validation-for="Phone" class="field-error"></span></div>
+                <div class="field"><label asp-for="TaxIdentifier">Tax identifier</label><input asp-for="TaxIdentifier" maxlength="80" /><span asp-validation-for="TaxIdentifier" class="field-error"></span></div>
+                <div class="field field-full"><label asp-for="Address">Address <span class="required">*</span></label><textarea asp-for="Address" rows="2" maxlength="500"></textarea><span asp-validation-for="Address" class="field-error"></span></div>
+            </div>
+        </section>
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">02</span><div><h2>Commercial terms</h2><p>Payment term and the currency used for purchase orders.</p></div></div>
+            <div class="form-grid">
+                <div class="field"><label asp-for="PaymentTermDays">Payment terms (days)</label><input asp-for="PaymentTermDays" type="number" min="0" max="365" /><span asp-validation-for="PaymentTermDays" class="field-error"></span></div>
+                <div class="field"><label asp-for="CurrencyCode">Currency code</label><input asp-for="CurrencyCode" maxlength="3" minlength="3" placeholder="BYN" /><span asp-validation-for="CurrencyCode" class="field-error"></span></div>
+            </div>
+        </section>
+    }
+    else if (isStock)
+    {
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">01</span><div><h2>Stock item</h2><p>Define the stock-keeping record. A catalog link is optional.</p></div></div>
+            <div class="form-grid">
+                <div class="field"><label asp-for="Sku">SKU <span class="required">*</span></label><input asp-for="Sku" maxlength="48" placeholder="STK-0001" /><span asp-validation-for="Sku" class="field-error"></span></div>
+                <div class="field"><label asp-for="CatalogItemId">Catalog item ID</label><input asp-for="CatalogItemId" placeholder="Optional catalog GUID" /><span asp-validation-for="CatalogItemId" class="field-error"></span><small>Link a plant or material by its catalog record ID.</small></div>
+                <div class="field field-full"><label asp-for="Description">Description <span class="required">*</span></label><input asp-for="Description" maxlength="200" /><span asp-validation-for="Description" class="field-error"></span></div>
+                <div class="field"><label asp-for="UnitSymbol">Unit symbol <span class="required">*</span></label><input asp-for="UnitSymbol" maxlength="24" placeholder="pcs, m, kg" /><span asp-validation-for="UnitSymbol" class="field-error"></span></div>
+                <div class="field"><label asp-for="StorageLocation">Storage location <span class="required">*</span></label><input asp-for="StorageLocation" maxlength="100" placeholder="Warehouse A / Rack 02" /><span asp-validation-for="StorageLocation" class="field-error"></span></div>
+                <div class="field"><label asp-for="ReorderLevel">Reorder level</label><input asp-for="ReorderLevel" type="number" min="0" max="1000000000" step="0.001" /><span asp-validation-for="ReorderLevel" class="field-error"></span><small>Low-stock alerts compare on-hand quantity against this threshold.</small></div>
+            </div>
+        </section>
+    }
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index" asp-route-resource="@Model.Resource">Cancel</a><button class="button button-primary" type="submit" @(isCatalog && Model.MeasurementUnits.Count == 0 ? "disabled" : null)>Create record <span aria-hidden="true">→</span></button></div>
+</form>

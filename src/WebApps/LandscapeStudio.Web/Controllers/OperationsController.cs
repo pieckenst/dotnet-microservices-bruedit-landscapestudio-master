@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using LandscapeStudio.Web.Models;
 using LandscapeStudio.Web.Services;
@@ -18,6 +17,16 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             ["stock-items"] = ("Inventory", "/StockItems?page=1&pageSize=100"),
             ["purchase-orders"] = ("Purchase orders", "/PurchaseOrders?page=1&pageSize=100"),
             ["deliveries"] = ("Supplier deliveries", "/Deliveries?page=1&pageSize=100")
+        };
+
+    private static readonly IReadOnlyDictionary<string, string> CreateEndpoints =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["plants"] = "/Catalog/Plants",
+            ["materials"] = "/Catalog/Materials",
+            ["work-types"] = "/Catalog/WorkTypes",
+            ["suppliers"] = "/Suppliers",
+            ["stock-items"] = "/StockItems"
         };
 
     public async Task<IActionResult> Index(string resource = "plants", CancellationToken cancellationToken = default)
@@ -51,6 +60,167 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
             });
         }
     }
+
+    [HttpGet]
+    public async Task<IActionResult> Create(string resource, CancellationToken cancellationToken)
+    {
+        if (!CreateEndpoints.ContainsKey(resource))
+            return NotFound();
+
+        var model = new OperationFormViewModel
+        {
+            Resource = resource,
+            Title = Resources[resource].Title,
+            IsActive = true,
+            CurrencyCode = "BYN",
+            PaymentTermDays = 30
+        };
+        await LoadLookupsAsync(model, cancellationToken);
+        return View(model);
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(OperationFormViewModel model, CancellationToken cancellationToken)
+    {
+        if (!CreateEndpoints.TryGetValue(model.Resource ?? string.Empty, out var endpoint))
+            return NotFound();
+
+        model.Title = Resources[model.Resource].Title;
+        ValidateForResource(model);
+        if (!ModelState.IsValid)
+        {
+            await LoadLookupsAsync(model, cancellationToken);
+            return View(model);
+        }
+
+        try
+        {
+            await api.PostAsync<object, JsonElement>(
+                endpoint, BuildPayload(model), cancellationToken: cancellationToken);
+            TempData["Success"] = $"{model.Title.TrimEnd('.')}: “{GetRecordName(model)}” created successfully.";
+            return RedirectToAction(nameof(Index), new { resource = model.Resource });
+        }
+        catch (ApiException exception)
+        {
+            logger.LogWarning(exception, "The {Resource} API rejected a create request.", model.Resource);
+            ModelState.AddModelError(string.Empty, exception.Message);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogError(exception, "Could not create a record in {Resource}.", model.Resource);
+            ModelState.AddModelError(string.Empty, "The service could not be reached or returned an invalid response. The record was not confirmed as created.");
+        }
+
+        await LoadLookupsAsync(model, cancellationToken);
+        return View(model);
+    }
+
+    private async Task LoadLookupsAsync(OperationFormViewModel model, CancellationToken cancellationToken)
+    {
+        if (!IsCatalogItem(model.Resource)) return;
+        try
+        {
+            var page = await api.GetAsync<ApiPage<MeasurementUnitOption>>(
+                "/Catalog/MeasurementUnits?page=1&pageSize=200", cancellationToken);
+            model.MeasurementUnits = page.Items.Where(unit => unit.IsActive)
+                .OrderBy(unit => unit.Name).ToArray();
+            if (model.MeasurementUnits.Count == 0)
+                model.LookupError = "No active measurement units exist. Create a measurement unit in Catalog before adding this record.";
+        }
+        catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogWarning(exception, "Measurement units could not be loaded for {Resource}.", model.Resource);
+            model.LookupError = "Measurement units could not be loaded. Check Catalog service availability and your catalog.read permission.";
+            model.MeasurementUnits = Array.Empty<MeasurementUnitOption>();
+        }
+    }
+
+    private void ValidateForResource(OperationFormViewModel model)
+    {
+        static bool Missing(string? value) => string.IsNullOrWhiteSpace(value);
+        switch (model.Resource.ToLowerInvariant())
+        {
+            case "plants":
+                if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Plant name is required.");
+                if (model.MeasurementUnitId == Guid.Empty) ModelState.AddModelError(nameof(model.MeasurementUnitId), "Choose an active measurement unit.");
+                break;
+            case "materials":
+                if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Material name is required.");
+                if (Missing(model.Sku)) ModelState.AddModelError(nameof(model.Sku), "Material SKU is required.");
+                if (model.MeasurementUnitId == Guid.Empty) ModelState.AddModelError(nameof(model.MeasurementUnitId), "Choose an active measurement unit.");
+                break;
+            case "work-types":
+                if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Work type name is required.");
+                if (model.MeasurementUnitId == Guid.Empty) ModelState.AddModelError(nameof(model.MeasurementUnitId), "Choose an active measurement unit.");
+                break;
+            case "suppliers":
+                if (Missing(model.Code)) ModelState.AddModelError(nameof(model.Code), "Supplier code is required.");
+                if (Missing(model.Name)) ModelState.AddModelError(nameof(model.Name), "Supplier name is required.");
+                if (Missing(model.ContactName)) ModelState.AddModelError(nameof(model.ContactName), "Contact name is required.");
+                if (Missing(model.Address)) ModelState.AddModelError(nameof(model.Address), "Supplier address is required.");
+                if (Missing(model.CurrencyCode) || model.CurrencyCode.Trim().Length != 3 ||
+                    !model.CurrencyCode.All(char.IsLetter))
+                    ModelState.AddModelError(nameof(model.CurrencyCode), "Enter a three-letter currency code.");
+                if (model.PaymentTermDays is < 0 or > 365)
+                    ModelState.AddModelError(nameof(model.PaymentTermDays), "Payment terms must be between 0 and 365 days.");
+                break;
+            case "stock-items":
+                if (Missing(model.Sku)) ModelState.AddModelError(nameof(model.Sku), "Stock SKU is required.");
+                if (Missing(model.Description)) ModelState.AddModelError(nameof(model.Description), "Stock description is required.");
+                if (Missing(model.UnitSymbol)) ModelState.AddModelError(nameof(model.UnitSymbol), "Unit symbol is required.");
+                if (Missing(model.StorageLocation)) ModelState.AddModelError(nameof(model.StorageLocation), "Storage location is required.");
+                break;
+        }
+    }
+
+    private static object BuildPayload(OperationFormViewModel model) =>
+        model.Resource.ToLowerInvariant() switch
+        {
+            "plants" => new
+            {
+                name = model.Name.Trim(), latinName = Clean(model.LatinName),
+                description = model.Description ?? string.Empty, measurementUnitId = model.MeasurementUnitId,
+                unitPrice = model.UnitPrice, isActive = model.IsActive
+            },
+            "materials" => new
+            {
+                name = model.Name.Trim(), sku = model.Sku.Trim().ToUpperInvariant(),
+                description = model.Description ?? string.Empty, measurementUnitId = model.MeasurementUnitId,
+                unitPrice = model.UnitPrice, isActive = model.IsActive
+            },
+            "work-types" => new
+            {
+                name = model.Name.Trim(), description = model.Description ?? string.Empty,
+                measurementUnitId = model.MeasurementUnitId, basePrice = model.BasePrice, isActive = model.IsActive
+            },
+            "suppliers" => new
+            {
+                code = model.Code.Trim().ToUpperInvariant(), name = model.Name.Trim(),
+                contactName = model.ContactName.Trim(), email = Clean(model.Email), phone = Clean(model.Phone),
+                taxIdentifier = Clean(model.TaxIdentifier), address = model.Address.Trim(),
+                paymentTermDays = model.PaymentTermDays, currencyCode = model.CurrencyCode.Trim().ToUpperInvariant()
+            },
+            "stock-items" => new
+            {
+                catalogItemId = model.CatalogItemId, sku = model.Sku.Trim().ToUpperInvariant(),
+                description = model.Description.Trim(), unitSymbol = model.UnitSymbol.Trim(),
+                storageLocation = model.StorageLocation.Trim(), reorderLevel = model.ReorderLevel
+            },
+            _ => throw new InvalidOperationException("The selected operation is not supported.")
+        };
+
+    private static bool IsCatalogItem(string? resource) =>
+        resource is not null && resource.Equals("plants", StringComparison.OrdinalIgnoreCase) ||
+        resource is not null && resource.Equals("materials", StringComparison.OrdinalIgnoreCase) ||
+        resource is not null && resource.Equals("work-types", StringComparison.OrdinalIgnoreCase);
+
+    private static string GetRecordName(OperationFormViewModel model) =>
+        model.Resource.Equals("suppliers", StringComparison.OrdinalIgnoreCase) ? model.Name :
+        model.Resource.Equals("stock-items", StringComparison.OrdinalIgnoreCase) ? model.Sku :
+        model.Name;
+
+    private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     private static IReadOnlyList<OperationItem> ReadRows(JsonElement root)
     {
