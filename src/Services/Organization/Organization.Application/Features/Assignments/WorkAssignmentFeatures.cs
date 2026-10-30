@@ -1,5 +1,6 @@
 using FluentValidation;
 using MediatR;
+using Organization.Application.Contracts;
 using Organization.Application.DTOs;
 using Organization.Domain.Entities;
 using Organization.Domain.Enums;
@@ -61,12 +62,34 @@ public sealed class GetWorkAssignmentsQueryHandler(IRepositoryBase<WorkAssignmen
     }
 }
 public sealed class CreateWorkAssignmentCommandHandler(
-    IRepositoryBase<WorkAssignment> assignments, IRepositoryBase<Employee> employees, IRepositoryBase<Brigade> brigades)
+    IRepositoryBase<WorkAssignment> assignments,
+    IRepositoryBase<Employee> employees,
+    IRepositoryBase<Brigade> brigades,
+    IProjectAssignmentLookup projectLookup)
     : IRequestHandler<CreateWorkAssignmentCommand, WorkAssignmentDto>
 {
     public async Task<WorkAssignmentDto> Handle(CreateWorkAssignmentCommand request, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
+
+        // Project and task identifiers are remote references, not local foreign keys.
+        // Validate them against Project before persisting an assignment.
+        var projectStatus = await projectLookup.GetProjectStatusAsync(request.ProjectId, cancellationToken);
+        if (projectStatus is null)
+            throw new NotFoundException("Project", request.ProjectId);
+        if (!IsAssignableProjectStatus(projectStatus))
+            throw new ValidationException("Work can only be assigned to projects in Planned or InProgress status.");
+
+        if (request.ProjectTaskId.HasValue)
+        {
+            var taskStatus = await projectLookup.GetProjectTaskStatusAsync(
+                request.ProjectId, request.ProjectTaskId.Value, cancellationToken);
+            if (taskStatus is null)
+                throw new NotFoundException("Project task", request.ProjectTaskId.Value);
+            if (IsTerminalTaskStatus(taskStatus))
+                throw new ValidationException("A completed or cancelled project task cannot receive a new work assignment.");
+        }
+
         if (request.EmployeeId.HasValue)
         {
             var employee = await employees.GetByIdAsync(request.EmployeeId.Value);
@@ -82,6 +105,16 @@ public sealed class CreateWorkAssignmentCommandHandler(
         await assignments.AddAsync(entity);
         return WorkAssignmentMapping.ToDto(entity);
     }
+
+    private static bool IsAssignableProjectStatus(string status) =>
+        status.Equals("Planned", StringComparison.OrdinalIgnoreCase) ||
+        status.Equals("InProgress", StringComparison.OrdinalIgnoreCase) ||
+        status is "1" or "2";
+
+    private static bool IsTerminalTaskStatus(string status) =>
+        status.Equals("Completed", StringComparison.OrdinalIgnoreCase) ||
+        status.Equals("Cancelled", StringComparison.OrdinalIgnoreCase) ||
+        status is "3" or "4";
 }
 public sealed class ChangeWorkAssignmentStatusCommandHandler(IRepositoryBase<WorkAssignment> assignments)
     : IRequestHandler<ChangeWorkAssignmentStatusCommand, WorkAssignmentDto?>
