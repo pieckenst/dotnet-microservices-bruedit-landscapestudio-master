@@ -105,6 +105,9 @@ jobs:
             /Projects?page=1\&pageSize=5 \
             /Catalog/MeasurementUnits?page=1\&pageSize=5 \
             /Employees?page=1\&pageSize=5 \
+            /Positions?page=1\&pageSize=5 \
+            /Brigades?page=1\&pageSize=5 \
+            /WorkAssignments?page=1\&pageSize=5 \
             /Suppliers?page=1\&pageSize=5 \
             /PurchaseOrders?page=1\&pageSize=5 \
             /Analytics/Summary
