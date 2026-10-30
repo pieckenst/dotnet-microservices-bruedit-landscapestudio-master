@@ -23,9 +23,6 @@ services:
     volumes:
       - account_postgres_data:/var/lib/postgresql/data
 
-  customerdb:
-    image: postgres
-
   catalogdb:
     image: postgres:16-alpine
     environment:
@@ -186,18 +183,6 @@ services:
       - "8004:8080"
     volumes:
       - account_sqlite_data:/app/data
-
-  customer.api:
-    image: ${DOCKER_REGISTRY-}customerapi
-    build:
-      context: .
-      dockerfile: Services/Customer/Customer.API/Dockerfile
-
-  customer.grpc:
-    image: ${DOCKER_REGISTRY-}customergrpc
-    build:
-      context: .
-      dockerfile: Services/Customer/Customer.GRPC/Dockerfile
 
   catalog.api:
     image: ${DOCKER_REGISTRY-}catalogapi
