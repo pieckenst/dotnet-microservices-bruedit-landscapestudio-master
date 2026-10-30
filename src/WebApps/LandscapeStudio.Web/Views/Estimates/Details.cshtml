@@ -62,7 +62,7 @@
                                         data-unit="@option.UnitSymbol"
                                         data-price="@option.UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                         selected="@(Model.NewLineItem.CatalogItemId == option.Id ? "selected" : null)">
-                                    @option.Name · @EnumLabel(System.Text.Json.JsonDocument.Parse(option.ItemType.ToString()).RootElement, new[] { "Work", "Material", "Plant" }) · @option.UnitSymbol
+                                    @option.Name · @(option.ItemType switch { 0 => "Work", 1 => "Material", 2 => "Plant", _ => "Catalog" }) · @option.UnitSymbol
                                 </option>
                             }
                         </select>
