@@ -92,9 +92,10 @@ public sealed class EstimatesController(
         var workCost = costedItems
             .Where(item => item.ItemType == EstimateLineItemType.Work)
             .Sum(item => item.LineCost!.Value);
-        var materialsCost = costedItems
-            .Where(item => item.ItemType != EstimateLineItemType.Work)
-            .Sum(item => item.LineCost!.Value);
+        var materialsCost = SumCost(costedItems, EstimateLineItemType.Material);
+        var plantsCost = SumCost(costedItems, EstimateLineItemType.Plant);
+        var equipmentCost = SumCost(costedItems, EstimateLineItemType.Equipment);
+        var otherCost = SumCost(costedItems, EstimateLineItemType.Other);
 
         outbox.Enqueue(new EstimateApprovedEvent
         {
@@ -106,6 +107,9 @@ public sealed class EstimatesController(
             EstimatedTotal = estimate.EstimatedTotal,
             MaterialsCost = materialsCost,
             WorksCost = workCost,
+            PlantsCost = plantsCost,
+            EquipmentCost = equipmentCost,
+            OtherCost = otherCost,
             Currency = string.Empty,
             ApprovedDate = estimate.ApprovedAtUtc ?? DateTime.UtcNow,
             LineItemCount = estimate.LineItems.Count
@@ -123,6 +127,10 @@ public sealed class EstimatesController(
     [Authorize(Policy = "projects.write")]
     public Task<ActionResult<EstimateDto>> Supersede(Guid id, CancellationToken cancellationToken) =>
         Transition(new SupersedeEstimateCommand(id), cancellationToken);
+
+    private static decimal SumCost(IEnumerable<EstimateLineItem> items, EstimateLineItemType type) =>
+        items.Where(item => item.ItemType == type && item.LineCost.HasValue)
+            .Sum(item => item.LineCost!.Value);
 
     private async Task<ActionResult<EstimateDto>> Transition<TCommand>(TCommand command, CancellationToken cancellationToken)
         where TCommand : MediatR.IRequest<EstimateDto?>
