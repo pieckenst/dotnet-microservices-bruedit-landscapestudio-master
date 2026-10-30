@@ -97,16 +97,16 @@ public sealed class AuditAnalyticsContractTests
             Id = Guid.NewGuid(),
             OccurredAtUtc = new DateTime(2026, 10, 30, 12, 0, 0, DateTimeKind.Utc),
             SourceService = "Project|Archive",
-            Action = "Project\\nCreated",
+            Action = "Project\nCreated",
             EntityType = "Project",
-            EntityId = "id\\\\part",
+            EntityId = "id\\part",
             ActorId = "=formula"
         };
 
         var output = AuditCsvExporter.ExportPipe([record]);
 
-        Assert.Contains("Project\\\\|Archive", output);
-        Assert.Contains("Project\\\\nCreated", output);
+        Assert.Contains("Project\\|Archive", output);
+        Assert.Contains("Project\\nCreated", output);
         Assert.Contains("id\\\\\\\\part", output);
         Assert.Contains("'=formula", output);
         Assert.Equal(2, output.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Length);
