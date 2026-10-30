@@ -30,6 +30,8 @@ public partial class Form1 : KryptonForm
     private KryptonButton? _editReferenceButton;
     private KryptonButton? _archiveReferenceButton;
     private KryptonButton? _editStockItemButton;
+    private KryptonButton? _editCatalogButton;
+    private KryptonButton? _editSupplierButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -189,6 +191,8 @@ public partial class Form1 : KryptonForm
         _editReferenceButton = null;
         _archiveReferenceButton = null;
         _editStockItemButton = null;
+        _editCatalogButton = null;
+        _editSupplierButton = null;
         var header = BuildPageHeader(page);
         layout.Controls.Add(header, 0, 0);
         var body = new Panel { Dock = DockStyle.Fill, BackColor = Canvas, Padding = Padding.Empty };
@@ -298,12 +302,30 @@ public partial class Form1 : KryptonForm
                 create.Click += async (_, _) => await CreateCatalogRecordAsync();
                 actions.Controls.Add(create);
             }
+            if (_api is not null && page.Equals("Plant & material catalog", StringComparison.OrdinalIgnoreCase))
+            {
+                var edit = CreateSecondaryButton("Edit selected");
+                edit.Margin = new Padding(8, 0, 0, 0);
+                edit.Enabled = false;
+                edit.Click += async (_, _) => await EditCatalogRecordAsync();
+                _editCatalogButton = edit;
+                actions.Controls.Add(edit);
+            }
             if (_api is not null && page.Equals("Suppliers", StringComparison.OrdinalIgnoreCase))
             {
                 var create = CreatePrimaryButton("＋ New supplier");
                 create.Margin = new Padding(8, 0, 0, 0);
                 create.Click += async (_, _) => await CreateSupplierAsync();
                 actions.Controls.Add(create);
+            }
+            if (_api is not null && page.Equals("Suppliers", StringComparison.OrdinalIgnoreCase))
+            {
+                var edit = CreateSecondaryButton("Edit selected");
+                edit.Margin = new Padding(8, 0, 0, 0);
+                edit.Enabled = false;
+                edit.Click += async (_, _) => await EditSupplierAsync();
+                _editSupplierButton = edit;
+                actions.Controls.Add(edit);
             }
             if (_api is not null && page.Equals("Inventory", StringComparison.OrdinalIgnoreCase))
             {
@@ -568,6 +590,32 @@ public partial class Form1 : KryptonForm
                     await EditStockItemAsync();
             };
         }
+        if (page.Equals("Plant & material catalog", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                if (_editCatalogButton is not null && !_editCatalogButton.IsDisposed)
+                    _editCatalogButton.Enabled = GetSelectedGridRecordId().HasValue;
+            };
+            grid.CellDoubleClick += async (_, args) =>
+            {
+                if (args.RowIndex >= 0)
+                    await EditCatalogRecordAsync();
+            };
+        }
+        if (page.Equals("Suppliers", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                if (_editSupplierButton is not null && !_editSupplierButton.IsDisposed)
+                    _editSupplierButton.Enabled = GetSelectedGridRecordId().HasValue;
+            };
+            grid.CellDoubleClick += async (_, args) =>
+            {
+                if (args.RowIndex >= 0)
+                    await EditSupplierAsync();
+            };
+        }
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -707,10 +755,42 @@ public partial class Form1 : KryptonForm
             await ShowPageAsync("Plant & material catalog");
     }
 
+    private async Task EditCatalogRecordAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select a catalog record in the table first.",
+                "No catalog record selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new CreateCatalogRecordDialog(_api, _catalogResource, id.Value);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Plant & material catalog");
+    }
+
     private async Task CreateSupplierAsync()
     {
         if (_api is null) return;
         using var dialog = new CreateSupplierDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Suppliers");
+    }
+
+    private async Task EditSupplierAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select a supplier in the table first.",
+                "No supplier selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new CreateSupplierDialog(_api, id.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Suppliers");
     }
