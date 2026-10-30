@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
@@ -26,6 +27,8 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
 
             var (status, title, detail) = exception switch
             {
+                ValidationException validation => (StatusCodes.Status400BadRequest, "Validation failed",
+                    string.Join("; ", validation.Errors.Select(error => $"{error.PropertyName}: {error.ErrorMessage}"))),
                 ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request", exception.Message),
                 KeyNotFoundException => (StatusCodes.Status404NotFound, "Resource not found", exception.Message),
                 InvalidOperationException => (StatusCodes.Status409Conflict, "Operation cannot be completed", exception.Message),
@@ -34,6 +37,9 @@ public sealed class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Ex
             };
             if (status >= 500)
                 logger.LogError(exception, "Unhandled Procurement API failure for {Method} {Path}.", context.Request.Method, context.Request.Path);
+            else
+                logger.LogInformation("Procurement request rejected with {StatusCode} for {Method} {Path}.",
+                    status, context.Request.Method, context.Request.Path);
 
             context.Response.Clear();
             context.Response.StatusCode = status;
