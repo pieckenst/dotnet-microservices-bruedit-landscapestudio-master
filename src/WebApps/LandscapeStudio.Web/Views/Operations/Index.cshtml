@@ -5,12 +5,12 @@
     var resources = new[] {
         ("clients", "Clients"), ("land-plots", "Land plots"),
         ("plants", "Plant catalog"), ("materials", "Materials"), ("work-types", "Work types"),
-        ("suppliers", "Suppliers"), ("stock-items", "Inventory"), ("purchase-orders", "Purchase orders"),
+        ("suppliers", "Suppliers"), ("stock-items", "Inventory"), ("employees", "Employees"), ("purchase-orders", "Purchase orders"),
         ("deliveries", "Deliveries")
     };
-    var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items" }
+    var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
-    var canEdit = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items" }
+    var canEdit = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items", "employees" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
     var canArchive = Model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ||
         Model.Resource.Equals("land-plots", StringComparison.OrdinalIgnoreCase);
@@ -49,6 +49,21 @@
                         @if (Guid.TryParse(idText, out var id))
                         {
                             <a class="text-link" asp-action="Edit" asp-route-resource="@Model.Resource" asp-route-id="@id">Edit</a>
+                            @if (Model.Resource.Equals("employees", StringComparison.OrdinalIgnoreCase))
+                            {
+                                var employeeStatus = item.Values.TryGetValue("Status", out var currentStatus) ? currentStatus : "Active";
+                                <form asp-action="ChangeEmployeeStatus" method="post" class="inline-action employee-status-form">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@id" />
+                                    <select name="status" aria-label="Employee status">
+                                        <option value="Active" selected="@(employeeStatus == "Active" ? "selected" : null)">Active</option>
+                                        <option value="OnLeave" selected="@(employeeStatus == "OnLeave" ? "selected" : null)">On leave</option>
+                                        <option value="Inactive" selected="@(employeeStatus == "Inactive" ? "selected" : null)">Inactive</option>
+                                        <option value="Terminated" selected="@(employeeStatus == "Terminated" ? "selected" : null)">Terminated</option>
+                                    </select>
+                                    <button class="text-link" type="submit">Save status</button>
+                                </form>
+                            }
                             @if (canArchive && !isArchived)
                             {
                                 <form asp-action="Archive" method="post" class="inline-action" onsubmit="return confirm('Archive this record? Existing projects keep their historical reference.');">
