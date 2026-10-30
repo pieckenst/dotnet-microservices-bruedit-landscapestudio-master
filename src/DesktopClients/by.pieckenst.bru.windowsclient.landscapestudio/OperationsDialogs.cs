@@ -341,6 +341,7 @@ internal sealed class CreateReferenceRecordDialog : OperationDialogBase
 internal sealed class CreateCatalogRecordDialog : OperationDialogBase
 {
     private readonly string _resource;
+    private readonly Guid? _recordId;
     private readonly TextBox _name = new() { MaxLength = 160 };
     private readonly TextBox _latinName = new() { MaxLength = 200 };
     private readonly TextBox _sku = new() { MaxLength = 64 };
@@ -349,10 +350,13 @@ internal sealed class CreateCatalogRecordDialog : OperationDialogBase
     private readonly NumericUpDown _price = new() { Minimum = 0, Maximum = 1000000000, DecimalPlaces = 2, Increment = 1 };
     private readonly CheckBox _active = new() { Checked = true };
 
-    public CreateCatalogRecordDialog(DesktopApiClient api, string resource)
-        : base(api, "New " + ResourceLabel(resource), "Create a catalog record with an active unit of measurement.", 650)
+    public CreateCatalogRecordDialog(DesktopApiClient api, string resource, Guid? recordId = null)
+        : base(api, (recordId.HasValue ? "Edit " : "New ") + ResourceLabel(resource),
+            recordId.HasValue ? "Update catalog details while preserving the owning Catalog record." :
+                "Create a catalog record with an active unit of measurement.", 650)
     {
         _resource = resource;
+        _recordId = recordId;
         AddField("Name *", _name);
         if (resource.Equals("Plants", StringComparison.OrdinalIgnoreCase))
             AddField("Latin name", _latinName);
@@ -362,6 +366,7 @@ internal sealed class CreateCatalogRecordDialog : OperationDialogBase
         AddField("Measurement unit *", _unit);
         AddField(resource.Equals("Work types", StringComparison.OrdinalIgnoreCase) ? "Base price" : "Unit price", _price);
         AddCheckBox("Active and available for new estimates", _active);
+        SaveButton.Values.Text = recordId.HasValue ? "Save changes  →" : "Create record  →";
         SaveButton.Enabled = false;
         Shown += async (_, _) => await LoadUnitsAsync();
     }
@@ -371,6 +376,13 @@ internal sealed class CreateCatalogRecordDialog : OperationDialogBase
         "Materials" => "material",
         "Work types" => "work type",
         _ => "plant"
+    };
+
+    private string Endpoint => _resource switch
+    {
+        "Materials" => "Catalog/Materials",
+        "Work types" => "Catalog/WorkTypes",
+        _ => "Catalog/Plants"
     };
 
     private async Task LoadUnitsAsync()
@@ -391,20 +403,55 @@ internal sealed class CreateCatalogRecordDialog : OperationDialogBase
                     _unit.Items.Add(new UnitOption(id, name, symbol));
                 }
             }
-            if (_unit.Items.Count > 0)
+            if (_unit.Items.Count == 0)
             {
-                _unit.SelectedIndex = 0;
-                SaveButton.Enabled = true;
-                SetInfo($"Loaded {_unit.Items.Count} active measurement unit(s).");
+                SetError("No active units found. Create or activate a unit in Catalog before adding this item.");
+                return;
             }
+
+            _unit.SelectedIndex = 0;
+            if (_recordId is Guid recordId)
+                await LoadRecordAsync(recordId);
             else
             {
-                SetError("No active units found. Create a unit in Catalog before adding this item.");
+                SaveButton.Enabled = true;
+                SetInfo($"Loaded {_unit.Items.Count} active measurement unit(s).");
             }
         }
         catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
         {
             SetError("Measurement units could not be loaded: " + exception.Message);
+        }
+    }
+
+    private async Task LoadRecordAsync(Guid id)
+    {
+        SaveButton.Enabled = false;
+        SetInfo("Loading catalog record…");
+        try
+        {
+            var item = await Api.GetAsync($"/{Endpoint}/{id:D}");
+            _name.Text = CreateEstimateDialog.ReadString(item, "name") ?? string.Empty;
+            _latinName.Text = CreateEstimateDialog.ReadString(item, "latinName") ?? string.Empty;
+            _sku.Text = CreateEstimateDialog.ReadString(item, "sku") ?? string.Empty;
+            _description.Text = CreateEstimateDialog.ReadString(item, "description") ?? string.Empty;
+            _active.Checked = CreateEstimateDialog.ReadBoolean(item, "isActive");
+            var priceText = CreateEstimateDialog.ReadString(item,
+                _resource.Equals("Work types", StringComparison.OrdinalIgnoreCase) ? "basePrice" : "unitPrice");
+            if (decimal.TryParse(priceText, NumberStyles.Number, CultureInfo.InvariantCulture, out var price))
+                _price.Value = Math.Clamp(price, _price.Minimum, _price.Maximum);
+
+            if (Guid.TryParse(CreateEstimateDialog.ReadString(item, "measurementUnitId"), out var unitId))
+                _unit.SelectedItem = _unit.Items.OfType<UnitOption>().FirstOrDefault(unit => unit.Id == unitId);
+            if (_unit.SelectedItem is null)
+                SetInfo("The previous unit is inactive or unavailable. Select an active replacement unit.");
+            else
+                SetInfo("Catalog record loaded.");
+            SaveButton.Enabled = true;
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError("Catalog record could not be loaded: " + exception.Message);
         }
     }
 
@@ -421,33 +468,63 @@ internal sealed class CreateCatalogRecordDialog : OperationDialogBase
             return;
         }
 
-        object payload = _resource switch
+        if (_resource.Equals("Materials", StringComparison.OrdinalIgnoreCase))
         {
-            "Materials" => new
+            var payload = new
             {
                 name = _name.Text.Trim(), sku = _sku.Text.Trim().ToUpperInvariant(),
                 description = _description.Text.Trim(), measurementUnitId = unit.Id,
                 unitPrice = _price.Value, isActive = _active.Checked
-            },
-            "Work types" => new
+            };
+            await SaveCatalogPayloadAsync(payload);
+        }
+        else if (_resource.Equals("Work types", StringComparison.OrdinalIgnoreCase))
+        {
+            var payload = new
             {
                 name = _name.Text.Trim(), description = _description.Text.Trim(),
                 measurementUnitId = unit.Id, basePrice = _price.Value, isActive = _active.Checked
-            },
-            _ => new
+            };
+            await SaveCatalogPayloadAsync(payload);
+        }
+        else
+        {
+            var payload = new
             {
                 name = _name.Text.Trim(), latinName = Clean(_latinName.Text),
                 description = _description.Text.Trim(), measurementUnitId = unit.Id,
                 unitPrice = _price.Value, isActive = _active.Checked
-            }
-        };
-        var endpoint = _resource switch
+            };
+            await SaveCatalogPayloadAsync(payload);
+        }
+    }
+
+    private async Task SaveCatalogPayloadAsync(object payload)
+    {
+        if (_recordId is not Guid id)
         {
-            "Materials" => "Catalog/Materials",
-            "Work types" => "Catalog/WorkTypes",
-            _ => "Catalog/Plants"
-        };
-        await SubmitAsync(endpoint, payload);
+            await SubmitAsync(Endpoint, payload);
+            return;
+        }
+
+        SaveButton.Enabled = false;
+        SetInfo("Saving catalog changes…");
+        try
+        {
+            await Api.PutAsync($"/{Endpoint}/{id:D}", payload);
+            SetInfo("Catalog record updated.");
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception) { SetError(exception.Message); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException ? "The update timed out. Refresh the catalog record before retrying." : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
     }
 
     private static string? Clean(string? value) =>
@@ -461,6 +538,7 @@ internal sealed class CreateCatalogRecordDialog : OperationDialogBase
 
 internal sealed class CreateSupplierDialog : OperationDialogBase
 {
+    private readonly Guid? _recordId;
     private readonly TextBox _code = new() { MaxLength = 32 };
     private readonly TextBox _name = new() { MaxLength = 200 };
     private readonly TextBox _contact = new() { MaxLength = 120 };
@@ -470,10 +548,13 @@ internal sealed class CreateSupplierDialog : OperationDialogBase
     private readonly TextBox _address = new() { MaxLength = 500 };
     private readonly NumericUpDown _paymentDays = new() { Minimum = 0, Maximum = 365, Value = 30 };
     private readonly TextBox _currency = new() { MaxLength = 3, Text = "BYN" };
+    private readonly CheckBox _active = new() { Checked = true };
 
-    public CreateSupplierDialog(DesktopApiClient api)
-        : base(api, "New supplier", "Supplier contact information and purchasing terms.", 760)
+    public CreateSupplierDialog(DesktopApiClient api, Guid? recordId = null)
+        : base(api, recordId.HasValue ? "Edit supplier" : "New supplier",
+            "Supplier contact information, purchasing terms and availability.", 790)
     {
+        _recordId = recordId;
         AddField("Supplier code *", _code);
         AddField("Supplier name *", _name);
         AddField("Primary contact *", _contact);
@@ -483,6 +564,40 @@ internal sealed class CreateSupplierDialog : OperationDialogBase
         AddField("Address *", _address, height: 82);
         AddField("Payment terms (days)", _paymentDays);
         AddField("Currency code *", _currency);
+        if (recordId.HasValue)
+            AddCheckBox("Active and available for new purchase orders", _active);
+        SaveButton.Values.Text = recordId.HasValue ? "Save changes  →" : "Create supplier  →";
+        if (recordId.HasValue)
+        {
+            SaveButton.Enabled = false;
+            Shown += async (_, _) => await LoadRecordAsync(recordId.Value);
+        }
+    }
+
+    private async Task LoadRecordAsync(Guid id)
+    {
+        SetInfo("Loading supplier…");
+        try
+        {
+            var supplier = await Api.GetAsync($"/Suppliers/{id:D}");
+            _code.Text = CreateEstimateDialog.ReadString(supplier, "code") ?? string.Empty;
+            _name.Text = CreateEstimateDialog.ReadString(supplier, "name") ?? string.Empty;
+            _contact.Text = CreateEstimateDialog.ReadString(supplier, "contactName") ?? string.Empty;
+            _email.Text = CreateEstimateDialog.ReadString(supplier, "email") ?? string.Empty;
+            _phone.Text = CreateEstimateDialog.ReadString(supplier, "phone") ?? string.Empty;
+            _taxId.Text = CreateEstimateDialog.ReadString(supplier, "taxIdentifier") ?? string.Empty;
+            _address.Text = CreateEstimateDialog.ReadString(supplier, "address") ?? string.Empty;
+            if (int.TryParse(CreateEstimateDialog.ReadString(supplier, "paymentTermDays"), out var days))
+                _paymentDays.Value = Math.Clamp(days, (int)_paymentDays.Minimum, (int)_paymentDays.Maximum);
+            _currency.Text = CreateEstimateDialog.ReadString(supplier, "currencyCode") ?? "BYN";
+            _active.Checked = CreateEstimateDialog.ReadBoolean(supplier, "isActive");
+            SetInfo("Supplier loaded.");
+            SaveButton.Enabled = true;
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError("Supplier could not be loaded: " + exception.Message);
+        }
     }
 
     protected override async Task SaveAsync()
@@ -506,7 +621,7 @@ internal sealed class CreateSupplierDialog : OperationDialogBase
             return;
         }
 
-        await SubmitAsync("Suppliers", new
+        var payload = new
         {
             code = _code.Text.Trim().ToUpperInvariant(),
             name = _name.Text.Trim(),
@@ -517,7 +632,37 @@ internal sealed class CreateSupplierDialog : OperationDialogBase
             address = _address.Text.Trim(),
             paymentTermDays = (int)_paymentDays.Value,
             currencyCode = currency
-        });
+        };
+
+        if (_recordId is not Guid id)
+        {
+            await SubmitAsync("Suppliers", payload);
+            return;
+        }
+
+        SaveButton.Enabled = false;
+        SetInfo("Saving supplier changes…");
+        try
+        {
+            await Api.PutAsync($"/Suppliers/{id:D}", new
+            {
+                payload.code, payload.name, payload.contactName, payload.email, payload.phone,
+                payload.taxIdentifier, payload.address, payload.paymentTermDays, payload.currencyCode,
+                isActive = _active.Checked
+            });
+            SetInfo("Supplier updated.");
+            DialogResult = DialogResult.OK;
+            Close();
+        }
+        catch (DesktopApiException exception) { SetError(exception.Message); }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError(exception is TaskCanceledException ? "The update timed out. Refresh the supplier before retrying." : exception.Message);
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
     }
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
