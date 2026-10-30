@@ -16,6 +16,7 @@ public sealed class AuditEventQuery
     public string? Validate()
     {
         if (Page < 1) return "Page must be greater than zero.";
+        if (Page > 1_000_000) return "Page cannot exceed 1,000,000.";
         if (PageSize is < 1 or > 200) return "PageSize must be between 1 and 200.";
         if (FromUtc.HasValue && ToUtc.HasValue && FromUtc.Value > ToUtc.Value)
             return "FromUtc cannot be later than ToUtc.";
