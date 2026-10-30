@@ -10,7 +10,8 @@
     };
     var canCreate = new[] { "clients", "land-plots", "plants", "materials", "work-types", "suppliers", "stock-items" }
         .Contains(Model.Resource, StringComparer.OrdinalIgnoreCase);
-    var canManageReferences = Model.Resource is "clients" or "land-plots";
+    var canManageReferences = Model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase) ||
+        Model.Resource.Equals("land-plots", StringComparison.OrdinalIgnoreCase);
 }
 <div class="page-heading page-heading-compact">
     <div><span class="eyebrow"><span class="eyebrow-line"></span> OPERATIONS</span><h1>@Model.Title <span>workspace.</span></h1><p>Live records returned by the connected service. Changes are validated and persisted by the service that owns each record.</p></div>

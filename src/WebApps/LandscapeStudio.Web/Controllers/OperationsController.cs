@@ -134,7 +134,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     [HttpGet]
     public async Task<IActionResult> Edit(string resource, Guid id, CancellationToken cancellationToken)
     {
-        if (id == Guid.Empty || !UpdateEndpoints.TryGetValue(resource, out var endpoint))
+        if (id == Guid.Empty || string.IsNullOrWhiteSpace(resource) || !UpdateEndpoints.TryGetValue(resource, out var endpoint))
             return NotFound();
 
         try
@@ -172,7 +172,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Edit(string resource, Guid id, OperationFormViewModel model, CancellationToken cancellationToken)
     {
-        if (id == Guid.Empty || !UpdateEndpoints.TryGetValue(resource, out var endpoint))
+        if (id == Guid.Empty || string.IsNullOrWhiteSpace(resource) || !UpdateEndpoints.TryGetValue(resource, out var endpoint))
             return NotFound();
 
         model.Resource = resource;
@@ -207,7 +207,7 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Archive(string resource, Guid id, CancellationToken cancellationToken)
     {
-        if (id == Guid.Empty || !UpdateEndpoints.ContainsKey(resource))
+        if (id == Guid.Empty || string.IsNullOrWhiteSpace(resource) || !UpdateEndpoints.ContainsKey(resource))
             return NotFound();
 
         var endpoint = UpdateEndpoints[resource];
@@ -229,25 +229,30 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
         return RedirectToAction(nameof(Index), new { resource });
     }
 
-    private static object BuildUpdatePayload(OperationFormViewModel model, Guid id) =>
-        model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase)
-            ? new
+    private static object BuildUpdatePayload(OperationFormViewModel model, Guid id)
+    {
+        if (model.Resource.Equals("clients", StringComparison.OrdinalIgnoreCase))
+        {
+            return new
             {
                 id,
                 displayName = model.Name.Trim(),
                 email = Clean(model.Email),
                 phone = Clean(model.Phone),
                 billingAddress = Clean(model.Address)
-            }
-            : new
-            {
-                id,
-                name = model.Name.Trim(),
-                address = model.Address.Trim(),
-                areaSquareMetres = model.AreaSquareMetres,
-                soilType = Clean(model.SoilType),
-                notes = Clean(model.Notes)
             };
+        }
+
+        return new
+        {
+            id,
+            name = model.Name.Trim(),
+            address = model.Address.Trim(),
+            areaSquareMetres = model.AreaSquareMetres,
+            soilType = Clean(model.SoilType),
+            notes = Clean(model.Notes)
+        };
+    }
 
     private async Task LoadLookupsAsync(OperationFormViewModel model, CancellationToken cancellationToken)
     {
