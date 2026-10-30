@@ -3,6 +3,8 @@
     ViewData["Title"] = "New " + Model.Title;
     ViewData["Section"] = Model.Title + " / New";
     var resource = Model.Resource.ToLowerInvariant();
+    var isClient = resource == "clients";
+    var isLandPlot = resource == "land-plots";
     var isCatalog = resource is "plants" or "materials" or "work-types";
     var isSupplier = resource == "suppliers";
     var isStock = resource == "stock-items";
@@ -19,7 +21,32 @@
     {
         <div class="alert alert-error" role="alert">@Model.LookupError</div>
     }
-    @if (isCatalog)
+    @if (isClient)
+    {
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">01</span><div><h2>Client details</h2><p>Create the customer record used by project and estimate workflows.</p></div></div>
+            <div class="form-grid">
+                <div class="field field-full"><label asp-for="Name">Display name <span class="required">*</span></label><input asp-for="Name" maxlength="160" placeholder="Client or organization name" /><span asp-validation-for="Name" class="field-error"></span></div>
+                <div class="field"><label asp-for="Email">Email</label><input asp-for="Email" type="email" maxlength="254" /><span asp-validation-for="Email" class="field-error"></span></div>
+                <div class="field"><label asp-for="Phone">Phone</label><input asp-for="Phone" maxlength="40" /><span asp-validation-for="Phone" class="field-error"></span></div>
+                <div class="field field-full"><label asp-for="Address">Billing address</label><textarea asp-for="Address" rows="2" maxlength="500"></textarea><span asp-validation-for="Address" class="field-error"></span></div>
+            </div>
+        </section>
+    }
+    else if (isLandPlot)
+    {
+        <section class="surface-card form-section">
+            <div class="form-section-heading"><span class="form-step">01</span><div><h2>Land plot details</h2><p>Define the site that can be referenced by landscaping projects.</p></div></div>
+            <div class="form-grid">
+                <div class="field"><label asp-for="Name">Plot name <span class="required">*</span></label><input asp-for="Name" maxlength="160" placeholder="North garden parcel" /><span asp-validation-for="Name" class="field-error"></span></div>
+                <div class="field"><label asp-for="AreaSquareMetres">Area (m²) <span class="required">*</span></label><input asp-for="AreaSquareMetres" type="number" min="0.01" max="1000000000" step="0.01" /><span asp-validation-for="AreaSquareMetres" class="field-error"></span></div>
+                <div class="field field-full"><label asp-for="Address">Site address <span class="required">*</span></label><textarea asp-for="Address" rows="2" maxlength="500"></textarea><span asp-validation-for="Address" class="field-error"></span></div>
+                <div class="field"><label asp-for="SoilType">Soil type</label><input asp-for="SoilType" maxlength="100" /></div>
+                <div class="field field-full"><label asp-for="Notes">Site notes</label><textarea asp-for="Notes" rows="3" maxlength="2000"></textarea></div>
+            </div>
+        </section>
+    }
+    else if (isCatalog)
     {
         <section class="surface-card form-section">
             <div class="form-section-heading"><span class="form-step">01</span><div><h2>Catalog details</h2><p>Product identity, unit of measurement and pricing.</p></div></div>
