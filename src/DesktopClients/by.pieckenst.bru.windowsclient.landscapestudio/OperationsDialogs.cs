@@ -1287,7 +1287,7 @@ internal sealed class CreateEmployeeDialog : OperationDialogBase
     private readonly TextBox _phone = new() { MaxLength = 40 };
 
     public CreateEmployeeDialog(DesktopApiClient api, Guid? employeeId = null)
-        : base(employeeId.HasValue ? "Edit employee" : "New employee",
+        : base(api, employeeId.HasValue ? "Edit employee" : "New employee",
             "Employment details are owned by Organization; login credentials remain in Identity.",
             760)
     {
@@ -1465,7 +1465,7 @@ internal sealed class ChangeEmployeeStatusDialog : OperationDialogBase
     private readonly ComboBox _status = new() { DropDownStyle = ComboBoxStyle.DropDownList };
 
     public ChangeEmployeeStatusDialog(DesktopApiClient api, Guid employeeId, string currentStatus)
-        : base("Change employee status",
+        : base(api, "Change employee status",
             "The Organization service validates employment status transitions.", 420)
     {
         if (employeeId == Guid.Empty) throw new ArgumentException("Employee id is required.", nameof(employeeId));
