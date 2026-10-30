@@ -2,6 +2,7 @@ using Identity.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Shared.Common.Common;
 
+using Shared.Common.Outbox;
 namespace Identity.Infrastructure.Persistence;
 
 public sealed class IdentityContext(DbContextOptions<IdentityContext> options) : DbContext(options)
@@ -14,6 +15,7 @@ public sealed class IdentityContext(DbContextOptions<IdentityContext> options) :
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.AddIntegrationOutbox();
         ConfigureEntity<UserCredential>(modelBuilder);
         ConfigureEntity<Role>(modelBuilder);
         ConfigureEntity<Permission>(modelBuilder);
