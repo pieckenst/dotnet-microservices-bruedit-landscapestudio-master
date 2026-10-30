@@ -70,6 +70,46 @@ public sealed class AuditEventRepository(IAuditEventContext context) : IAuditEve
             .Limit(maximumRows)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<AuditRecord>> GetSnapshotAsync(
+        int maximumRows, CancellationToken cancellationToken = default)
+    {
+        if (maximumRows < 1) throw new ArgumentOutOfRangeException(nameof(maximumRows));
+        return await context.AuditEvents.Find(Builders<AuditRecord>.Filter.Empty)
+            .SortBy(x => x.OccurredAtUtc)
+            .ThenBy(x => x.Id)
+            .Limit(maximumRows)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <summary>
+    /// Restores missing records only. Existing audit events are immutable and are never overwritten.
+    /// Duplicate IDs are treated as successful idempotent replays.
+    /// </summary>
+    public async Task<int> ImportMissingAsync(
+        IReadOnlyCollection<AuditRecord> records, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var inserted = 0;
+        foreach (var batch in records.Chunk(500))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            try
+            {
+                await context.AuditEvents.InsertManyAsync(
+                    batch, new InsertManyOptions { IsOrdered = false }, cancellationToken);
+                inserted += batch.Length;
+            }
+            catch (MongoBulkWriteException<AuditRecord> exception)
+                when (exception.WriteErrors.Count > 0 &&
+                      exception.WriteErrors.All(error => error.Category == ServerErrorCategory.DuplicateKey))
+            {
+                inserted += batch.Length - exception.WriteErrors.Count;
+            }
+        }
+
+        return inserted;
+    }
+
     public Task<long> CountAsync(DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default) =>
         context.AuditEvents.CountDocumentsAsync(
             Builders<AuditRecord>.Filter.Gte(x => x.OccurredAtUtc, AsUtc(fromUtc)) &
