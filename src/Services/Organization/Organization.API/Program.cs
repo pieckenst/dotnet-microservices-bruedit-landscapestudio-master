@@ -10,6 +10,7 @@ using Organization.Infrastructure;
 using Organization.Infrastructure.Persistence;
 using Serilog;
 using Shared.ServiceKit.Auditing;
+using Shared.ServiceKit.Outbox;
 using System.Security.Claims;
 using System.Text;
 
@@ -29,7 +30,7 @@ var audience = builder.Configuration["Jwt:Audience"] ?? "LandscapeStudio.Clients
 builder.Host.UseSerilog(SeriLogger.Configure);
 builder.Services.AddOrganizationApplication(builder.Configuration);
 builder.Services.AddOrganizationInfrastructure(builder.Configuration);
-builder.Services.AddMutationAuditEvents(builder.Configuration, "Organization");
+builder.Services.AddMutationAuditEvents<OrganizationContext>(builder.Configuration, "Organization");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.TokenValidationParameters = new TokenValidationParameters
@@ -75,6 +76,7 @@ app.UseMiddleware<Organization.API.Middleware.ExceptionHandlingMiddleware>();
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<OutboxTransactionMiddleware<OrganizationContext>>();
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = _ => true, ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse });
 await app.RunAsync();
