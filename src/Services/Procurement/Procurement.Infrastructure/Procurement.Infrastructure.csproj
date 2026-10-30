@@ -3,6 +3,7 @@
   <ItemGroup><PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.8" /></ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Procurement.Domain\Procurement.Domain.csproj" />
+    <ProjectReference Include="..\Procurement.Application\Procurement.Application.csproj" />
     <ProjectReference Include="..\..\..\BuildingBlocks\Shared.Common\Shared.Common.csproj" />
   </ItemGroup>
 </Project>
