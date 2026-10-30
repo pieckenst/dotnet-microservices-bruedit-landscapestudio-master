@@ -87,10 +87,15 @@ public sealed class CreateEstimateViewModel
     public IReadOnlyList<LandscapeProjectDto> Projects { get; set; } = Array.Empty<LandscapeProjectDto>();
 }
 
+public sealed record EstimateCatalogItemOption(
+    Guid Id, int ItemType, string Name, string Description, string UnitSymbol, decimal UnitPrice);
+
 public sealed class EstimateDetailsViewModel
 {
     public EstimateDto? Estimate { get; set; }
     public LandscapeProjectDto? Project { get; set; }
+    public IReadOnlyList<EstimateCatalogItemOption> CatalogItems { get; set; } = Array.Empty<EstimateCatalogItemOption>();
+    public string? CatalogError { get; set; }
     public AddEstimateLineItemViewModel NewLineItem { get; set; } = new();
     public string? Error { get; set; }
 }
