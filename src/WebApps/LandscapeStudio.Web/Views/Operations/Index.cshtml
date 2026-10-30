@@ -52,6 +52,7 @@
                             @if (Model.Resource.Equals("employees", StringComparison.OrdinalIgnoreCase))
                             {
                                 var employeeStatus = item.Values.TryGetValue("Status", out var currentStatus) ? currentStatus : "Active";
+                                employeeStatus = employeeStatus switch { "0" => "Active", "1" => "OnLeave", "2" => "Inactive", "3" => "Terminated", _ => employeeStatus };
                                 <form asp-action="ChangeEmployeeStatus" method="post" class="inline-action employee-status-form">
                                     @Html.AntiForgeryToken()
                                     <input type="hidden" name="id" value="@id" />
