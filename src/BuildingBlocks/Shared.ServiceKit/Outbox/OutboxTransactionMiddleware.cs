@@ -18,7 +18,10 @@ public sealed class OutboxTransactionMiddleware<TContext>(
     public async Task InvokeAsync(HttpContext httpContext, TContext context)
     {
         var method = httpContext.Request.Method;
-        if (HttpMethods.IsGet(method) || HttpMethods.IsHead(method) ||
+        // Identity intentionally commits failed-login counters before returning 401.
+        // A transaction that rolls back every non-2xx response would undo the lockout policy.
+        if (httpContext.Request.Path.Equals("/api/v1/auth/login", StringComparison.OrdinalIgnoreCase) ||
+            HttpMethods.IsGet(method) || HttpMethods.IsHead(method) ||
             HttpMethods.IsOptions(method) || HttpMethods.IsTrace(method))
         {
             await next(httpContext);
