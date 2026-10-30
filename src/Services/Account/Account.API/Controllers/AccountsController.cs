@@ -1,26 +1,22 @@
 using Account.API.Models;
-using Account.Domain.Entities;
-using Account.Infrastructure.Persistence;
+using Account.Application.Features.Profiles;
 using EventBus.Messages.Events;
 using MassTransit;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace Account.API.Controllers;
 
 /// <summary>
-/// Owns user profile/contact data, addresses and preferences. Authentication credentials,
-/// roles and token issuance are exclusively owned by the Identity service.
+/// Owns user profile, contact, address and preference data. Credentials and role assignments
+/// are exclusively owned by Identity. All use cases are dispatched through the Application layer.
 /// </summary>
 [ApiController]
 [Authorize]
 [Route("api/v1/accounts")]
-public sealed class AccountsController(
-    AccountContext context,
-    IPublishEndpoint publishEndpoint,
-    ILogger<AccountsController> logger) : ControllerBase
+public sealed class AccountsController(IMediator mediator, IPublishEndpoint publishEndpoint) : ControllerBase
 {
     [HttpGet("me")]
     [ProducesResponseType(typeof(AccountProfileDto), StatusCodes.Status200OK)]
@@ -29,7 +25,7 @@ public sealed class AccountsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var profile = await EnsureProfileAsync(userId.Value, cancellationToken);
+        var profile = await mediator.Send(new GetMyProfileQuery(userId.Value, User.Identity?.Name), cancellationToken);
         return Ok(AccountProfileDto.From(profile));
     }
 
@@ -42,20 +38,27 @@ public sealed class AccountsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
-        var profile = await EnsureProfileAsync(userId.Value, cancellationToken);
         try
         {
-            profile.Update(request.DisplayName, request.FirstName, request.LastName,
-                request.Email, request.PhoneNumber, request.CompanyName);
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        catch (ArgumentException exception)
-        {
-            return BadRequest(new ProblemDetails { Title = "Invalid profile", Detail = exception.Message });
-        }
+            var profile = await mediator.Send(new UpdateMyProfileCommand(
+                userId.Value, request.DisplayName, request.FirstName, request.LastName,
+                request.Email, request.PhoneNumber, request.CompanyName), cancellationToken);
 
-        await PublishProfileUpdatedAsync(profile, "profile");
-        return Ok(AccountProfileDto.From(profile));
+            // Persist the profile before publishing the integration event. A transport failure
+            // is not presented as a successful update and is logged by the host's exception pipeline.
+            await publishEndpoint.Publish(new ProfileUpdatedEvent
+            {
+                UserId = profile.Id,
+                UpdatedFields = "profile",
+                UpdatedAt = DateTime.UtcNow
+            }, cancellationToken);
+
+            return Ok(AccountProfileDto.From(profile));
+        }
+        catch (Exception exception) when (exception is ArgumentException or FluentValidation.ValidationException)
+        {
+            return InvalidInput(exception, "Invalid profile");
+        }
     }
 
     [HttpGet("me/preferences")]
@@ -64,14 +67,8 @@ public sealed class AccountsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        await EnsureProfileAsync(userId.Value, cancellationToken);
-        var preferences = await context.AccountPreferences.FindAsync([userId.Value], cancellationToken);
-        if (preferences is null)
-        {
-            preferences = new AccountPreference(userId.Value);
-            await context.AccountPreferences.AddAsync(preferences, cancellationToken);
-            await context.SaveChangesAsync(cancellationToken);
-        }
+        var preferences = await mediator.Send(
+            new GetMyPreferencesQuery(userId.Value, User.Identity?.Name), cancellationToken);
         return Ok(AccountPreferenceDto.From(preferences));
     }
 
@@ -83,25 +80,18 @@ public sealed class AccountsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        await EnsureProfileAsync(userId.Value, cancellationToken);
-        var preferences = await context.AccountPreferences.FindAsync([userId.Value], cancellationToken);
-        if (preferences is null)
-        {
-            preferences = new AccountPreference(userId.Value);
-            await context.AccountPreferences.AddAsync(preferences, cancellationToken);
-        }
 
         try
         {
-            preferences.Update(request.Theme, request.Language, request.TimeZone,
-                request.EmailNotificationsEnabled, request.SmsNotificationsEnabled);
-            await context.SaveChangesAsync(cancellationToken);
+            var preferences = await mediator.Send(new UpdateMyPreferencesCommand(
+                userId.Value, request.Theme, request.Language, request.TimeZone,
+                request.EmailNotificationsEnabled, request.SmsNotificationsEnabled), cancellationToken);
+            return Ok(AccountPreferenceDto.From(preferences));
         }
-        catch (ArgumentException exception)
+        catch (Exception exception) when (exception is ArgumentException or FluentValidation.ValidationException)
         {
-            return BadRequest(new ProblemDetails { Title = "Invalid preferences", Detail = exception.Message });
+            return InvalidInput(exception, "Invalid preferences");
         }
-        return Ok(AccountPreferenceDto.From(preferences));
     }
 
     [HttpGet("me/addresses")]
@@ -110,13 +100,9 @@ public sealed class AccountsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        await EnsureProfileAsync(userId.Value, cancellationToken);
-        var addresses = await context.AccountAddresses.AsNoTracking()
-            .Where(x => x.UserId == userId.Value)
-            .OrderByDescending(x => x.IsDefault).ThenBy(x => x.Label)
-            .Select(x => AccountAddressDto.From(x))
-            .ToListAsync(cancellationToken);
-        return Ok(addresses);
+        var addresses = await mediator.Send(
+            new GetMyAddressesQuery(userId.Value, User.Identity?.Name), cancellationToken);
+        return Ok(addresses.Select(AccountAddressDto.From).ToArray());
     }
 
     [HttpPost("me/addresses")]
@@ -127,53 +113,43 @@ public sealed class AccountsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        await EnsureProfileAsync(userId.Value, cancellationToken);
-        if (request.IsDefault)
-            await ClearDefaultAddressAsync(userId.Value, null, cancellationToken);
 
-        AccountAddress address;
         try
         {
-            address = new AccountAddress(Guid.NewGuid(), userId.Value, request.Label, request.Line1,
-                request.City, request.Country);
-            address.Update(request.Label, request.Line1, request.Line2, request.City,
-                request.Region, request.PostalCode, request.Country, request.IsDefault);
+            var address = await mediator.Send(new CreateMyAddressCommand(
+                userId.Value, User.Identity?.Name, request.Label, request.Line1, request.Line2,
+                request.City, request.Region, request.PostalCode, request.Country, request.IsDefault),
+                cancellationToken);
+            return Created($"/api/v1/accounts/me/addresses/{address.Id}", AccountAddressDto.From(address));
         }
-        catch (ArgumentException exception)
+        catch (Exception exception) when (exception is ArgumentException or FluentValidation.ValidationException)
         {
-            return BadRequest(new ProblemDetails { Title = "Invalid address", Detail = exception.Message });
+            return InvalidInput(exception, "Invalid address");
         }
-
-        await context.AccountAddresses.AddAsync(address, cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
-        return Created($"/api/v1/accounts/me/addresses/{address.Id}", AccountAddressDto.From(address));
     }
 
     [HttpPut("me/addresses/{addressId:guid}")]
     [ProducesResponseType(typeof(AccountAddressDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<AccountAddressDto>> UpdateAddress(
         Guid addressId, AccountAddressRequest request, CancellationToken cancellationToken)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var address = await context.AccountAddresses.FirstOrDefaultAsync(
-            x => x.Id == addressId && x.UserId == userId.Value, cancellationToken);
-        if (address is null) return NotFound();
 
-        if (request.IsDefault)
-            await ClearDefaultAddressAsync(userId.Value, addressId, cancellationToken);
         try
         {
-            address.Update(request.Label, request.Line1, request.Line2, request.City,
-                request.Region, request.PostalCode, request.Country, request.IsDefault);
-            await context.SaveChangesAsync(cancellationToken);
+            var address = await mediator.Send(new UpdateMyAddressCommand(
+                userId.Value, addressId, request.Label, request.Line1, request.Line2,
+                request.City, request.Region, request.PostalCode, request.Country, request.IsDefault),
+                cancellationToken);
+            return address is null ? NotFound() : Ok(AccountAddressDto.From(address));
         }
-        catch (ArgumentException exception)
+        catch (Exception exception) when (exception is ArgumentException or FluentValidation.ValidationException)
         {
-            return BadRequest(new ProblemDetails { Title = "Invalid address", Detail = exception.Message });
+            return InvalidInput(exception, "Invalid address");
         }
-        return Ok(AccountAddressDto.From(address));
     }
 
     [HttpDelete("me/addresses/{addressId:guid}")]
@@ -183,12 +159,8 @@ public sealed class AccountsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var address = await context.AccountAddresses.FirstOrDefaultAsync(
-            x => x.Id == addressId && x.UserId == userId.Value, cancellationToken);
-        if (address is null) return NotFound();
-        context.AccountAddresses.Remove(address);
-        await context.SaveChangesAsync(cancellationToken);
-        return NoContent();
+        var deleted = await mediator.Send(new DeleteMyAddressCommand(userId.Value, addressId), cancellationToken);
+        return deleted ? NoContent() : NotFound();
     }
 
     private Guid? GetUserId()
@@ -197,37 +169,21 @@ public sealed class AccountsController(
         return Guid.TryParse(raw, out var id) && id != Guid.Empty ? id : null;
     }
 
-    private async Task<AccountProfile> EnsureProfileAsync(Guid userId, CancellationToken cancellationToken)
+    private ActionResult InvalidInput(Exception exception, string title)
     {
-        var profile = await context.AccountProfiles.FindAsync([userId], cancellationToken);
-        if (profile is not null) return profile;
-
-        var displayName = User.Identity?.Name;
-        if (string.IsNullOrWhiteSpace(displayName)) displayName = $"User {userId.ToString("N")[..8]}";
-        profile = new AccountProfile(userId, displayName);
-        await context.AccountProfiles.AddAsync(profile, cancellationToken);
-        if (await context.AccountPreferences.FindAsync([userId], cancellationToken) is null)
-            await context.AccountPreferences.AddAsync(new AccountPreference(userId), cancellationToken);
-        await context.SaveChangesAsync(cancellationToken);
-        logger.LogInformation("Created a default Account profile for identity {UserId}", userId);
-        return profile;
-    }
-
-    private async Task ClearDefaultAddressAsync(Guid userId, Guid? exceptId, CancellationToken cancellationToken)
-    {
-        var existing = await context.AccountAddresses
-            .Where(x => x.UserId == userId && x.IsDefault && (!exceptId.HasValue || x.Id != exceptId.Value))
-            .ToListAsync(cancellationToken);
-        foreach (var address in existing)
-            address.Update(address.Label, address.Line1, address.Line2, address.City,
-                address.Region, address.PostalCode, address.Country, false);
-    }
-
-    private Task PublishProfileUpdatedAsync(AccountProfile profile, string updatedFields) =>
-        publishEndpoint.Publish(new ProfileUpdatedEvent
+        if (exception is FluentValidation.ValidationException validation)
         {
-            UserId = profile.Id,
-            UpdatedFields = updatedFields,
-            UpdatedAt = DateTime.UtcNow
-        }, HttpContext.RequestAborted);
+            var errors = validation.Errors
+                .GroupBy(error => error.PropertyName)
+                .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).Distinct().ToArray());
+            return ValidationProblem(errors, title: title);
+        }
+
+        return BadRequest(new ProblemDetails
+        {
+            Title = title,
+            Detail = exception.Message,
+            Status = StatusCodes.Status400BadRequest
+        });
+    }
 }

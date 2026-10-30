@@ -6,7 +6,6 @@ namespace Account.Infrastructure.Persistence;
 
 public sealed class AccountContext(DbContextOptions<AccountContext> options) : DbContext(options)
 {
-    public DbSet<Domain.Entities.Account> Accounts => Set<Domain.Entities.Account>();
     public DbSet<AccountProfile> AccountProfiles => Set<AccountProfile>();
     public DbSet<AccountPreference> AccountPreferences => Set<AccountPreference>();
     public DbSet<AccountAddress> AccountAddresses => Set<AccountAddress>();
@@ -14,13 +13,6 @@ public sealed class AccountContext(DbContextOptions<AccountContext> options) : D
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
-
-        modelBuilder.Entity<Domain.Entities.Account>(entity =>
-        {
-            entity.ToTable("Accounts");
-            entity.HasKey(x => x.Id);
-            entity.Property(x => x.Balance).HasPrecision(18, 2);
-        });
 
         modelBuilder.Entity<AccountProfile>(entity =>
         {
@@ -70,6 +62,47 @@ public sealed class AccountContext(DbContextOptions<AccountContext> options) : D
                 .HasForeignKey(x => x.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
+    }
+
+    /// <summary>
+    /// The SQLite fallback can outlive upgrades. Older versions created an Accounts banking
+    /// table, which causes EnsureCreated to return without creating profile tables. Rebuild
+    /// that obsolete-only database; preserve a complete profile schema on subsequent starts.
+    /// </summary>
+    public async Task EnsureSqliteSchemaAsync(CancellationToken cancellationToken = default)
+    {
+        if (Database.ProviderName?.Contains("Sqlite", StringComparison.OrdinalIgnoreCase) != true)
+            throw new InvalidOperationException("EnsureSqliteSchemaAsync can only be used with SQLite.");
+
+        var profileTableCount = 0;
+        if (await Database.CanConnectAsync(cancellationToken))
+        {
+            await Database.OpenConnectionAsync(cancellationToken);
+            try
+            {
+                await using var command = Database.GetDbConnection().CreateCommand();
+                command.CommandText = """
+                    SELECT COUNT(*)
+                    FROM sqlite_master
+                    WHERE type = 'table'
+                      AND name IN ('AccountProfiles', 'AccountPreferences', 'AccountAddresses');
+                    """;
+                profileTableCount = Convert.ToInt32(await command.ExecuteScalarAsync(cancellationToken));
+            }
+            finally
+            {
+                await Database.CloseConnectionAsync();
+            }
+
+            if (profileTableCount == 0)
+                await Database.EnsureDeletedAsync(cancellationToken);
+            else if (profileTableCount != 3)
+                throw new InvalidOperationException(
+                    "The SQLite Account database contains an incomplete profile schema. Back up the file and restore it from a valid Account database backup.");
+        }
+
+        await Database.EnsureCreatedAsync(cancellationToken);
+        await Database.ExecuteSqlRawAsync("DROP TABLE IF EXISTS \"Accounts\";", cancellationToken);
     }
 
     private void StampAuditFields()

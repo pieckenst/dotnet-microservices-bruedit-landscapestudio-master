@@ -1,4 +1,5 @@
 using Account.API.EventBus;
+using Account.Application;
 using Account.Infrastructure;
 using Account.Infrastructure.Persistence;
 using Common.Logging;
@@ -47,6 +48,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
     };
 });
 builder.Services.AddAuthorization();
+builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
 builder.Services.AddScoped<AuditEventActionFilter>();
 builder.Services.AddMassTransit(registration =>
@@ -103,7 +105,7 @@ await using (var scope = app.Services.CreateAsyncScope())
     var selection = scope.ServiceProvider.GetRequiredService<DatabaseProviderResolution>();
     var context = scope.ServiceProvider.GetRequiredService<AccountContext>();
     if (selection.Strategy.ProviderName.Equals("Sqlite", StringComparison.OrdinalIgnoreCase))
-        await context.Database.EnsureCreatedAsync();
+        await context.EnsureSqliteSchemaAsync();
     else
         await context.Database.MigrateAsync();
 }

@@ -29,8 +29,7 @@ public static class InfrastructureServiceRegistration
             var selection = sp.GetRequiredService<DatabaseProviderResolution>();
             selection.Strategy.Configure(options, selection.ConnectionString);
         });
-        services.AddScoped(typeof(IRepositoryBase<>), typeof(RepositoryBase<>));
-        services.AddScoped<IAccountRepository, AccountRepository>();
+        services.AddScoped<IAccountProfileRepository, AccountProfileRepository>();
         return services;
     }
 }
