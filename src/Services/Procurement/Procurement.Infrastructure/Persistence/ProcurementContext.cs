@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Procurement.Domain.Entities;
 using Shared.Common.Common;
 
+using Shared.Common.Outbox;
 namespace Procurement.Infrastructure.Persistence;
 
 public sealed class ProcurementContext(DbContextOptions<ProcurementContext> options) : DbContext(options)
@@ -16,6 +17,7 @@ public sealed class ProcurementContext(DbContextOptions<ProcurementContext> opti
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.AddIntegrationOutbox();
         ConfigureEntity<Supplier>(modelBuilder); ConfigureEntity<PurchaseOrder>(modelBuilder);
         ConfigureEntity<PurchaseOrderLine>(modelBuilder); ConfigureEntity<StockItem>(modelBuilder);
         ConfigureEntity<StockMovement>(modelBuilder); ConfigureEntity<SupplierDelivery>(modelBuilder);
