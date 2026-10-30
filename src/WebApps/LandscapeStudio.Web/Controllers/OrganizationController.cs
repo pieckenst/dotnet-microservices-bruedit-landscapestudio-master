@@ -179,7 +179,12 @@ public sealed class OrganizationController(
             await Task.WhenAll(projectsTask, employeesTask, brigadesTask);
 
             model.Projects = ReadItems(projectsTask.Result)
-                .Where(item => !ReadBoolean(item, "isArchived"))
+                .Where(item =>
+                {
+                    var status = ReadEnum(item, "status");
+                    return status.Equals("Planned", StringComparison.OrdinalIgnoreCase) ||
+                        status.Equals("InProgress", StringComparison.OrdinalIgnoreCase) || status is "1" or "2";
+                })
                 .Select(item => new AssignmentProjectOption(
                     ReadGuid(item, "id"),
                     ReadString(item, "projectNumber") ?? string.Empty,
