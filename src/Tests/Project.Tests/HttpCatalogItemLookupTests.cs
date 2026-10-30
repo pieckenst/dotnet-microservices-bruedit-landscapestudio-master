@@ -24,8 +24,8 @@ public sealed class HttpCatalogItemLookupTests
                 request.Headers.TryGetValues("X-Correlation-ID", out var values) ? values.Single() : null));
 
             var json = request.RequestUri.AbsolutePath.EndsWith($"/materials/{itemId:D}", StringComparison.Ordinal)
-                ? $$"""{"id":"{{itemId:D}}","name":"Granite paving","description":"Cut granite","measurementUnitId":"{{unitId:D}}","unitPrice":48.50,"isActive":true}"""
-                : $$"""{"id":"{{unitId:D}}","name":"Square metre","symbol":"m²","isActive":true}""";
+                ? $$$"""{"id":"{{itemId:D}}","name":"Granite paving","description":"Cut granite","measurementUnitId":"{{unitId:D}}","unitPrice":48.50,"isActive":true}"""
+                : $$$"""{"id":"{{unitId:D}}","name":"Square metre","symbol":"m²","isActive":true}""";
 
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
@@ -73,8 +73,8 @@ public sealed class HttpCatalogItemLookupTests
             var requestedPath = request.RequestUri!.AbsolutePath;
             requestedPaths.Add(requestedPath);
             var json = requestedPath.EndsWith($"/measurement-units/{unitId:D}", StringComparison.Ordinal)
-                ? $"""{"id":"{{unitId:D}}","name":"Unit","symbol":"pcs","isActive":true}"""
-                : $"""{"id":"{{itemId:D}}","name":"Catalog item","description":"Description","measurementUnitId":"{{unitId:D}}","{{priceProperty}}":{{expectedPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"isActive":true}""";
+                ? $$"""{"id":"{{unitId:D}}","name":"Unit","symbol":"pcs","isActive":true}"""
+                : $$"""{"id":"{{itemId:D}}","name":"Catalog item","description":"Description","measurementUnitId":"{{unitId:D}}","{{priceProperty}}":{{expectedPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)}},"isActive":true}""";
             return new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
