@@ -307,6 +307,9 @@ services:
       dockerfile: ApiGateways/OcelotApiGateway/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Jwt__Issuer: LandscapeStudio.Identity
+      Jwt__Audience: LandscapeStudio.Clients
+      Jwt__SigningKey: ${IDENTITY_JWT_SIGNING_KEY:-local-development-signing-key-change-before-deployment-2026}
     depends_on:
       account.api:
         condition: service_started

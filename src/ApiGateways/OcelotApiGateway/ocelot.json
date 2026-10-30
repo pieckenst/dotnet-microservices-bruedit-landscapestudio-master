@@ -1,6 +1,21 @@
 {
   "Routes": [
     {
+      "DownstreamPathTemplate": "/api/v1/auth/login",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "identity.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Auth/login",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "Priority": 100
+    },
+    {
       "DownstreamPathTemplate": "/api/v1/analytics/summary",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
@@ -12,7 +27,13 @@
       "UpstreamPathTemplate": "/Analytics/Summary",
       "UpstreamHttpMethod": [
         "GET"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/audit-events/export",
@@ -26,7 +47,13 @@
       "UpstreamPathTemplate": "/AuditEvents/export",
       "UpstreamHttpMethod": [
         "GET"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/audit-events",
@@ -40,7 +67,13 @@
       "UpstreamPathTemplate": "/AuditEvents",
       "UpstreamHttpMethod": [
         "GET"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/accounts/me/addresses",
@@ -55,7 +88,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/accounts/me/preferences",
@@ -70,7 +109,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "PUT"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/accounts/me/addresses/{addressId}",
@@ -85,7 +130,13 @@
       "UpstreamHttpMethod": [
         "PUT",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/accounts/me",
@@ -100,7 +151,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "PUT"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/plants",
@@ -115,7 +172,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/materials",
@@ -130,7 +193,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/work-types",
@@ -145,7 +214,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/measurement-units",
@@ -160,7 +235,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/plants/{id}",
@@ -176,7 +257,13 @@
         "GET",
         "PUT",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/materials/{id}",
@@ -192,7 +279,13 @@
         "GET",
         "PUT",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/work-types/{id}",
@@ -208,7 +301,13 @@
         "GET",
         "PUT",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/measurement-units/{id}",
@@ -224,7 +323,13 @@
         "GET",
         "PUT",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/users",
@@ -239,7 +344,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/projects",
@@ -254,7 +365,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/clients",
@@ -269,7 +386,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/land-plots",
@@ -284,7 +407,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-stages",
@@ -299,7 +428,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-tasks",
@@ -314,7 +449,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/estimates",
@@ -329,7 +470,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/employees",
@@ -344,7 +491,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/positions",
@@ -359,7 +512,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/brigades",
@@ -374,7 +533,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/work-assignments",
@@ -389,7 +554,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/auth/{everything}",
@@ -404,7 +575,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/users/{id}",
@@ -418,7 +595,13 @@
       "UpstreamPathTemplate": "/Users/{id}",
       "UpstreamHttpMethod": [
         "GET"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/projects/{everything}",
@@ -436,7 +619,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/clients/{everything}",
@@ -454,7 +643,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/land-plots/{everything}",
@@ -472,7 +667,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-stages/{everything}",
@@ -490,7 +691,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/project-tasks/{everything}",
@@ -508,7 +715,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/estimates/{everything}",
@@ -526,7 +739,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/{resource}",
@@ -541,7 +760,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/employees/{everything}",
@@ -559,7 +784,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/positions/{everything}",
@@ -577,7 +808,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/brigades/{everything}",
@@ -595,7 +832,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/work-assignments/{everything}",
@@ -613,7 +856,13 @@
         "PUT",
         "PATCH",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/{resource}/{id}",
@@ -629,7 +878,13 @@
         "GET",
         "PUT",
         "DELETE"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/suppliers",
@@ -644,7 +899,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/suppliers/{id}",
@@ -659,7 +920,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "PUT"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/suppliers/{id}/active",
@@ -673,7 +940,13 @@
       "UpstreamPathTemplate": "/Suppliers/{id}/active",
       "UpstreamHttpMethod": [
         "PATCH"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/stock-items",
@@ -688,7 +961,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/stock-items/{id}",
@@ -702,7 +981,13 @@
       "UpstreamPathTemplate": "/StockItems/{id}",
       "UpstreamHttpMethod": [
         "GET"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/stock-items/{id}/movements",
@@ -717,7 +1002,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/purchase-orders",
@@ -732,7 +1023,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}",
@@ -746,7 +1043,13 @@
       "UpstreamPathTemplate": "/PurchaseOrders/{id}",
       "UpstreamHttpMethod": [
         "GET"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/submit",
@@ -760,7 +1063,13 @@
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/submit",
       "UpstreamHttpMethod": [
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/approve",
@@ -774,7 +1083,13 @@
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/approve",
       "UpstreamHttpMethod": [
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/receive-lines/{lineId}",
@@ -788,7 +1103,13 @@
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/receive-lines/{lineId}",
       "UpstreamHttpMethod": [
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/cancel",
@@ -802,7 +1123,13 @@
       "UpstreamPathTemplate": "/PurchaseOrders/{id}/cancel",
       "UpstreamHttpMethod": [
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/deliveries",
@@ -817,7 +1144,13 @@
       "UpstreamHttpMethod": [
         "GET",
         "POST"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/deliveries/{id}",
@@ -831,7 +1164,13 @@
       "UpstreamPathTemplate": "/Deliveries/{id}",
       "UpstreamHttpMethod": [
         "GET"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
       "DownstreamPathTemplate": "/api/v1/deliveries/{id}/status",
@@ -845,7 +1184,13 @@
       "UpstreamPathTemplate": "/Deliveries/{id}/status",
       "UpstreamHttpMethod": [
         "PATCH"
-      ]
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     }
   ],
   "GlobalConfiguration": {
