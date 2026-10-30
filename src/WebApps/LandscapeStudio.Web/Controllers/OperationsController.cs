@@ -240,6 +240,30 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeEmployeeStatus(Guid id, string status, CancellationToken cancellationToken)
+    {
+        var allowed = new[] { "Active", "OnLeave", "Inactive", "Terminated" };
+        if (id == Guid.Empty || !allowed.Contains(status, StringComparer.OrdinalIgnoreCase))
+            return BadRequest();
+
+        try
+        {
+            await api.SendAsync<JsonElement>(HttpMethod.Patch,
+                $"/Employees/{id:D}/status?status={Uri.EscapeDataString(status)}",
+                cancellationToken: cancellationToken);
+            TempData["Success"] = $"Employee status changed to {status}.";
+        }
+        catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogWarning(exception, "Could not change employee {EmployeeId} status to {Status}.", id, status);
+            TempData["Error"] = $"Employee status change failed: {exception.Message}";
+        }
+
+        return RedirectToAction(nameof(Index), new { resource = "employees" });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Archive(string resource, Guid id, CancellationToken cancellationToken)
     {
         if (id == Guid.Empty || string.IsNullOrWhiteSpace(resource) ||
@@ -516,7 +540,9 @@ public sealed class OperationsController(LandscapeApiClient api, ILogger<Operati
     private static string GetRecordName(OperationFormViewModel model) =>
         model.Resource.Equals("suppliers", StringComparison.OrdinalIgnoreCase) ? model.Name :
         model.Resource.Equals("stock-items", StringComparison.OrdinalIgnoreCase) ? model.Sku :
-        model.Name;
+        model.Resource.Equals("employees", StringComparison.OrdinalIgnoreCase)
+            ? $"{model.EmployeeNumber} — {model.FirstName} {model.LastName}"
+            : model.Name;
 
     private static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
