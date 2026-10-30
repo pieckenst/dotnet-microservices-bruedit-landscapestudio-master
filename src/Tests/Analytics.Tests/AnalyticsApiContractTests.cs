@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Transaction.API.Controllers;
 using Transaction.API.Data.DTOs.Requests;
 using Transaction.API.Data.DTOs.Responses;
@@ -88,6 +89,74 @@ public sealed class AnalyticsApiContractTests
         Assert.Equal(0, repository.QueryCalls);
     }
 
+
+    [Fact]
+    public async Task State_Import_Rejects_Unsupported_Schema_Before_Repository_Access()
+    {
+        var repository = new StubAuditEventRepository();
+        var controller = new AnalyticsStateController(repository, NullLogger<AnalyticsStateController>.Instance);
+
+        var result = await controller.Import(
+            new AuditStateSnapshot { SchemaVersion = 99 },
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(0, repository.ImportCalls);
+    }
+
+    [Fact]
+    public async Task State_Import_Rejects_Duplicate_Event_Ids()
+    {
+        var id = Guid.NewGuid();
+        var record = new AuditRecord
+        {
+            Id = id,
+            OccurredAtUtc = DateTime.UtcNow,
+            SourceService = "Project",
+            Action = "ProjectCreated",
+            EntityType = "Project"
+        };
+        var repository = new StubAuditEventRepository();
+        var controller = new AnalyticsStateController(repository, NullLogger<AnalyticsStateController>.Instance);
+
+        var result = await controller.Import(
+            new AuditStateSnapshot { Records = [record, record] },
+            CancellationToken.None);
+
+        Assert.IsType<BadRequestObjectResult>(result.Result);
+        Assert.Equal(0, repository.ImportCalls);
+    }
+
+    [Fact]
+    public async Task State_Import_Returns_Insert_And_Idempotency_Counts()
+    {
+        var repository = new StubAuditEventRepository();
+        var controller = new AnalyticsStateController(repository, NullLogger<AnalyticsStateController>.Instance);
+        var snapshot = new AuditStateSnapshot
+        {
+            Records =
+            [
+                new AuditRecord
+                {
+                    Id = Guid.NewGuid(),
+                    OccurredAtUtc = DateTime.UtcNow,
+                    SourceService = "Project",
+                    Action = "ProjectCreated",
+                    EntityType = "Project"
+                }
+            ]
+        };
+
+        var result = await controller.Import(snapshot, CancellationToken.None);
+
+        var response = Assert.IsType<OkObjectResult>(result.Result);
+        var imported = Assert.IsType<AuditStateImportResult>(response.Value);
+        Assert.Equal(1, imported.Received);
+        Assert.Equal(1, imported.Inserted);
+        Assert.Equal(0, imported.SkippedExisting);
+        Assert.Equal(1, repository.ImportCalls);
+    }
+
     private sealed class StubAuditEventRepository : IAuditEventRepository
     {
         public long TotalCount { get; init; }
@@ -96,6 +165,7 @@ public sealed class AnalyticsApiContractTests
         public (IReadOnlyList<AuditRecord> Items, long TotalCount) QueryResult { get; init; } = ([], 0);
         public int CountCalls { get; private set; }
         public int QueryCalls { get; private set; }
+        public int ImportCalls { get; private set; }
         public AuditEventQuery? LastQuery { get; private set; }
 
         public Task AddAsync(AuditRecord record, CancellationToken cancellationToken = default) =>
@@ -118,8 +188,11 @@ public sealed class AnalyticsApiContractTests
             Task.FromResult<IReadOnlyList<AuditRecord>>([]);
 
         public Task<int> ImportMissingAsync(
-            IReadOnlyCollection<AuditRecord> records, CancellationToken cancellationToken = default) =>
-            Task.FromResult(records.Count);
+            IReadOnlyCollection<AuditRecord> records, CancellationToken cancellationToken = default)
+        {
+            ImportCalls++;
+            return Task.FromResult(records.Count);
+        }
 
         public Task<IReadOnlyList<(string Name, long Count)>> CountByServiceAsync(
             DateTime fromUtc, DateTime toUtc, CancellationToken cancellationToken = default) =>
