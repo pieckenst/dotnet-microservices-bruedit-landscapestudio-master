@@ -525,22 +525,59 @@ internal sealed class CreateSupplierDialog : OperationDialogBase
 
 internal sealed class CreateStockItemDialog : OperationDialogBase
 {
+    private readonly Guid? _recordId;
     private readonly TextBox _sku = new() { MaxLength = 48 };
     private readonly TextBox _description = new() { MaxLength = 200 };
     private readonly TextBox _unit = new() { MaxLength = 24 };
     private readonly TextBox _location = new() { MaxLength = 100 };
-    private readonly TextBox _catalogId = new() { MaxLength = 36 };
+    private readonly TextBox _catalogId = new() { MaxLength = 36, ReadOnly = true };
     private readonly NumericUpDown _reorder = new() { Minimum = 0, Maximum = 1000000000, DecimalPlaces = 3, Increment = 1 };
 
-    public CreateStockItemDialog(DesktopApiClient api)
-        : base(api, "New stock item", "Create the inventory item before recording its first movement.", 640)
+    public CreateStockItemDialog(DesktopApiClient api, Guid? recordId = null)
+        : base(api, recordId.HasValue ? "Edit stock item" : "New stock item",
+            recordId.HasValue ? "Update stock metadata without changing stock quantity or its Catalog link." :
+                "Create the inventory item before recording its first movement.", 640)
     {
+        _recordId = recordId;
         AddField("Stock-keeping unit (SKU) *", _sku);
         AddField("Description *", _description);
         AddField("Unit symbol *", _unit);
         AddField("Storage location *", _location);
-        AddField("Catalog item ID (optional)", _catalogId);
+        AddField("Catalog item ID (read-only)", _catalogId);
         AddField("Reorder level", _reorder);
+        SaveButton.Values.Text = recordId.HasValue ? "Save changes  →" : "Create stock item  →";
+        Shown += async (_, _) =>
+        {
+            if (_recordId.HasValue) await LoadRecordAsync();
+        };
+    }
+
+    private async Task LoadRecordAsync()
+    {
+        SaveButton.Enabled = false;
+        SetInfo("Loading stock item…");
+        try
+        {
+            var item = await Api.GetAsync($"/StockItems/{_recordId!.Value:D}");
+            _sku.Text = CreateEstimateDialog.ReadString(item, "sku") ?? string.Empty;
+            _description.Text = CreateEstimateDialog.ReadString(item, "description") ?? string.Empty;
+            _unit.Text = CreateEstimateDialog.ReadString(item, "unitSymbol") ?? string.Empty;
+            _location.Text = CreateEstimateDialog.ReadString(item, "storageLocation") ?? string.Empty;
+            _catalogId.Text = CreateEstimateDialog.ReadString(item, "catalogItemId") ?? string.Empty;
+            if (decimal.TryParse(CreateEstimateDialog.ReadString(item, "reorderLevel"),
+                    NumberStyles.Number, CultureInfo.InvariantCulture, out var reorder))
+                _reorder.Value = Math.Clamp(reorder, _reorder.Minimum, _reorder.Maximum);
+            SetInfo("Stock item loaded. Quantity on hand is changed only through stock movements.");
+        }
+        catch (Exception exception) when (exception is DesktopApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            SetError("Stock item could not be loaded: " + exception.Message);
+            return;
+        }
+        finally
+        {
+            if (!IsDisposed) SaveButton.Enabled = true;
+        }
     }
 
     protected override async Task SaveAsync()
@@ -551,6 +588,44 @@ internal sealed class CreateStockItemDialog : OperationDialogBase
             SetError("SKU, description, unit symbol and storage location are required.");
             return;
         }
+
+        var payload = new
+        {
+            sku = _sku.Text.Trim().ToUpperInvariant(),
+            description = _description.Text.Trim(),
+            unitSymbol = _unit.Text.Trim(),
+            storageLocation = _location.Text.Trim(),
+            reorderLevel = _reorder.Value
+        };
+
+        if (_recordId is Guid recordId)
+        {
+            SaveButton.Enabled = false;
+            SetInfo("Saving stock metadata…");
+            try
+            {
+                await Api.PutAsync($"/StockItems/{recordId:D}", payload);
+                SetInfo("Stock item updated. On-hand quantity was preserved.");
+                DialogResult = DialogResult.OK;
+                Close();
+            }
+            catch (DesktopApiException exception)
+            {
+                SetError(exception.Message);
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+            {
+                SetError(exception is TaskCanceledException
+                    ? "The update timed out. Refresh the stock item before retrying."
+                    : exception.Message);
+            }
+            finally
+            {
+                if (!IsDisposed) SaveButton.Enabled = true;
+            }
+            return;
+        }
+
         Guid? catalogId = null;
         if (!string.IsNullOrWhiteSpace(_catalogId.Text))
         {
@@ -565,11 +640,11 @@ internal sealed class CreateStockItemDialog : OperationDialogBase
         await SubmitAsync("StockItems", new
         {
             catalogItemId = catalogId,
-            sku = _sku.Text.Trim().ToUpperInvariant(),
-            description = _description.Text.Trim(),
-            unitSymbol = _unit.Text.Trim(),
-            storageLocation = _location.Text.Trim(),
-            reorderLevel = _reorder.Value
+            payload.sku,
+            payload.description,
+            payload.unitSymbol,
+            payload.storageLocation,
+            payload.reorderLevel
         });
     }
 }

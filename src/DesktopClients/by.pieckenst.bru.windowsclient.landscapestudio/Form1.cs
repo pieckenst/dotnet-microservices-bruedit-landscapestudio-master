@@ -29,6 +29,7 @@ public partial class Form1 : KryptonForm
     private KryptonButton? _editProjectButton;
     private KryptonButton? _editReferenceButton;
     private KryptonButton? _archiveReferenceButton;
+    private KryptonButton? _editStockItemButton;
     private DataGridView? _currentGrid;
     private DesktopApiClient? _api;
     private CancellationTokenSource? _loadCancellation;
@@ -187,6 +188,7 @@ public partial class Form1 : KryptonForm
         _editProjectButton = null;
         _editReferenceButton = null;
         _archiveReferenceButton = null;
+        _editStockItemButton = null;
         var header = BuildPageHeader(page);
         layout.Controls.Add(header, 0, 0);
         var body = new Panel { Dock = DockStyle.Fill, BackColor = Canvas, Padding = Padding.Empty };
@@ -309,6 +311,15 @@ public partial class Form1 : KryptonForm
                 create.Margin = new Padding(8, 0, 0, 0);
                 create.Click += async (_, _) => await CreateStockItemAsync();
                 actions.Controls.Add(create);
+            }
+            if (_api is not null && page.Equals("Inventory", StringComparison.OrdinalIgnoreCase))
+            {
+                var edit = CreateSecondaryButton("Edit selected");
+                edit.Margin = new Padding(8, 0, 0, 0);
+                edit.Enabled = false;
+                edit.Click += async (_, _) => await EditStockItemAsync();
+                _editStockItemButton = edit;
+                actions.Controls.Add(edit);
             }
             if (_api is not null && page.Equals("Inventory", StringComparison.OrdinalIgnoreCase))
             {
@@ -544,6 +555,19 @@ public partial class Form1 : KryptonForm
                     await EditReferenceRecordAsync();
             };
         }
+        if (page.Equals("Inventory", StringComparison.OrdinalIgnoreCase))
+        {
+            grid.SelectionChanged += (_, _) =>
+            {
+                if (_editStockItemButton is not null && !_editStockItemButton.IsDisposed)
+                    _editStockItemButton.Enabled = GetSelectedGridRecordId().HasValue;
+            };
+            grid.CellDoubleClick += async (_, args) =>
+            {
+                if (args.RowIndex >= 0)
+                    await EditStockItemAsync();
+            };
+        }
         if (rowCount == 2) layout.Controls.Add(grid, 0, 1); else layout.Controls.Add(grid, 0, 0);
         queryPanel.Controls.Add(layout);
         body.Controls.Clear();
@@ -695,6 +719,22 @@ public partial class Form1 : KryptonForm
     {
         if (_api is null) return;
         using var dialog = new CreateStockItemDialog(_api);
+        if (dialog.ShowDialog(this) == DialogResult.OK)
+            await ShowPageAsync("Inventory");
+    }
+
+    private async Task EditStockItemAsync()
+    {
+        if (_api is null) return;
+        var id = GetSelectedGridRecordId();
+        if (!id.HasValue)
+        {
+            MessageBox.Show(this, "Select a stock item in the inventory table first.",
+                "No stock item selected", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            return;
+        }
+
+        using var dialog = new CreateStockItemDialog(_api, id.Value);
         if (dialog.ShowDialog(this) == DialogResult.OK)
             await ShowPageAsync("Inventory");
     }
