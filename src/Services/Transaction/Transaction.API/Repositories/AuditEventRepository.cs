@@ -57,6 +57,7 @@ public sealed class AuditEventRepository(IAuditEventContext context) : IAuditEve
         var total = await context.AuditEvents.CountDocumentsAsync(filter, cancellationToken: cancellationToken);
         var items = await context.AuditEvents.Find(filter)
             .SortByDescending(x => x.OccurredAtUtc)
+            .ThenByDescending(x => x.Id)
             .Skip(checked((query.Page - 1) * query.PageSize))
             .Limit(query.PageSize)
             .ToListAsync(cancellationToken);
