@@ -1,5 +1,3 @@
-version: '3.4'
-
 services:
   analyticsdb:
     image: mongo:7
@@ -126,10 +124,11 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
       interval: 5s
       timeout: 5s
       retries: 12
+      start_period: 20s
 
   pgadmin:
     image: dpage/pgadmin4
