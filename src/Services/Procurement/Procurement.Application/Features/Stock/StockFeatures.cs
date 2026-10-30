@@ -119,8 +119,9 @@ public sealed class RecordStockMovementCommandHandler(
     public Task<StockMovementDto> Handle(RecordStockMovementCommand request, CancellationToken cancellationToken) =>
         unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            var item = await stockItems.GetAsync(predicate: x => x.Id == request.StockItemId,
+            var matches = await stockItems.GetAsync(predicate: x => x.Id == request.StockItemId,
                 includes: new(), disableTracking: false);
+            var item = matches.FirstOrDefault();
             if (item is null) throw new KeyNotFoundException("Stock item was not found.");
 
             var signedQuantity = request.MovementType switch
