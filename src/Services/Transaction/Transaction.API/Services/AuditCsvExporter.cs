@@ -34,6 +34,43 @@ public static class AuditCsvExporter
         return output.ToString();
     }
 
+    /// <summary>
+    /// Exports the same privacy-minimized columns as CSV using an escaped pipe-delimited format.
+    /// Backslash, pipe and line breaks are escaped so one event always occupies one physical line.
+    /// </summary>
+    public static string ExportPipe(IEnumerable<AuditRecord> records)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+        var output = new StringBuilder();
+        output.AppendLine(string.Join("|", Headers.Select(EscapePipe)));
+        foreach (var record in records)
+        {
+            output.AppendLine(string.Join("|", new[]
+            {
+                record.Id.ToString("D"),
+                record.OccurredAtUtc.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture),
+                record.SourceService,
+                record.Action,
+                record.EntityType,
+                record.EntityId ?? string.Empty,
+                record.ActorId ?? string.Empty,
+                record.CorrelationId ?? string.Empty
+            }.Select(EscapePipe)));
+        }
+        return output.ToString();
+    }
+
+    private static string EscapePipe(string? value)
+    {
+        value ??= string.Empty;
+        if (value.Length > 0 && value[0] is '=' or '+' or '-' or '@' or '\\t' or '\\r')
+            value = "'" + value;
+        return value.Replace("\\\\", "\\\\\\\\", StringComparison.Ordinal)
+            .Replace("|", "\\\\|", StringComparison.Ordinal)
+            .Replace("\\r", "\\\\r", StringComparison.Ordinal)
+            .Replace("\\n", "\\\\n", StringComparison.Ordinal);
+    }
+
     private static string Escape(string? value)
     {
         value ??= string.Empty;
