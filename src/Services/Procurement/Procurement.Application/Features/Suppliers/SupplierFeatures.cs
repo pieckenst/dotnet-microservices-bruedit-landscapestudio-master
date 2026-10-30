@@ -2,7 +2,6 @@ using FluentValidation;
 using MediatR;
 using Procurement.Application.DTOs;
 using Procurement.Domain.Entities;
-using Shared.Common.Exceptions;
 using Shared.Common.Persistence;
 
 namespace Procurement.Application.Features.Suppliers;
@@ -28,10 +27,17 @@ public sealed class GetSupplierByIdQueryValidator : AbstractValidator<GetSupplie
 }
 public sealed class CreateSupplierCommandValidator : AbstractValidator<CreateSupplierCommand>
 {
-    public CreateSupplierCommandValidator() => AddRules(this);
-    internal static void AddRules<T>(AbstractValidator<T> validator) where T : class
+    public CreateSupplierCommandValidator()
     {
-        validator.RuleFor(x => ((dynamic)x).Code).NotEmpty().MaximumLength(32);
+        RuleFor(x => x.Code).NotEmpty().MaximumLength(32);
+        RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
+        RuleFor(x => x.ContactName).NotEmpty().MaximumLength(120);
+        RuleFor(x => x.Email).EmailAddress().MaximumLength(254).When(x => !string.IsNullOrWhiteSpace(x.Email));
+        RuleFor(x => x.Phone).MaximumLength(40);
+        RuleFor(x => x.TaxIdentifier).MaximumLength(80);
+        RuleFor(x => x.Address).NotEmpty().MaximumLength(500);
+        RuleFor(x => x.PaymentTermDays).InclusiveBetween(0, 365);
+        RuleFor(x => x.CurrencyCode).NotEmpty().Length(3).Matches("^[A-Za-z]{3}$");
     }
 }
 public sealed class UpdateSupplierCommandValidator : AbstractValidator<UpdateSupplierCommand>
@@ -52,7 +58,7 @@ public sealed class UpdateSupplierCommandValidator : AbstractValidator<UpdateSup
 }
 public sealed class SetSupplierActiveCommandValidator : AbstractValidator<SetSupplierActiveCommand>
 {
-    public SetSupplierActiveCommandValidator() { RuleFor(x => x.Id).NotEmpty(); }
+    public SetSupplierActiveCommandValidator() => RuleFor(x => x.Id).NotEmpty();
 }
 
 public static class SupplierMapping
