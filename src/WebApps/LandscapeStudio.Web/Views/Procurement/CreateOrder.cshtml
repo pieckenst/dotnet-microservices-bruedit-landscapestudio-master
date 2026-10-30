@@ -1,0 +1,90 @@
+@model CreatePurchaseOrderViewModel
+@{
+    ViewData["Title"] = "New purchase order";
+    ViewData["Section"] = "Procurement / New order";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> PROCUREMENT / PURCHASING</span><h1>New purchase <span>order.</span></h1><p>Build a supplier order with individually priced lines. The Procurement service validates supplier eligibility and order totals.</p></div>
+    <a class="button button-quiet" asp-action="Index">← Back to procurement</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.LookupError))
+{
+    <div class="alert alert-warning" role="status">@Model.LookupError</div>
+}
+<form asp-action="CreateOrder" method="post" class="form-workspace" id="purchase-order-form">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">01</span><div><h2>Order details</h2><p>Supplier, dates and project association.</p></div></div>
+        <div class="form-grid">
+            <div class="field"><label asp-for="OrderNumber">Order number <span class="required">*</span></label><input asp-for="OrderNumber" maxlength="40" placeholder="PO-2026-001" /><span asp-validation-for="OrderNumber" class="field-error"></span></div>
+            <div class="field"><label asp-for="SupplierId">Supplier <span class="required">*</span></label><select asp-for="SupplierId"><option value="">Select supplier</option>@foreach (var supplier in Model.Suppliers) { <option value="@supplier.Id">@supplier.Code — @supplier.Name (@supplier.CurrencyCode)</option> }</select><span asp-validation-for="SupplierId" class="field-error"></span></div>
+            <div class="field"><label asp-for="OrderDate">Order date <span class="required">*</span></label><input asp-for="OrderDate" type="date" /><span asp-validation-for="OrderDate" class="field-error"></span></div>
+            <div class="field"><label asp-for="ExpectedDeliveryDate">Expected delivery</label><input asp-for="ExpectedDeliveryDate" type="date" /><span asp-validation-for="ExpectedDeliveryDate" class="field-error"></span></div>
+            <div class="field"><label asp-for="ProjectId">Project ID</label><input asp-for="ProjectId" placeholder="Optional project GUID" /><span asp-validation-for="ProjectId" class="field-error"></span><small>Associate this purchase with a project for traceability.</small></div>
+            <div class="field field-full"><label asp-for="Notes">Notes</label><textarea asp-for="Notes" rows="3" maxlength="4000" placeholder="Delivery instructions, commercial notes or internal reference"></textarea><span asp-validation-for="Notes" class="field-error"></span></div>
+        </div>
+    </section>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">02</span><div><h2>Order lines</h2><p>Each line contributes to the order total. Leave unused rows blank.</p></div></div>
+        <div class="po-line-header"><span>Item type</span><span>Description</span><span>Unit</span><span>Quantity</span><span>Unit price</span><span></span></div>
+        <div id="po-lines">
+        @for (var i = 0; i < Model.Lines.Count; i++)
+        {
+            <div class="po-entry">
+                <div class="field"><label class="mobile-field-label">Item type</label><select name="Lines[@i].ItemType"><option value="0" selected="@(Model.Lines[i].ItemType == 0)">Material</option><option value="1" selected="@(Model.Lines[i].ItemType == 1)">Plant</option><option value="2" selected="@(Model.Lines[i].ItemType == 2)">Equipment</option><option value="3" selected="@(Model.Lines[i].ItemType == 3)">Service</option><option value="4" selected="@(Model.Lines[i].ItemType == 4)">Other</option></select></div>
+                <div class="field"><label class="mobile-field-label">Description</label><input name="Lines[@i].Description" value="@Model.Lines[i].Description" maxlength="500" placeholder="Birch tree, soil, installation…" /></div>
+                <div class="field"><label class="mobile-field-label">Unit</label><input name="Lines[@i].UnitSymbol" value="@Model.Lines[i].UnitSymbol" maxlength="24" placeholder="pcs" /></div>
+                <div class="field"><label class="mobile-field-label">Quantity</label><input name="Lines[@i].Quantity" type="number" min="0.001" max="1000000000" step="0.001" value="@Model.Lines[i].Quantity.ToString(System.Globalization.CultureInfo.InvariantCulture)" /></div>
+                <div class="field"><label class="mobile-field-label">Unit price</label><input name="Lines[@i].UnitPrice" type="number" min="0" max="1000000000000" step="0.01" value="@Model.Lines[i].UnitPrice.ToString(System.Globalization.CultureInfo.InvariantCulture)" /></div>
+                <div class="po-line-total">—</div>
+            </div>
+            <input type="hidden" name="Lines[@i].CatalogItemId" value="@Model.Lines[i].CatalogItemId" />
+        }
+        </div>
+        <button class="button button-secondary" type="button" id="add-po-line">＋ Add line item</button>
+        <div class="po-total-bar"><span>Estimated order total</span><strong id="po-total">0.00</strong></div>
+        <p class="form-hint">Linking a catalog item is optional. For material or plant receipts to update inventory automatically, set its catalog item ID when creating the line.</p>
+    </section>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index">Cancel</a><button class="button button-primary" type="submit" @(Model.Suppliers.Count == 0 ? "disabled" : null)>Create purchase order <span aria-hidden="true">→</span></button></div>
+</form>
+@section Scripts {
+<script>
+(() => {
+    const container = document.getElementById('po-lines');
+    const addButton = document.getElementById('add-po-line');
+    const total = document.getElementById('po-total');
+    if (!container || !addButton || !total) return;
+    let nextIndex = container.querySelectorAll('.po-entry').length;
+    const money = value => Number.isFinite(value) ? value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00';
+    const updateTotals = () => {
+        let sum = 0;
+        container.querySelectorAll('.po-entry').forEach(row => {
+            const quantity = Number(row.querySelector('[name$=".Quantity"]')?.value || 0);
+            const unitPrice = Number(row.querySelector('[name$=".UnitPrice"]')?.value || 0);
+            const line = quantity > 0 && unitPrice >= 0 ? quantity * unitPrice : 0;
+            sum += line;
+            row.querySelector('.po-line-total').textContent = money(line);
+        });
+        total.textContent = money(sum);
+    };
+    const template = index => `
+        <div class="po-entry">
+            <div class="field"><label class="mobile-field-label">Item type</label><select name="Lines[${index}].ItemType"><option value="0">Material</option><option value="1">Plant</option><option value="2">Equipment</option><option value="3">Service</option><option value="4">Other</option></select></div>
+            <div class="field"><label class="mobile-field-label">Description</label><input name="Lines[${index}].Description" maxlength="500" placeholder="Description" /></div>
+            <div class="field"><label class="mobile-field-label">Unit</label><input name="Lines[${index}].UnitSymbol" maxlength="24" value="pcs" /></div>
+            <div class="field"><label class="mobile-field-label">Quantity</label><input name="Lines[${index}].Quantity" type="number" min="0.001" max="1000000000" step="0.001" value="1" /></div>
+            <div class="field"><label class="mobile-field-label">Unit price</label><input name="Lines[${index}].UnitPrice" type="number" min="0" max="1000000000000" step="0.01" value="0" /></div>
+            <div class="po-line-total">—</div>
+        </div>
+        <input type="hidden" name="Lines[${index}].CatalogItemId" value="" />`;
+    addButton.addEventListener('click', () => {
+        container.insertAdjacentHTML('beforeend', template(nextIndex++));
+        updateTotals();
+    });
+    container.addEventListener('input', updateTotals);
+    container.addEventListener('change', updateTotals);
+    updateTotals();
+})();
+</script>
+}
