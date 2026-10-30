@@ -144,6 +144,30 @@ public sealed class OrganizationController(
         return View(model);
     }
 
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ChangeAssignmentStatus(Guid id, string status, CancellationToken cancellationToken)
+    {
+        var allowed = new[] { "Planned", "Active", "Completed", "Cancelled" };
+        if (id == Guid.Empty || !allowed.Contains(status, StringComparer.OrdinalIgnoreCase))
+            return BadRequest();
+
+        try
+        {
+            await api.SendAsync<JsonElement>(HttpMethod.Patch,
+                $"/WorkAssignments/{id:D}/status?status={Uri.EscapeDataString(status)}",
+                cancellationToken: cancellationToken);
+            TempData["Success"] = $"Assignment status changed to {status}.";
+        }
+        catch (Exception exception) when (exception is ApiException or HttpRequestException or TaskCanceledException or JsonException)
+        {
+            logger.LogWarning(exception, "Could not change work assignment {AssignmentId} status to {Status}.", id, status);
+            TempData["Error"] = $"Assignment status change failed: {exception.Message}";
+        }
+
+        return RedirectToAction(nameof(Assignments));
+    }
+
     private async Task LoadLookupsAsync(WorkAssignmentFormViewModel model, CancellationToken cancellationToken)
     {
         model.LookupError = null;
