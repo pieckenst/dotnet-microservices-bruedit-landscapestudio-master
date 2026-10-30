@@ -36,7 +36,8 @@ public sealed class OperationFormViewModel
     [StringLength(4000)]
     public string Description { get; set; } = string.Empty;
 
-    [Range(typeof(decimal), "0.01", "1000000000")]
+    // Validated only for land-plot forms; a global Range attribute would reject
+    // unrelated client, catalog, supplier and employee forms whose unused value is zero.
     public decimal AreaSquareMetres { get; set; }
 
     [StringLength(100)]
