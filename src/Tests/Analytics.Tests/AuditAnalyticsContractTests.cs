@@ -107,7 +107,7 @@ public sealed class AuditAnalyticsContractTests
 
         Assert.Contains("Project\\|Archive", output);
         Assert.Contains("Project\\nCreated", output);
-        Assert.Contains("id\\\\\\\\part", output);
+        Assert.Contains("id\\\\part", output);
         Assert.Contains("'=formula", output);
         Assert.Equal(2, output.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Length);
     }
