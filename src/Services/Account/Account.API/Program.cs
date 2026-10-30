@@ -15,6 +15,7 @@ using Serilog;
 using Shared.Common.Common;
 using Shared.ServiceKit.Auditing;
 using Shared.ServiceKit.Outbox;
+using Shared.Common.Outbox;
 using System.Security.Claims;
 using System.Text;
 
@@ -103,6 +104,7 @@ await using (var scope = app.Services.CreateAsyncScope())
         await context.EnsureSqliteSchemaAsync();
     else
         await context.Database.MigrateAsync();
+    await context.Database.EnsureIntegrationOutboxSchemaAsync();
 }
 
 if (app.Environment.IsDevelopment())
