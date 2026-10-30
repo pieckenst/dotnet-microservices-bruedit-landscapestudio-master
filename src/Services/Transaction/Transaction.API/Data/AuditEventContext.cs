@@ -21,7 +21,7 @@ public sealed class AuditEventContext : IAuditEventContext
         AuditEvents = database.GetCollection<AuditRecord>(collectionName);
         AuditEvents.Indexes.CreateMany(new[]
         {
-            new CreateIndexModel<AuditRecord>(Builders<AuditRecord>.IndexKeys.Descending(x => x.OccurredAtUtc)),
+            new CreateIndexModel<AuditRecord>(Builders<AuditRecord>.IndexKeys.Descending(x => x.OccurredAtUtc).Descending(x => x.Id)),
             new CreateIndexModel<AuditRecord>(Builders<AuditRecord>.IndexKeys.Ascending(x => x.SourceService).Descending(x => x.OccurredAtUtc)),
             new CreateIndexModel<AuditRecord>(Builders<AuditRecord>.IndexKeys.Ascending(x => x.EntityType).Ascending(x => x.EntityId)),
             new CreateIndexModel<AuditRecord>(Builders<AuditRecord>.IndexKeys.Ascending(x => x.ActorId).Descending(x => x.OccurredAtUtc))
