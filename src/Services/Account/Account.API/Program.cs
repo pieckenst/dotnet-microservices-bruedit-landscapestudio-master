@@ -14,6 +14,7 @@ using Microsoft.OpenApi.Models;
 using Serilog;
 using Shared.Common.Common;
 using Shared.ServiceKit.Auditing;
+using Shared.ServiceKit.Outbox;
 using System.Security.Claims;
 using System.Text;
 
@@ -50,25 +51,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJw
 builder.Services.AddAuthorization();
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
-builder.Services.AddScoped<AuditEventActionFilter>();
-builder.Services.AddMassTransit(registration =>
-{
-    registration.AddConsumer<UserRegisteredConsumer>();
-    registration.UsingRabbitMq((context, bus) =>
-    {
-        var host = builder.Configuration["EventBusSettings:HostAddress"] ?? "amqp://guest:guest@localhost:5672";
-        bus.Host(host);
+builder.Services.AddMutationAuditEvents<AccountContext>(
+    builder.Configuration,
+    "Account",
+    configureConsumers: registration => registration.AddConsumer<UserRegisteredConsumer>(),
+    configureBus: (context, bus) =>
         bus.ReceiveEndpoint(EventBusConstants.UserRegisteredQueue, endpoint =>
-            endpoint.ConfigureConsumer<UserRegisteredConsumer>(context));
-    });
-});
+            endpoint.ConfigureConsumer<UserRegisteredConsumer>(context)));
 builder.Services.Configure<MassTransitHostOptions>(options =>
 {
     options.WaitUntilStarted = true;
     options.StartTimeout = TimeSpan.FromSeconds(30);
     options.StopTimeout = TimeSpan.FromMinutes(1);
 });
-builder.Services.AddControllers(options => options.Filters.AddService<AuditEventActionFilter>());
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -118,6 +113,7 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<OutboxTransactionMiddleware<AccountContext>>();
 app.MapControllers();
 app.MapHealthChecks("/health", new HealthCheckOptions
 {
