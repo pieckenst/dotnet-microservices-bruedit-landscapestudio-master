@@ -30,6 +30,11 @@
                 <a class="@(currentController == "Projects" ? "active" : "")" asp-controller="Projects" asp-action="Index"><span class="nav-icon">▦</span>Projects</a>
                 <a class="@(currentController == "Operations" && (Context.Request.Query["resource"] == "plants" || Context.Request.Query["resource"] == "materials" || Context.Request.Query["resource"] == "work-types") ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="plants"><span class="nav-icon">❋</span>Plant &amp; material catalog</a>
             </nav>
+            <div class="nav-label">CLIENTS &amp; SITES</div>
+            <nav class="main-nav" aria-label="Client and site records">
+                <a class="@(Context.Request.Query["resource"] == "clients" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="clients"><span class="nav-icon">◎</span>Clients</a>
+                <a class="@(Context.Request.Query["resource"] == "land-plots" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="land-plots"><span class="nav-icon">⌖</span>Land plots</a>
+            </nav>
             <div class="nav-label">OPERATIONS</div>
             <nav class="main-nav" aria-label="Operational workflows">
                 <a class="@(Context.Request.Query["resource"] == "suppliers" ? "active" : "")" asp-controller="Operations" asp-action="Index" asp-route-resource="suppliers"><span class="nav-icon">⌘</span>Suppliers</a>
