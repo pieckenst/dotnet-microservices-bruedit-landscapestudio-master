@@ -17,6 +17,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\Services\Procurement\Procurement.Domain\Procurement.Domain.csproj" />
+    <ProjectReference Include="..\..\Services\Procurement\Procurement.Application\Procurement.Application.csproj" />
     <ProjectReference Include="..\..\Services\Procurement\Procurement.Infrastructure\Procurement.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
