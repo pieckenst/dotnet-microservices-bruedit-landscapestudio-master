@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Project.Domain.Entities;
 using Shared.Common.Common;
 
+using Shared.Common.Outbox;
 namespace Project.Infrastructure.Persistence;
 
 public sealed class ProjectContext(DbContextOptions<ProjectContext> options) : DbContext(options)
@@ -17,6 +18,7 @@ public sealed class ProjectContext(DbContextOptions<ProjectContext> options) : D
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.AddIntegrationOutbox();
         ConfigureEntity<Client>(modelBuilder);
         ConfigureEntity<LandPlot>(modelBuilder);
         ConfigureEntity<LandscapeProject>(modelBuilder);
