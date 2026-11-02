@@ -1,103 +1,1217 @@
 {
   "Routes": [
-    //Transaction API
     {
-      "DownstreamPathTemplate": "/api/v1/Transactions/{accountId}",
+      "DownstreamPathTemplate": "/api/v1/auth/login",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "transaction.api",
-          "Port": "8080"
+          "Host": "identity.api",
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Transactions/{accountId}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamPathTemplate": "/Auth/login",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "Priority": 100
     },
     {
-      "DownstreamPathTemplate": "/api/v1/Transactions",
+      "DownstreamPathTemplate": "/api/v1/analytics/state",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "transaction.api",
-          "Port": "8080"
+          "Host": "analytics.api",
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Transactions",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamPathTemplate": "/Analytics/State",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
-    //Account API
     {
-      "DownstreamPathTemplate": "/api/v1/Accounts",
+      "DownstreamPathTemplate": "/api/v1/analytics/summary",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Analytics/Summary",
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/audit-events/export",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/AuditEvents/export",
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/audit-events",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "analytics.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/AuditEvents",
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Accounts",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamPathTemplate": "/Accounts/me/addresses",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
-      "DownstreamPathTemplate": "/api/v1/Accounts/Adding",
+      "DownstreamPathTemplate": "/api/v1/accounts/me/preferences",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Accounts/Adding",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamPathTemplate": "/Accounts/me/preferences",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
-      "DownstreamPathTemplate": "/api/v1/Accounts/Withdrawing",
+      "DownstreamPathTemplate": "/api/v1/accounts/me/addresses/{addressId}",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Accounts/Withdrawing",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamPathTemplate": "/Accounts/me/addresses/{addressId}",
+      "UpstreamHttpMethod": [
+        "PUT",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
-      "DownstreamPathTemplate": "/api/v1/Accounts/{id}",
+      "DownstreamPathTemplate": "/api/v1/accounts/me",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
           "Host": "account.api",
-          "Port": "8080"
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Accounts/{id}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamPathTemplate": "/Accounts/me",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
-    //Customer API
     {
-      "DownstreamPathTemplate": "/api/v1/Customers",
+      "DownstreamPathTemplate": "/api/v1/plants",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "customer.api",
-          "Port": "8080"
+          "Host": "catalog.api",
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Customers",
-      "UpstreamHttpMethod": [ "POST" ]
+      "UpstreamPathTemplate": "/Catalog/Plants",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     },
     {
-      "DownstreamPathTemplate": "/api/v1/Customers/{id}",
+      "DownstreamPathTemplate": "/api/v1/materials",
       "DownstreamScheme": "http",
       "DownstreamHostAndPorts": [
         {
-          "Host": "customer.api",
-          "Port": "8080"
+          "Host": "catalog.api",
+          "Port": 8080
         }
       ],
-      "UpstreamPathTemplate": "/Customers/{id}",
-      "UpstreamHttpMethod": [ "GET" ]
+      "UpstreamPathTemplate": "/Catalog/Materials",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-types",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/WorkTypes",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/measurement-units",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/MeasurementUnits",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/plants/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/Plants/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/materials/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/Materials/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-types/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/WorkTypes/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/measurement-units/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/MeasurementUnits/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "identity.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Users",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/projects",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Projects",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/clients",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Clients",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/land-plots",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/LandPlots",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-stages",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/ProjectStages",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-tasks",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/ProjectTasks",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/estimates",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Estimates",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/employees",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Employees",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/positions",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Positions",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/brigades",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Brigades",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-assignments",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/WorkAssignments",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/auth/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "identity.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Auth/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/users/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "identity.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Users/{id}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/projects/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Projects/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/clients/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Clients/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/land-plots/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/LandPlots/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-stages/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/ProjectStages/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/project-tasks/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/ProjectTasks/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/estimates/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "project.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Estimates/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/{resource}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/{resource}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/employees/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Employees/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/positions/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Positions/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/brigades/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Brigades/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/work-assignments/{everything}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "organization.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/WorkAssignments/{everything}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/{resource}/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "catalog.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Catalog/{resource}/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT",
+        "DELETE"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/suppliers",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Suppliers",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/suppliers/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Suppliers/{id}",
+      "UpstreamHttpMethod": [
+        "GET",
+        "PUT"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/suppliers/{id}/active",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Suppliers/{id}/active",
+      "UpstreamHttpMethod": [
+        "PATCH"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/stock-items",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/StockItems",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/stock-items/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/StockItems/{id}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/stock-items/{id}/movements",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/StockItems/{id}/movements",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/submit",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/submit",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/approve",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/approve",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/receive-lines/{lineId}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/receive-lines/{lineId}",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/purchase-orders/{id}/cancel",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/PurchaseOrders/{id}/cancel",
+      "UpstreamHttpMethod": [
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/deliveries",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Deliveries",
+      "UpstreamHttpMethod": [
+        "GET",
+        "POST"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/deliveries/{id}",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Deliveries/{id}",
+      "UpstreamHttpMethod": [
+        "GET"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
+    },
+    {
+      "DownstreamPathTemplate": "/api/v1/deliveries/{id}/status",
+      "DownstreamScheme": "http",
+      "DownstreamHostAndPorts": [
+        {
+          "Host": "procurement.api",
+          "Port": 8080
+        }
+      ],
+      "UpstreamPathTemplate": "/Deliveries/{id}/status",
+      "UpstreamHttpMethod": [
+        "PATCH"
+      ],
+      "AuthenticationOptions": {
+        "AuthenticationProviderKeys": [
+          "GatewayJwt"
+        ],
+        "AllowedScopes": []
+      }
     }
   ],
   "GlobalConfiguration": {

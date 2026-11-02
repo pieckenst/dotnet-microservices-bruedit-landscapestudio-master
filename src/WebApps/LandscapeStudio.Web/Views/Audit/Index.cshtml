@@ -1,0 +1,40 @@
+@model AuditListViewModel
+@{
+    ViewData["Title"] = "Audit log";
+    ViewData["Section"] = "Audit log";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> TRACEABLE OPERATIONS</span><h1>Audit log <span>and activity.</span></h1><p>Review event records from connected services. Export is filtered and capped by the analytics service.</p></div>
+    <a class="button button-primary" asp-action="Export" asp-route-fromUtc="@Model.FromUtc?.ToString("O")" asp-route-toUtc="@Model.ToUtc?.ToString("O")" asp-route-sourceService="@Model.SourceService" asp-route-action="@Model.Action">↓ Export CSV</a>
+</div>
+<section class="surface-card filter-card">
+    <form method="get" asp-action="Index" class="filter-grid">
+        <div class="field"><label for="fromUtc">From (UTC)</label><input id="fromUtc" name="fromUtc" type="datetime-local" value="@Model.FromUtc?.ToString("yyyy-MM-ddTHH:mm")" /></div>
+        <div class="field"><label for="toUtc">To (UTC)</label><input id="toUtc" name="toUtc" type="datetime-local" value="@Model.ToUtc?.ToString("yyyy-MM-ddTHH:mm")" /></div>
+        <div class="field"><label for="sourceService">Source service</label><input id="sourceService" name="sourceService" value="@Model.SourceService" placeholder="e.g. Project" maxlength="100" /></div>
+        <div class="field"><label for="action">Action</label><input id="action" name="action" value="@Model.Action" placeholder="e.g. Projects.Create" maxlength="100" /></div>
+        <div class="filter-actions"><button class="button button-secondary" type="submit">Apply filters</button><a class="button button-quiet" asp-action="Index">Clear</a></div>
+    </form>
+</section>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-error" role="alert"><strong>Audit query failed.</strong> @Model.Error</div>
+}
+<section class="surface-card audit-surface">
+    <div class="section-heading section-heading-table"><div><span class="mini-kicker">IMMUTABLE EVENT RECORDS</span><h2>Recent audit events</h2><p>@Model.TotalCount.ToString("N0") records match the service query. Showing up to 100 on this page.</p></div><span class="gateway-status"><span class="status-dot"></span>Analytics API</span></div>
+    @if (Model.Items.Count > 0)
+    {
+        var preferred = new[] { "occurredAtUtc", "OccurredAtUtc", "sourceService", "SourceService", "action", "Action", "entityType", "EntityType", "entityId", "EntityId", "actorId", "ActorId", "correlationId", "CorrelationId" };
+        var columns = preferred.Where(col => Model.Items[0].ContainsKey(col)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        <div class="table-wrap"><table><thead><tr>@foreach (var column in columns) { <th>@column</th> }</tr></thead><tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>@foreach (var column in columns) { <td>@(item.TryGetValue(column, out var value) ? value : "—")</td> }</tr>
+        }
+        </tbody></table></div>
+    }
+    else if (string.IsNullOrWhiteSpace(Model.Error))
+    {
+        <div class="empty-state"><span class="empty-illustration">◷</span><h3>No audit events match</h3><p>Try a wider date range or remove one of the filters. The service does not seed fake activity.</p></div>
+    }
+</section>

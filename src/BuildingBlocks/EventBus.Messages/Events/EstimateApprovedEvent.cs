@@ -16,7 +16,12 @@ namespace EventBus.Messages.Events
         public decimal EstimatedTotal { get; set; }
         public decimal MaterialsCost { get; set; }
         public decimal WorksCost { get; set; }
-        public string Currency { get; set; } = "RUB";
+        public decimal PlantsCost { get; set; }
+        public decimal EquipmentCost { get; set; }
+        public decimal OtherCost { get; set; }
+        // The estimate currently has no currency field. Do not imply RUB/BYN until
+        // currency becomes an explicit part of the estimate contract.
+        public string Currency { get; set; } = string.Empty;
         public DateTime ApprovedDate { get; set; }
         public int LineItemCount { get; set; }
     }

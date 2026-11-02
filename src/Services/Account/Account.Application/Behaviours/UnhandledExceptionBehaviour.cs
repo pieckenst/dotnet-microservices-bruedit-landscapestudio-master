@@ -1,35 +1,41 @@
-﻿using MediatR;
+using MediatR;
 using Microsoft.Extensions.Logging;
 
 namespace Account.Application.Behaviours
 {
-    public class UnhandledExceptionBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-       where TRequest : notnull
+    public sealed class UnhandledExceptionBehaviour<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : notnull
     {
-        private readonly ILogger<TRequest> _logger;
+        private readonly ILogger<UnhandledExceptionBehaviour<TRequest, TResponse>> _logger;
 
-        public UnhandledExceptionBehaviour(ILogger<TRequest> logger)
+        public UnhandledExceptionBehaviour(
+            ILogger<UnhandledExceptionBehaviour<TRequest, TResponse>> logger)
         {
-            _logger = logger;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+        public async Task<TResponse> Handle(
+            TRequest request,
+            RequestHandlerDelegate<TResponse> next,
+            CancellationToken cancellationToken)
         {
             try
             {
                 return await next();
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                var requestName = typeof(TRequest).Name;
-                _logger.LogError(ex, $"Application Request: Unhandled Exception for Request {requestName} {request}");
                 throw;
             }
-        }
-
-        public Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
-        {
-            throw new NotImplementedException();
+            catch (Exception exception)
+            {
+                // Do not serialize/log request payloads: they may contain personal or financial data.
+                _logger.LogError(
+                    exception,
+                    "Unhandled exception while processing application request {RequestType}.",
+                    typeof(TRequest).Name);
+                throw;
+            }
         }
     }
 }

@@ -12,7 +12,7 @@ namespace Shared.Common.Common
         string ProviderName { get; }
 
         /// <summary>Configures the DbContextOptionsBuilder with the appropriate EF Core provider.</summary>
-        DbContextOptionsBuilder<T> Configure<T>(DbContextOptionsBuilder<T> builder, string connectionString) where T : DbContext;
+        DbContextOptionsBuilder Configure(DbContextOptionsBuilder builder, string connectionString);
 
         /// <summary>Attempts to verify connectivity to the database with the given connection string.</summary>
         bool CanConnect(string connectionString);

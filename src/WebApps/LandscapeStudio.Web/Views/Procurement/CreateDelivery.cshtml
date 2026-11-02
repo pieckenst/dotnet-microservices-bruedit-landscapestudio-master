@@ -1,0 +1,28 @@
+@model CreateDeliveryViewModel
+@{
+    ViewData["Title"] = "Schedule delivery";
+    ViewData["Section"] = "Procurement / Delivery";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> PROCUREMENT / LOGISTICS</span><h1>Schedule a <span>delivery.</span></h1><p>Attach an inbound delivery to an approved purchase order and track its expected arrival.</p></div>
+    <a class="button button-quiet" asp-action="Index">← Back to procurement</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.LookupError))
+{
+    <div class="alert alert-warning" role="status">@Model.LookupError</div>
+}
+<form asp-action="CreateDelivery" method="post" class="form-workspace">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">01</span><div><h2>Delivery reference</h2><p>Choose the purchase order and identify the carrier shipment.</p></div></div>
+        <div class="form-grid">
+            <div class="field field-full"><label asp-for="PurchaseOrderId">Approved purchase order <span class="required">*</span></label><select asp-for="PurchaseOrderId"><option value="">Select purchase order</option>@foreach (var order in Model.EligibleOrders) { <option value="@order.Id">@order.OrderNumber · @order.OrderDate.ToString("dd MMM yyyy") · @order.OrderTotal.ToString("N2")</option> }</select><span asp-validation-for="PurchaseOrderId" class="field-error"></span></div>
+            <div class="field"><label asp-for="DeliveryNumber">Delivery number <span class="required">*</span></label><input asp-for="DeliveryNumber" maxlength="48" placeholder="DEL-2026-001" /><span asp-validation-for="DeliveryNumber" class="field-error"></span></div>
+            <div class="field"><label asp-for="Carrier">Carrier <span class="required">*</span></label><input asp-for="Carrier" maxlength="120" placeholder="Supplier or transport company" /><span asp-validation-for="Carrier" class="field-error"></span></div>
+            <div class="field"><label asp-for="ExpectedDate">Expected arrival <span class="required">*</span></label><input asp-for="ExpectedDate" type="date" /><span asp-validation-for="ExpectedDate" class="field-error"></span></div>
+            <div class="field"><label asp-for="TrackingReference">Tracking reference</label><input asp-for="TrackingReference" maxlength="120" placeholder="Optional carrier tracking ID" /><span asp-validation-for="TrackingReference" class="field-error"></span></div>
+        </div>
+    </section>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index">Cancel</a><button class="button button-primary" type="submit" @(Model.EligibleOrders.Count == 0 ? "disabled" : null)>Schedule delivery <span aria-hidden="true">→</span></button></div>
+</form>

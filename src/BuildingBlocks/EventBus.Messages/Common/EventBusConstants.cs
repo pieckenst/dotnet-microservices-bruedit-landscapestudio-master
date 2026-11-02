@@ -2,8 +2,7 @@
 {
     public static class EventBusConstants
     {
-        // Legacy queue (kept for backward compatibility during migration)
-        public const string AccountTransactionQueue = "accounttransaction-queue";
+        public const string AuditEventQueue = "audit-events-queue";
 
         // Landscape Studio integration event queues
         public const string ProjectStageCompletedQueue = "projectstage-completed-queue";

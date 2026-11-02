@@ -1,0 +1,22 @@
+@model CreateEstimateViewModel
+@{
+    ViewData["Title"] = "New estimate";
+    ViewData["Section"] = "Estimates / New";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> COMMERCIAL WORKSPACE</span><h1>Create an <span>estimate draft.</span></h1><p>Choose an existing project and start a versioned estimate. Add the actual work and material quantities on the next screen.</p></div>
+    <a class="button button-quiet" asp-action="Index" asp-route-projectId="@Model.ProjectId">← Back to estimates</a>
+</div>
+<form asp-action="Create" method="post" class="form-workspace">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="All" class="validation-summary"></div>
+    <section class="surface-card form-section">
+        <div class="form-section-heading"><span class="form-step">01</span><div><h2>Estimate details</h2><p>Estimate versions are owned by a single project.</p></div></div>
+        <div class="form-grid">
+            <div class="field field-full"><label asp-for="ProjectId">Project <span class="required">*</span></label><select asp-for="ProjectId"><option value="">Select a project</option>@foreach (var project in Model.Projects) { <option value="@project.Id" selected="@(Model.ProjectId == project.Id ? "selected" : null)">@project.ProjectNumber — @project.Name</option> }</select><span asp-validation-for="ProjectId" class="field-error"></span></div>
+            <div class="field"><label asp-for="Version">Version label <span class="required">*</span></label><input asp-for="Version" maxlength="40" placeholder="V1" /><span asp-validation-for="Version" class="field-error"></span><small>Use an identifier your team can distinguish, such as V1 or Revision B.</small></div>
+            <div class="field"><label asp-for="Notes">Internal notes</label><input asp-for="Notes" maxlength="4000" placeholder="Scope assumptions and exclusions" /><span asp-validation-for="Notes" class="field-error"></span></div>
+        </div>
+    </section>
+    <div class="form-actions"><a class="button button-quiet" asp-action="Index" asp-route-projectId="@Model.ProjectId">Cancel</a><button class="button button-primary" type="submit">Create draft <span aria-hidden="true">→</span></button></div>
+</form>

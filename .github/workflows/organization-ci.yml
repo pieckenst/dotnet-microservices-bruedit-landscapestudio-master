@@ -1,0 +1,45 @@
+name: Organization service CI
+
+on:
+  pull_request:
+    paths:
+      - "src/Services/Organization/**"
+      - "src/Tests/Organization.Tests/**"
+      - "src/BuildingBlocks/Shared.Common/**"
+      - "src/BuildingBlocks/Shared.ServiceKit/**"
+      - "src/BuildingBlocks/Common.Logging/**"
+      - "src/docker-compose.yml"
+      - "src/ApiGateways/OcelotApiGateway/ocelot.json"
+      - "src/SOLUTION.BRU.TPPO.sln"
+      - ".github/workflows/organization-ci.yml"
+  push:
+    branches: [main, master]
+    paths:
+      - "src/Services/Organization/**"
+      - "src/Tests/Organization.Tests/**"
+      - "src/BuildingBlocks/Shared.Common/**"
+      - "src/BuildingBlocks/Shared.ServiceKit/**"
+      - "src/BuildingBlocks/Common.Logging/**"
+      - "src/docker-compose.yml"
+      - "src/ApiGateways/OcelotApiGateway/ocelot.json"
+      - "src/SOLUTION.BRU.TPPO.sln"
+      - ".github/workflows/organization-ci.yml"
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Restore Organization API
+        run: dotnet restore src/Services/Organization/Organization.API/Organization.API.csproj
+      - name: Build Organization API
+        run: dotnet build src/Services/Organization/Organization.API/Organization.API.csproj --configuration Release --no-restore
+      - name: Restore Organization tests
+        run: dotnet restore src/Tests/Organization.Tests/Organization.Tests.csproj
+      - name: Run Organization tests
+        run: dotnet test src/Tests/Organization.Tests/Organization.Tests.csproj --configuration Release --no-restore --logger "console;verbosity=normal"
+      - name: Validate Docker Compose
+        run: docker compose -f src/docker-compose.yml config --quiet

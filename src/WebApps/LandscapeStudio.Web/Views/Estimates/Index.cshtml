@@ -1,0 +1,55 @@
+@model EstimatesIndexViewModel
+@{
+    ViewData["Title"] = "Estimates";
+    ViewData["Section"] = "Estimates";
+}
+<div class="page-heading page-heading-compact">
+    <div><span class="eyebrow"><span class="eyebrow-line"></span> COMMERCIAL WORKSPACE</span><h1>Estimates <span>with clear numbers.</span></h1><p>Browse estimate versions for a project, assemble line items and move drafts through approval.</p></div>
+    <a class="button button-primary" asp-action="Create" asp-route-projectId="@Model.ProjectId">＋ New estimate</a>
+</div>
+@if (!string.IsNullOrWhiteSpace(Model.Error))
+{
+    <div class="alert alert-error" role="alert"><strong>Estimate data unavailable.</strong> @Model.Error</div>
+}
+<section class="surface-card estimate-filter-card">
+    <form method="get" asp-action="Index" class="estimate-project-select">
+        <div class="field"><label for="projectId">Choose project</label><select id="projectId" name="projectId"><option value="">Select a project to view its estimates</option>@foreach (var project in Model.Projects) { <option value="@project.Id" selected="@(Model.ProjectId == project.Id ? "selected" : null)">@project.ProjectNumber — @project.Name</option> }</select></div>
+        <button class="button button-secondary" type="submit">View estimates</button>
+    </form>
+</section>
+@if (Model.ProjectId.HasValue && Model.ProjectId.Value != Guid.Empty)
+{
+    <section class="surface-card">
+        <div class="section-heading section-heading-table"><div><span class="mini-kicker">PROJECT ESTIMATE VERSIONS</span><h2>Estimate records</h2><p>@Model.TotalCount.ToString("N0") record(s) returned for this project.</p></div><a class="text-link" asp-action="Create" asp-route-projectId="@Model.ProjectId">Create version <span>→</span></a></div>
+        @if (Model.Estimates.Count > 0)
+        {
+            <div class="table-wrap"><table><thead><tr><th>Version</th><th>Status</th><th>Line items</th><th>Estimated total</th><th>Estimated cost</th><th>Created</th><th></th></tr></thead><tbody>
+            @foreach (var estimate in Model.Estimates)
+            {
+                <tr><td><div class="entity-cell"><span class="entity-icon">≋</span><span><strong>@estimate.Version</strong><small>@estimate.Notes</small></span></div></td><td><span class="status-pill">@EnumLabel(estimate.Status, new[] { "Draft", "Submitted", "Approved", "Rejected", "Superseded" })</span></td><td>@estimate.LineItems.Count.ToString("N0")</td><td class="mono">@estimate.EstimatedTotal.ToString("N2")</td><td class="mono">@(estimate.EstimatedCost?.ToString("N2") ?? "—")</td><td>@estimate.CreatedDate.ToString("dd MMM yyyy")</td><td><a class="text-link" asp-action="Details" asp-route-id="@estimate.Id">Open <span>→</span></a></td></tr>
+            }
+            </tbody></table></div>
+            <div class="table-footer"><span>Page @Model.Page of @(Math.Max(Model.TotalPages, 1))</span><div class="pagination">
+                @if (Model.Page > 1) { <a class="button button-quiet button-small" asp-action="Index" asp-route-projectId="@Model.ProjectId" asp-route-page="@(Model.Page - 1)">← Previous</a> }
+                @if (Model.Page < Model.TotalPages) { <a class="button button-secondary button-small" asp-action="Index" asp-route-projectId="@Model.ProjectId" asp-route-page="@(Model.Page + 1)">Next →</a> }
+            </div></div>
+        }
+        else if (string.IsNullOrWhiteSpace(Model.Error))
+        {
+            <div class="empty-state"><span class="empty-illustration">≋</span><h3>No estimates for this project yet</h3><p>Create a draft, add work/material line items, then submit it for approval.</p><a class="button button-primary" asp-action="Create" asp-route-projectId="@Model.ProjectId">Create estimate</a></div>
+        }
+    </section>
+}
+else
+{
+    <section class="surface-card"><div class="empty-state"><span class="empty-illustration">≋</span><h3>Start with a project</h3><p>Select a project above to see its estimates, or create a new estimate for an existing project.</p></div></section>
+}
+@functions {
+    private static string EnumLabel(System.Text.Json.JsonElement value, string[] names)
+    {
+        if (value.ValueKind == System.Text.Json.JsonValueKind.String) return value.GetString() ?? "Unknown";
+        if (value.ValueKind == System.Text.Json.JsonValueKind.Number && value.TryGetInt32(out var number) && number >= 0 && number < names.Length)
+            return names[number];
+        return "Unknown";
+    }
+}
