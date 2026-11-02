@@ -77,6 +77,9 @@ await using (var scope = app.Services.CreateAsyncScope())
     var context = scope.ServiceProvider.GetRequiredService<OrganizationContext>();
     await context.Database.EnsureCreatedAsync();
     await context.Database.EnsureIntegrationOutboxSchemaAsync();
+
+    var seedLogger = scope.ServiceProvider.GetRequiredService<ILogger<OrganizationContextSeed>>();
+    await OrganizationContextSeed.SeedAsync(context, seedLogger);
 }
 if (app.Environment.IsDevelopment())
 {

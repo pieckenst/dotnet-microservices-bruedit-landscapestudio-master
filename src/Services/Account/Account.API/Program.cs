@@ -114,6 +114,9 @@ await using (var scope = app.Services.CreateAsyncScope())
     else
         await context.Database.MigrateAsync();
     await context.Database.EnsureIntegrationOutboxSchemaAsync();
+
+    var seedLogger = scope.ServiceProvider.GetRequiredService<ILogger<AccountContextSeed>>();
+    await AccountContextSeed.SeedAsync(context, seedLogger);
 }
 
 if (app.Environment.IsDevelopment())
