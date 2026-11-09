@@ -1,0 +1,111 @@
+services:
+  account.api:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  analytics.api:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  catalog.api:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  identity.api:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  organization.api:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  procurement.api:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  project.api:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  ocelotapigateway:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  landscapestudio.web:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  webstatus:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net8.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
+  serverdiagnostics:
+    volumes:
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/vstools/net6.0
+        target: /VSTools
+        read_only: true
+      - type: bind
+        source: ${USERPROFILE}/.vs/DockerComposeTools/hotreload
+        target: /HotReloadAgent
+        read_only: true
