@@ -7,10 +7,13 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 COPY ["Services/Procurement/Procurement.API/Procurement.API.csproj", "Services/Procurement/Procurement.API/"]
+COPY ["Services/Procurement/Procurement.Application/Procurement.Application.csproj", "Services/Procurement/Procurement.Application/"]
 COPY ["Services/Procurement/Procurement.Domain/Procurement.Domain.csproj", "Services/Procurement/Procurement.Domain/"]
 COPY ["Services/Procurement/Procurement.Infrastructure/Procurement.Infrastructure.csproj", "Services/Procurement/Procurement.Infrastructure/"]
 COPY ["BuildingBlocks/Shared.Common/Shared.Common.csproj", "BuildingBlocks/Shared.Common/"]
+COPY ["BuildingBlocks/Shared.ServiceKit/Shared.ServiceKit.csproj", "BuildingBlocks/Shared.ServiceKit/"]
 COPY ["BuildingBlocks/Common.Logging/Common.Logging.csproj", "BuildingBlocks/Common.Logging/"]
+COPY ["BuildingBlocks/EventBus.Messages/EventBus.Messages.csproj", "BuildingBlocks/EventBus.Messages/"]
 RUN dotnet restore "Services/Procurement/Procurement.API/Procurement.API.csproj"
 COPY . .
 WORKDIR "/src/Services/Procurement/Procurement.API"

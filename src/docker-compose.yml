@@ -319,9 +319,11 @@ services:
       - "8010:8080"
 
   elasticsearch:
+    profiles: ["observability"]
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.2
 
   kibana:
+    profiles: ["observability"]
     image: docker.elastic.co/kibana/kibana:7.9.2
 
   webstatus:
