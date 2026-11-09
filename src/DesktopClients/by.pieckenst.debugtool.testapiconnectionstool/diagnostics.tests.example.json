@@ -1,0 +1,52 @@
+{
+  "users": [
+    {
+      "name": "administrator",
+      "userNameEnv": "IDENTITY_ADMIN_USERNAME",
+      "passwordEnv": "IDENTITY_ADMIN_PASSWORD",
+      "expectedRole": "Administrator"
+    },
+    {
+      "name": "standard-user",
+      "userNameEnv": "LANDSCAPE_USER_USERNAME",
+      "passwordEnv": "LANDSCAPE_USER_PASSWORD",
+      "expectedRole": "User"
+    }
+  ],
+  "tests": [
+    {
+      "name": "Unauthenticated user listing is rejected",
+      "method": "GET",
+      "path": "/Users",
+      "expectedStatus": 401
+    },
+    {
+      "name": "Administrator can list users",
+      "method": "GET",
+      "path": "/Users",
+      "expectedStatus": 200,
+      "user": "administrator"
+    },
+    {
+      "name": "Standard user cannot list users",
+      "method": "GET",
+      "path": "/Users",
+      "expectedStatus": 403,
+      "user": "standard-user"
+    },
+    {
+      "name": "Administrator token resolves identity",
+      "method": "GET",
+      "path": "/Auth/me",
+      "expectedStatus": 200,
+      "user": "administrator"
+    },
+    {
+      "name": "Standard user token resolves identity",
+      "method": "GET",
+      "path": "/Auth/me",
+      "expectedStatus": 200,
+      "user": "standard-user"
+    }
+  ]
+}

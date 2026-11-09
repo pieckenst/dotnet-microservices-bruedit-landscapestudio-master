@@ -41,9 +41,9 @@ public sealed class UserRegisteredConsumer(
             // committed both records, this delivery is already satisfied and is safe to ack.
             context.ChangeTracker.Clear();
             var profileExists = await context.AccountProfiles.AsNoTracking()
-                .AnyAsync(item => item.UserId == evt.UserId, message.CancellationToken);
+                .AnyAsync(item => item.Id == evt.UserId, message.CancellationToken);
             var preferencesExist = await context.AccountPreferences.AsNoTracking()
-                .AnyAsync(item => item.UserId == evt.UserId, message.CancellationToken);
+                .AnyAsync(item => item.Id == evt.UserId, message.CancellationToken);
 
             if (!profileExists || !preferencesExist)
             {

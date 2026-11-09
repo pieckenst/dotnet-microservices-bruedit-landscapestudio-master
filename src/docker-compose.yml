@@ -346,6 +346,41 @@ services:
     ports:
       - "8008:8080"
 
+  serverdiagnostics:
+    profiles: ["diagnostics"]
+    image: landscapestudio-serverdiagnostics
+    build:
+      context: .
+      dockerfile: DesktopClients/by.pieckenst.debugtool.testapiconnectionstool/Dockerfile
+    environment:
+      IDENTITY_ADMIN_USERNAME: ${IDENTITY_ADMIN_USERNAME:-}
+      IDENTITY_ADMIN_PASSWORD: ${IDENTITY_ADMIN_PASSWORD:-}
+      LANDSCAPE_USER_USERNAME: ${LANDSCAPE_USER_USERNAME:-}
+      LANDSCAPE_USER_PASSWORD: ${LANDSCAPE_USER_PASSWORD:-}
+      LANDSCAPE_TEST_USERNAME: ${LANDSCAPE_TEST_USERNAME:-}
+      LANDSCAPE_TEST_PASSWORD: ${LANDSCAPE_TEST_PASSWORD:-}
+      LANDSCAPE_DEBUG_TOKEN: ${LANDSCAPE_DEBUG_TOKEN:-}
+    volumes:
+      - ./DesktopClients/by.pieckenst.debugtool.testapiconnectionstool/diagnostics.tests.example.json:/app/diagnostics.tests.json:ro
+    depends_on:
+      identity.api:
+        condition: service_started
+      account.api:
+        condition: service_started
+      catalog.api:
+        condition: service_started
+      project.api:
+        condition: service_started
+      organization.api:
+        condition: service_started
+      procurement.api:
+        condition: service_started
+      analytics.api:
+        condition: service_started
+      ocelotapigateway:
+        condition: service_started
+    command: ["check", "--target", "docker"]
+
 volumes:
   mongo_data:
   portainer_data:

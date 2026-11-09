@@ -78,7 +78,7 @@ public sealed class CreateWorkAssignmentCommandHandler(
         if (projectStatus is null)
             throw new NotFoundException("Project", request.ProjectId);
         if (!IsAssignableProjectStatus(projectStatus))
-            throw new ValidationException("Work can only be assigned to projects in Planned or InProgress status.");
+            throw new FluentValidation.ValidationException("Work can only be assigned to projects in Planned or InProgress status.");
 
         if (request.ProjectTaskId.HasValue)
         {
@@ -87,7 +87,7 @@ public sealed class CreateWorkAssignmentCommandHandler(
             if (taskStatus is null)
                 throw new NotFoundException("Project task", request.ProjectTaskId.Value);
             if (IsTerminalTaskStatus(taskStatus))
-                throw new ValidationException("A completed or cancelled project task cannot receive a new work assignment.");
+                throw new FluentValidation.ValidationException("A completed or cancelled project task cannot receive a new work assignment.");
         }
 
         if (request.EmployeeId.HasValue)
