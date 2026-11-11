@@ -14,6 +14,8 @@ COPY ["BuildingBlocks/EventBus.Messages/EventBus.Messages.csproj", "BuildingBloc
 COPY ["Services/Account/Account.Application/Account.Application.csproj", "Services/Account/Account.Application/"]
 COPY ["Services/Account/Account.Domain/Account.Domain.csproj", "Services/Account/Account.Domain/"]
 COPY ["Services/Account/Account.Infrastructure/Account.Infrastructure.csproj", "Services/Account/Account.Infrastructure/"]
+COPY ["BuildingBlocks/Shared.Common/Shared.Common.csproj", "BuildingBlocks/Shared.Common/"]
+COPY ["BuildingBlocks/Shared.ServiceKit/Shared.ServiceKit.csproj", "BuildingBlocks/Shared.ServiceKit/"]
 RUN dotnet restore "./Services/Account/Account.API/./Account.API.csproj"
 COPY . .
 WORKDIR "/src/Services/Account/Account.API"

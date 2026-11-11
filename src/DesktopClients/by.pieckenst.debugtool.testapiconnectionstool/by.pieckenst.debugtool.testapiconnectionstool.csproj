@@ -5,8 +5,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PublishAot>true</PublishAot>
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\ApiGateways\OcelotApiGateway\ocelot.json"
+          Link="ocelot.json"
+          CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
 </Project>

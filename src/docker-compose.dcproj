@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="15.0" Sdk="Microsoft.Docker.Sdk">
+<Project ToolsVersion="15.0" Sdk="Microsoft.Docker.Sdk"
+         TreatAsLocalProperty="DockerDevelopmentMode;UseDistrolessHelperSetting;AdditionalComposeFilePaths">
   <PropertyGroup Label="Globals">
     <ProjectVersion>2.1</ProjectVersion>
     <DockerTargetOS>Linux</DockerTargetOS>
     <DockerPublishLocally>False</DockerPublishLocally>
+    <DockerDevelopmentMode>Regular</DockerDevelopmentMode>
+    <UseDistrolessHelperSetting>false</UseDistrolessHelperSetting>
+    <AdditionalComposeFilePaths>$(MSBuildThisFileDirectory)docker-compose.vs-tools.yml</AdditionalComposeFilePaths>
     <ProjectGuid>af673a8c-9964-4b7d-927a-e96d81a3b7e2</ProjectGuid>
     <DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
     <DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
@@ -16,4 +20,22 @@
     <None Include="docker-compose.yml" />
     <None Include=".dockerignore" />
   </ItemGroup>
+
+  <Target Name="StageVisualStudioComposeTools" BeforeTargets="DockerCreateComposeVsGeneratedFiles"
+          Condition="'$(VSINSTALLDIR)' != ''">
+    <ItemGroup>
+      <_VsToolsNet8 Include="$(VSINSTALLDIR)\MSBuild\Sdks\Microsoft.Docker.Sdk\tools\linux-x64\net8.0\**\*" />
+      <_VsToolsNet6 Include="$(VSINSTALLDIR)\MSBuild\Sdks\Microsoft.Docker.Sdk\tools\linux-x64\net6.0\**\*" />
+      <_VsHotReload Include="$(VSINSTALLDIR)\Common7\IDE\extensions\Microsoft\managedprojectsystem\HotReload\**\*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_VsToolsNet8)"
+          DestinationFiles="@(_VsToolsNet8->'$(USERPROFILE)\.vs\DockerComposeTools\vstools\net8.0\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_VsToolsNet6)"
+          DestinationFiles="@(_VsToolsNet6->'$(USERPROFILE)\.vs\DockerComposeTools\vstools\net6.0\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(_VsHotReload)"
+          DestinationFiles="@(_VsHotReload->'$(USERPROFILE)\.vs\DockerComposeTools\hotreload\%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>
