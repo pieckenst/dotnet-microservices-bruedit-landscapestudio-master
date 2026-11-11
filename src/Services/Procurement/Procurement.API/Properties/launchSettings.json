@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Procurement.API": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:2301;http://localhost:2308"
+    }
+  }
+}
